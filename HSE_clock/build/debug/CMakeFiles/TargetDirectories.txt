@@ -1,0 +1,8 @@
+/home/mahonri/Desktop/BareMetal/HSE_clock/build/debug/CMakeFiles/Test_project.dir
+/home/mahonri/Desktop/BareMetal/HSE_clock/build/debug/CMakeFiles/edit_cache.dir
+/home/mahonri/Desktop/BareMetal/HSE_clock/build/debug/CMakeFiles/rebuild_cache.dir
+/home/mahonri/Desktop/BareMetal/HSE_clock/build/debug/App/CMakeFiles/edit_cache.dir
+/home/mahonri/Desktop/BareMetal/HSE_clock/build/debug/App/CMakeFiles/rebuild_cache.dir
+/home/mahonri/Desktop/BareMetal/HSE_clock/build/debug/App/HSE_Clock/CMakeFiles/HSE.dir
+/home/mahonri/Desktop/BareMetal/HSE_clock/build/debug/App/HSE_Clock/CMakeFiles/edit_cache.dir
+/home/mahonri/Desktop/BareMetal/HSE_clock/build/debug/App/HSE_Clock/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,3 @@
+/home/mahonri/Desktop/BareMetal/HSI_CLOCK/CMakeFiles/example.dir
+/home/mahonri/Desktop/BareMetal/HSI_CLOCK/CMakeFiles/edit_cache.dir
+/home/mahonri/Desktop/BareMetal/HSI_CLOCK/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,8 @@
+# ninja log v5
+31	347	1742718674563405380	CMakeFiles/Test_project.dir/Startup/startup_stm32f429zitx.s.obj	432c3c65edf29f47
+30	666	1742718674873397624	CMakeFiles/Test_project.dir/Src/sysmem.c.obj	8bfa2384682dc18f
+46	457	1742718674666402803	App/HSE_Clock/CMakeFiles/HSE.dir/HSE.c.obj	ad8846144b74181b
+457	934	1742718675128391244	App/HSE_Clock/libHSE.a	c088c74ce9b7ce41
+22	553	1742718674718401502	CMakeFiles/Test_project.dir/Src/main.c.obj	8d9d4ab010c399d3
+25	511	1742718674725401327	CMakeFiles/Test_project.dir/Src/syscall.c.obj	41c8acd3d4bc51d6
+935	1238	1742718675382384888	Test_project.elf	e9bcfa7a605c0382

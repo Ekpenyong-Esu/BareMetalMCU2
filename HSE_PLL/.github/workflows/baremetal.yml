@@ -1,0 +1,60 @@
+name: STM32F429I-DISC Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    # Manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install ARM GCC toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
+
+    - name: Install CMake
+      uses: lukka/get-cmake@latest
+      with:
+        cmakeVersion: "3.22.0"
+
+    - name: Create build directory
+      run: mkdir build
+
+    - name: Configure CMake
+      run: |
+        cd build
+        cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/gcc-arm-none-eabi.cmake -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build project
+      run: |
+        cd build
+        cmake --build . -j$(nproc)
+
+    - name: Check build artifacts
+      run: |
+        ls -la build
+        ls -la build/*.hex build/*.bin || echo "No hex/bin files found"
+
+    - name: Upload firmware artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware-files
+        path: |
+          build/*.hex
+          build/*.bin
+          build/*.map
+        if-no-files-found: warn
+
+    - name: Check firmware size
+      run: |
+        arm-none-eabi-size build/Test_project || echo "Could not get firmware size"
+...
