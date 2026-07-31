@@ -11,13 +11,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "gpio.h"
-#include <stdio.h>
-
-/* Private defines -----------------------------------------------------------*/
-#define GPIO_TIMEOUT 0x1000U
-
-/* Private variables ---------------------------------------------------------*/
-static volatile uint32_t button_press_count = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 static HAL_StatusTypeDef GPIO_EnableClock(GPIO_TypeDef *GPIOx);
@@ -172,6 +165,9 @@ HAL_StatusTypeDef GPIO_Driver_EnableIT(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, u
     if (pin_num > 15) {
         return HAL_ERROR;
     }
+
+    /* SYSCFG clock must be running before EXTICR can be written */
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
 
     /* Configure SYSCFG for EXTI */
     uint32_t port_num = ((uint32_t)GPIOx - GPIOA_BASE) / 0x400;
@@ -349,60 +345,5 @@ static IRQn_Type GPIO_GetIRQn(uint16_t GPIO_Pin)
     }
 }
 
-/* Interrupt handlers ------------------------------------------------------ */
-
-/**
- * @brief EXTI line 0 interrupt handler
- */
-// void EXTI0_IRQHandler(void)
-// {
-//     if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_0) != RESET) {
-//         __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
-//         // Add custom handler here
-//     }
-// }
-
-/**
- * @brief EXTI line 1 interrupt handler
- */
-void EXTI1_IRQHandler(void)
-{
-    if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_1) != RESET) {
-        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_1);
-        // Add custom handler here
-    }
-}
-
-/**
- * @brief EXTI lines 2-3 interrupt handler
- */
-void EXTI2_IRQHandler(void)
-{
-    if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_2) != RESET) {
-        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_2);
-        // Add custom handler here
-    }
-}
-
-void EXTI3_IRQHandler(void)
-{
-    if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_3) != RESET) {
-        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_3);
-        // Add custom handler here
-    }
-}
-
-/**
- * @brief EXTI lines 4-9 interrupt handler
- */
-void EXTI9_5_IRQHandler(void)
-{
-    for (uint8_t pin = 4; pin <= 9; pin++) {
-        uint16_t pin_mask = 1 << pin;
-        if (__HAL_GPIO_EXTI_GET_IT(pin_mask) != RESET) {
-            __HAL_GPIO_EXTI_CLEAR_IT(pin_mask);
-            // Add custom handler here based on pin
-        }
-    }
-}
+/* EXTI interrupt handlers live in Core/Src/stm32f4xx_it.c, not in this driver. */
 

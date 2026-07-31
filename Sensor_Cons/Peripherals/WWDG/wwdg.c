@@ -11,7 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "wwdg.h"
-#include "log.h"
+#include "../LOG/log.h"
 
 /* Private defines -----------------------------------------------------------*/
 #define WWDG_DEFAULT_PRESCALER      WWDG_PRESCALER_8

@@ -12,21 +12,8 @@ extern "C" {
 
 #include "stm32f4xx_hal.h"
 #include <stdbool.h>
-#include <string.h>
 
 
-
-#define ENABLE_DEBUG 1
-
-#if ENABLE_DEBUG
-    /* Forward declaration for printf */
-    int printf(const char *format, ...);
-    #define DEBUG_PRINT(fmt, ...) \
-        printf("[FILE: %s, LINE: %d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-#else
-    #define DEBUG_PRINT(fmt, ...) \
-        ((void)0)  // Does nothing
-#endif
 
 /**
  * @brief UART transfer mode enumeration

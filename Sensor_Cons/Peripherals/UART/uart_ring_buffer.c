@@ -15,13 +15,13 @@ void RingBuffer_Init(RingBuffer_t *ringBuffer)
     ringBuffer->tail = 0;
     ringBuffer->count = 0;
     memset(ringBuffer->buffer, 0, sizeof(ringBuffer->buffer));
-    DEBUG_PRINT("Ring buffer initialized");
+    log_debug("Ring buffer initialized");
 }
 
 bool RingBuffer_Put(RingBuffer_t *ringBuffer, uint8_t data)
 {
     if (ringBuffer == NULL || RingBuffer_IsFull(ringBuffer)) {
-        DEBUG_PRINT("Buffer Full");
+        log_debug("Buffer Full");
         return false;
     }
 
@@ -34,7 +34,7 @@ bool RingBuffer_Put(RingBuffer_t *ringBuffer, uint8_t data)
 bool RingBuffer_Get(RingBuffer_t *ringBuffer, uint8_t *data)
 {
     if (ringBuffer == NULL || data == NULL || RingBuffer_IsEmpty(ringBuffer)) {
-        DEBUG_PRINT("Buffer Empty or NULL data pointer");
+        log_debug("Buffer Empty or NULL data pointer");
         return false;
     }
 
@@ -67,13 +67,13 @@ void UART_RingBuffer_Init(void)
 UART_Status_t UART_RingBuffer_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size)
 {
     if (handle == NULL || data == NULL || size == 0) {
-        DEBUG_PRINT("UART handle, data is NULL or size is 0");
+        log_debug("UART handle, data is NULL or size is 0");
         return UART_ERROR;
     }
 
     for (uint16_t i = 0; i < size; i++) {
         if (!RingBuffer_Get(&rxRingBuffer, &data[i])) {
-            DEBUG_PRINT("Failed to get data from ring buffer");
+            log_debug("Failed to get data from ring buffer");
             return UART_ERROR; // Buffer underflow
         }
     }

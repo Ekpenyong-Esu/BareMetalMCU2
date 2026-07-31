@@ -8,7 +8,7 @@
 UART_Status_t UART_Blocking_Init(UART_Handle_t* handle)
 {
     if (handle == NULL || handle->huart == NULL) {
-        DEBUG_PRINT("Blocking UART handle or huart is NULL");
+        log_debug("Blocking UART handle or huart is NULL");
         return UART_ERROR;
     }
 
@@ -27,13 +27,13 @@ UART_Status_t UART_Blocking_Init(UART_Handle_t* handle)
 UART_Status_t UART_Blocking_Transmit(UART_Handle_t* handle, const uint8_t* data, uint16_t size, uint32_t timeout)
 {
     if (handle == NULL || handle->huart == NULL || data == NULL || size == 0) {
-        DEBUG_PRINT("Blocking UART handle, huart, data is NULL or size is 0");
+        log_debug("Blocking UART handle, huart, data is NULL or size is 0");
         return UART_ERROR;
     }
 
     HAL_StatusTypeDef status = HAL_UART_Transmit(handle->huart, (uint8_t*)data, size, timeout);
     if (status != HAL_OK) {
-        DEBUG_PRINT("Blocking UART Transmit failed: %d", status);
+        log_debug("Blocking UART Transmit failed: %d", status);
         return UART_ERROR;
     }
 
@@ -43,7 +43,7 @@ UART_Status_t UART_Blocking_Transmit(UART_Handle_t* handle, const uint8_t* data,
 UART_Status_t UART_Blocking_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size, uint32_t timeout)
 {
     if (handle == NULL || handle->huart == NULL || data == NULL || size == 0) {
-        DEBUG_PRINT("Blocking UART handle, huart, data is NULL or size is 0");
+        log_debug("Blocking UART handle, huart, data is NULL or size is 0");
         return UART_ERROR;
     }
 
@@ -59,7 +59,7 @@ UART_Status_t UART_Blocking_Receive(UART_Handle_t* handle, uint8_t* data, uint16
             if (rxSize > 0) {
                 return UART_OK;
             }
-            DEBUG_PRINT("Blocking UART Receive timeout: %d bytes received", rxSize);
+            log_debug("Blocking UART Receive timeout: %d bytes received", rxSize);
             return UART_TIMEOUT_ERROR;
         }
     }

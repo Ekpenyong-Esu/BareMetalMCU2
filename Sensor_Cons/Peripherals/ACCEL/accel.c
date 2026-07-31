@@ -12,7 +12,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "accel.h"
 #include "accel_constants.h"
-#include "spi.h"
+#include "../SPI/spi.h"
 #include <string.h>
 
 /* Private defines -----------------------------------------------------------*/

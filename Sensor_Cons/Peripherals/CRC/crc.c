@@ -6,7 +6,7 @@
  */
 
 #include "crc.h"
-#include "log.h"
+#include "../LOG/log.h"
 #include <string.h>
 
 /* Private defines */

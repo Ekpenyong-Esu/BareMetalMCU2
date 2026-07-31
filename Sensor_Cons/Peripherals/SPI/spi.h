@@ -98,16 +98,6 @@ void SPI_Init(void);
 SPI_StatusTypeDef SPI_Init_Custom(const SPI_ConfigTypeDef* config);
 
 /**
- * @brief   Change SPI baud-rate prescaler at runtime
- * @details Allows switching SPI clock speed without changing other settings.
- *          Useful for boards where LCD needs high speed but shared touch
- *          controller (XPT2046) requires a lower SPI clock.
- * @param   BaudRatePrescaler One of HAL SPI_BAUDRATEPRESCALER_2.._256 constants
- * @retval  SPI_StatusTypeDef Operation status
- */
-SPI_StatusTypeDef SPI_SetBaudRatePrescaler(uint32_t BaudRatePrescaler);
-
-/**
  * @brief   Deinitializes SPI peripheral
  * @details Disables SPI peripheral and releases resources
  * @param   None
@@ -152,12 +142,6 @@ SPI_StatusTypeDef SPI_Receive(uint8_t* pData, uint16_t Size, uint32_t Timeout);
  */
 SPI_StatusTypeDef SPI_TransmitReceive(uint8_t* pTxData, uint8_t* pRxData, uint16_t Size, uint32_t Timeout);
 
-/** DMA-based transmit (blocking until complete). */
-SPI_StatusTypeDef SPI_Transmit_DMA(uint8_t* pData, uint16_t Size);
-
-/** Wait until SPI/DMA transfers are complete (returns SPI_TIMEOUT on timeout). */
-SPI_StatusTypeDef SPI_WaitReady(uint32_t Timeout);
-
 /** @} */ /* End of SPI_Data_Operations */
 
 /** @defgroup SPI_Utility_Functions Utility Functions
@@ -185,11 +169,11 @@ const char* SPI_GetStatusString(SPI_StatusTypeDef status);
 /* Exported variables ---------------------------------------------------------*/
 
 /**
- * @brief   SPI handle structure
- * @details Used by HAL functions to manage SPI4 operations
+ * @brief   SPI5 handle structure
+ * @details Used by HAL functions to manage SPI5 operations
  *          typically used for display or external sensor communication
  */
-extern SPI_HandleTypeDef hspi4;
+extern SPI_HandleTypeDef hspi5;
 
 #ifdef __cplusplus
 }

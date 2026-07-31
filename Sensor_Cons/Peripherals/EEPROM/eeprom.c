@@ -9,7 +9,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "eeprom.h"
-#include "i2c.h"
+#include "../I2C/i2c.h"
 #include <string.h>
 #include "log.h"
 

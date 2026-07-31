@@ -44,9 +44,6 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 
-/* DMA handle for SPI4 TX (used for LCD transfers) */
-DMA_HandleTypeDef hdma_spi4_tx; /* made non-static so ISR can reference it */
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -476,55 +473,32 @@ void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef* hltdc)
 void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(hspi->Instance==SPI4)
+  if(hspi->Instance==SPI5)
   {
-    /* USER CODE BEGIN SPI4_MspInit 0 */
+    /* USER CODE BEGIN SPI5_MspInit 0 */
 
-    /* USER CODE END SPI4_MspInit 0 */
+    /* USER CODE END SPI5_MspInit 0 */
     /* Peripheral clock enable */
-    __HAL_RCC_SPI4_CLK_ENABLE();
+    __HAL_RCC_SPI5_CLK_ENABLE();
 
-    __HAL_RCC_GPIOE_CLK_ENABLE();
-    /**SPI4 GPIO Configuration
-    PE2     ------> SPI4_SCK
-    PE5     ------> SPI4_MISO
-    PE6     ------> SPI4_MOSI
+    __HAL_RCC_GPIOF_CLK_ENABLE();
+    /**SPI5 GPIO Configuration (matching ST BSP stm32f429i_discovery.c)
+    PF7     ------> SPI5_SCK
+    PF8     ------> SPI5_MISO
+    PF9     ------> SPI5_MOSI
     */
-    GPIO_InitStruct.Pin = SPI4_SCK_Pin|SPI4_MISO_Pin|SPI4_MOSI_Pin;
+    GPIO_InitStruct.Pin = SPI5_SCK_Pin|SPI5_MISO_Pin|SPI5_MOSI_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH; /* needed for ~40 MHz SCK */
-    GPIO_InitStruct.Alternate = GPIO_AF5_SPI4;
-    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN;        /* ST BSP uses PULLDOWN for SPI5 LCD/Gyro */
+    GPIO_InitStruct.Speed =                                                                                                     GPIO_SPEED_FREQ_MEDIUM;  /* ST BSP uses MEDIUM speed */
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI5;
+    HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-    /* USER CODE BEGIN SPI4_MspInit 1 */
+    /* SPI5 CS pin (PC1) is configured by GPIO_Init() in the GPIO peripheral */
 
-    /* Configure DMA for SPI4 TX */
-    __HAL_RCC_DMA2_CLK_ENABLE();
-    hdma_spi4_tx.Instance = DMA2_Stream1;
-    hdma_spi4_tx.Init.Channel = DMA_CHANNEL_4;
-    hdma_spi4_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
-    hdma_spi4_tx.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_spi4_tx.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_spi4_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-    hdma_spi4_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    hdma_spi4_tx.Init.Mode = DMA_NORMAL;
-    hdma_spi4_tx.Init.Priority = DMA_PRIORITY_HIGH;
-    hdma_spi4_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-    if (HAL_DMA_Init(&hdma_spi4_tx) != HAL_OK)
-    {
-        /* Initialization Error */
-        Error_Handler();
-    }
+    /* USER CODE BEGIN SPI5_MspInit 1 */
 
-    /* Link DMA handle to SPI handle */
-    __HAL_LINKDMA(hspi, hdmatx, hdma_spi4_tx);
-
-    /* Configure NVIC for DMA stream */
-    HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
-
-    /* USER CODE END SPI4_MspInit 1 */
+    /* USER CODE END SPI5_MspInit 1 */
 
   }
 
@@ -538,24 +512,26 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
   */
 void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
 {
-  if(hspi->Instance==SPI4)
+  if(hspi->Instance==SPI5)
   {
-    /* USER CODE BEGIN SPI4_MspDeInit 0 */
+    /* USER CODE BEGIN SPI5_MspDeInit 0 */
 
-    /* USER CODE END SPI4_MspDeInit 0 */
+    /* USER CODE END SPI5_MspDeInit 0 */
     /* Peripheral clock disable */
-    __HAL_RCC_SPI4_CLK_DISABLE();
+    __HAL_RCC_SPI5_CLK_DISABLE();
 
-    /**SPI4 GPIO Configuration
-    PE2     ------> SPI4_SCK
-    PE5     ------> SPI4_MISO
-    PE6     ------> SPI4_MOSI
+    /**SPI5 GPIO Configuration
+    PF7     ------> SPI5_SCK
+    PF8     ------> SPI5_MISO
+    PF9     ------> SPI5_MOSI
     */
-    HAL_GPIO_DeInit(GPIOE, SPI4_SCK_Pin|SPI4_MISO_Pin|SPI4_MOSI_Pin);
+    HAL_GPIO_DeInit(GPIOF, SPI5_SCK_Pin|SPI5_MISO_Pin|SPI5_MOSI_Pin);
 
-    /* USER CODE BEGIN SPI4_MspDeInit 1 */
+    /* SPI5 CS pin (PC1) is deinitialized by GPIO_DeInit() in the GPIO peripheral */
 
-    /* USER CODE END SPI4_MspDeInit 1 */
+    /* USER CODE BEGIN SPI5_MspDeInit 1 */
+
+    /* USER CODE END SPI5_MspDeInit 1 */
   }
 
 }

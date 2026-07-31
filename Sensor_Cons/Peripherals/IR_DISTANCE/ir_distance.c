@@ -11,7 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "ir_distance.h"
-#include "log.h"
+#include "../LOG/log.h"
 #include "adc.h"
 #include "stm32f4xx_hal.h"
 #include <stdlib.h>

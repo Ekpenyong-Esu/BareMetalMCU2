@@ -11,7 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "ultrasonic.h"
-#include "tim.h"
+#include "../TIM/tim.h"
 #include "log.h"
 #include "gpio.h"
 #include "stm32f4xx_hal.h"

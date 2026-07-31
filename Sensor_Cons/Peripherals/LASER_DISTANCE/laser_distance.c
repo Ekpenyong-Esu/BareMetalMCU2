@@ -11,7 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "laser_distance.h"
-#include "log.h"
+#include "../LOG/log.h"
 #include "i2c.h"
 #include "stm32f4xx_hal.h"
 #include <stdlib.h>

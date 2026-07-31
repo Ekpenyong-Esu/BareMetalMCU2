@@ -82,29 +82,14 @@ typedef struct {
 /**
  * @brief ILI9488 Handle structure
  */
-/** Pixel format constants */
-#define ILI9488_PIXEL_FMT_RGB565   0x55  /* 16-bit RGB565 */
-#define ILI9488_PIXEL_FMT_RGB666   0x66  /* 18-bit RGB666 (3 bytes/pixel) */
-
 typedef struct {
     ILI9488_Config_t config;        /**< Display configuration */
     uint16_t currentX;              /**< Current X position */
     uint16_t currentY;              /**< Current Y position */
-    uint16_t width;                 /**< Current display width (adjusted for orientation) */
-    uint16_t height;                /**< Current display height (adjusted for orientation) */
-    uint16_t base_width;            /**< Base width in portrait mode */
-    uint16_t base_height;           /**< Base height in portrait mode */
-    uint8_t pixel_format;           /**< Current pixel format (0x55=RGB565,0x66=RGB666) */
+    uint16_t width;                 /**< Display width */
+    uint16_t height;                /**< Display height */
     bool initialized;               /**< Initialization status */
 } ILI9488_Handle_t;
-
-/**
- * @brief   Board support hooks (weak by default)
- * @details Override these in a board-specific file (e.g., ili9488_board.c)
- *          to configure GPIO clocks and control pins.
- */
-void ILI9488_MspInit(void);
-void ILI9488_MspDeInit(void);
 
 /* Exported functions -------------------------------------------------------*/
 
@@ -122,15 +107,12 @@ void ILI9488_MspDeInit(void);
  * @param   dc_pin Data/command pin
  * @param   rst_port Reset port
  * @param   rst_pin Reset pin
- * @param   width Display width in portrait mode (e.g., 320)
- * @param   height Display height in portrait mode (e.g., 480)
  * @retval  ILI9488_StatusTypeDef Operation status
  */
 ILI9488_StatusTypeDef ILI9488_Init(ILI9488_Handle_t *hili,
                                   GPIO_TypeDef *cs_port, uint16_t cs_pin,
                                   GPIO_TypeDef *dc_port, uint16_t dc_pin,
-                                  GPIO_TypeDef *rst_port, uint16_t rst_pin,
-                                  uint16_t width, uint16_t height);
+                                  GPIO_TypeDef *rst_port, uint16_t rst_pin);
 
 /**
  * @brief   Deinitialize ILI9488 TFT display
@@ -193,17 +175,6 @@ ILI9488_StatusTypeDef ILI9488_Clear(ILI9488_Handle_t *hili, uint16_t color);
  * @retval  ILI9488_StatusTypeDef Operation status
  */
 ILI9488_StatusTypeDef ILI9488_UpdateScreen(ILI9488_Handle_t *hili, uint16_t *buffer, uint32_t size);
-ILI9488_StatusTypeDef ILI9488_WritePixels(ILI9488_Handle_t *hili,
-                                         uint16_t x0, uint16_t y0,
-                                         uint16_t x1, uint16_t y1,
-                                         const uint16_t *data,
-                                         uint32_t size);
-
-/* Read device identification (returns first ID byte) */
-ILI9488_StatusTypeDef ILI9488_ReadID(ILI9488_Handle_t *hili, uint8_t *id_buf, uint32_t len);
-
-/* Set pixel format manually */
-ILI9488_StatusTypeDef ILI9488_SetPixelFormat(ILI9488_Handle_t *hili, uint8_t pixel_fmt);
 
 /** @} */
 

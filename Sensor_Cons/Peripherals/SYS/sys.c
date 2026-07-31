@@ -13,6 +13,27 @@
 #include "sys.h"
 #include "log.h"
 
+/* Private variables ---------------------------------------------------------*/
+static uint32_t s_cyclesPerMicrosecond = 1U;
+
+/* Private functions ---------------------------------------------------------*/
+
+/**
+  * @brief  Start the DWT cycle counter used as microsecond time base
+  */
+static void SYS_MicrosInit(void)
+{
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0U;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+  s_cyclesPerMicrosecond = SystemCoreClock / 1000000U;
+  if (s_cyclesPerMicrosecond == 0U)
+  {
+    s_cyclesPerMicrosecond = 1U;
+  }
+}
+
 /**
   * @brief  System Initialization Function
   * @details Performs fundamental system initialization by:
@@ -35,16 +56,19 @@ void SYS_Init(void)
   /* Configure the system clock */
   SystemClock_Config();
 
-  /* Ensure DWT cycle counter is enabled so microsecond timing works
-   * even when no debugger is attached (used by drivers that rely on
-   * DWT->CYCCNT for short delays / timestamps). */
-  if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk)) {
-    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-  }
-  DWT->CYCCNT = 0;
-  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  /* Microsecond time base (needs the final core clock) */
+  SYS_MicrosInit();
 
   log_debug("SYS: System initialized successfully");
+}
+
+/**
+  * @brief  Free-running microsecond counter
+  * @retval Elapsed microseconds since SYS_Init()
+  */
+uint32_t SYS_GetMicros(void)
+{
+  return DWT->CYCCNT / s_cyclesPerMicrosecond;
 }
 
 /**

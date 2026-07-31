@@ -13,7 +13,7 @@ extern "C" {
 #include "stm32f4xx_hal.h"
 #include "uart_ring_buffer.h"
 
-/* Global transfer completion flags - defined in uart.c */
+/* Global completion flags - declared in uart_example.c */
 extern volatile uint8_t txComplete;
 extern volatile uint8_t uartExampleRxComplete;
 

@@ -1,12 +1,11 @@
 /**
   ******************************************************************************
   * @file    xpt2046.h
-  * @brief   XPT2046 Resistive Touchscreen driver interface for STM32F429 Discovery Board
+  * @brief   XPT2046 Resistive Touchscreen Controller Driver for STM32F429I-DISC1
   * @details This file contains function prototypes and definitions for
-  *          the XPT2046 resistive touchscreen controller using SPI interface.
-  *          Based on touchscreen.h pattern for STMPE811 but adapted for XPT2046.
+  *          XPT2046 resistive touchscreen controller using SPI interface.
   * @version 1.0
-  * @date    2025-02-11
+  * @date    2025-01-19
   ******************************************************************************
   */
 
@@ -24,61 +23,21 @@ extern "C" {
 #include <stdbool.h>
 
 /* Exported constants --------------------------------------------------------*/
-#define XPT2046_TIMEOUT                 1000U
-#define XPT2046_MAX_TOUCHES             1       /* Single touch support */
 
-/* XPT2046 Constants */
-#define XPT2046_MAX_X                   4095    /* 12-bit ADC resolution */
-#define XPT2046_MAX_Y                   4095    /* 12-bit ADC resolution */
-#define XPT2046_MIN_PRESSURE            5      /* Minimum pressure threshold */
-
-/* Display mapping constants - adjust to your display (Native resolution) */
-#define XPT2046_DISPLAY_WIDTH           320     /* Native Width (Portrait) */
-#define XPT2046_DISPLAY_HEIGHT          480     /* Native Height (Portrait) */
-
-/* XPT2046 Command Definitions (12-bit ADC, differential reference) */
-#define XPT2046_CMD_START               0x80    /* Start bit */
-#define XPT2046_CMD_12BIT               0x00    /* 12-bit conversion */
-#define XPT2046_CMD_8BIT                0x08    /* 8-bit conversion */
-#define XPT2046_CMD_DIFF                0x00    /* Differential reference */
-#define XPT2046_CMD_SINGLE              0x04    /* Single-ended reference */
-#define XPT2046_CMD_POWERDOWN_DISABLE   0x00    /* Power down between conversions */
-#define XPT2046_CMD_POWERDOWN_REF_OFF   0x01    /* Ref off, ADC on */
-#define XPT2046_CMD_POWERDOWN_REF_ON    0x02    /* Ref on, ADC off */
-#define XPT2046_CMD_POWERDOWN_ALWAYS_ON 0x03    /* Always powered */
-
-/* Channel select commands */
-#define XPT2046_CHANNEL_X               0x50    /* X position (Y+ to GND) */
-#define XPT2046_CHANNEL_Y               0x10    /* Y position (X+ to GND) */
-#define XPT2046_CHANNEL_Z1              0x30    /* Z1 pressure */
-#define XPT2046_CHANNEL_Z2              0x40    /* Z2 pressure */
-#define XPT2046_CHANNEL_TEMP0           0x00    /* Temperature 0 */
-#define XPT2046_CHANNEL_TEMP1           0x70    /* Temperature 1 */
-#define XPT2046_CHANNEL_VBAT            0x20    /* Battery voltage */
-#define XPT2046_CHANNEL_AUX             0x60    /* Auxiliary input */
-
-/* Complete command bytes for common operations */
-#define XPT2046_CMD_READ_X      (XPT2046_CMD_START | XPT2046_CHANNEL_X | XPT2046_CMD_12BIT)
-#define XPT2046_CMD_READ_Y      (XPT2046_CMD_START | XPT2046_CHANNEL_Y | XPT2046_CMD_12BIT)
-#define XPT2046_CMD_READ_Z1     (XPT2046_CMD_START | XPT2046_CHANNEL_Z1 | XPT2046_CMD_12BIT)
-#define XPT2046_CMD_READ_Z2     (XPT2046_CMD_START | XPT2046_CHANNEL_Z2 | XPT2046_CMD_12BIT)
-
-/* Calibration and filtering */
-#define XPT2046_SAMPLES                 8       /* Number of samples for averaging */
-#define XPT2046_DEBOUNCE_COUNT          3       /* Debounce count for stable reading */
-#define XPT2046_SMOOTHING_THRESHOLD     10      /* Coordinate smoothing threshold */
-#define XPT2046_GESTURE_THRESHOLD       20      /* Minimum movement for gesture */
-#define XPT2046_LONG_PRESS_TIME         1000    /* Minimum time for long press (ms) */
-
-/* Default calibration values (raw touch ranges)
- * Updated to measured corner values (user-provided) for portrait orientation.
- * Left/top raw values ~511..559, right/top raw values ~3136..3292,
- * vertical raw min/max observed ~479..3784.
+/** @defgroup XPT2046_Display_Specifications Specifications
+ * @{
  */
-#define XPT2046_RAW_X_MIN               200     /* Measured minimum X (left) */
-#define XPT2046_RAW_X_MAX               3900   /* Measured maximum X (right) */
-#define XPT2046_RAW_Y_MIN               200     /* Measured minimum Y (bottom) */
-#define XPT2046_RAW_Y_MAX               3900    /* Measured maximum Y (top) */
+#define XPT2046_MAX_X                  4095    /**< Maximum X coordinate */
+#define XPT2046_MAX_Y                  4095    /**< Maximum Y coordinate */
+#define XPT2046_MIN_PRESSURE           10      /**< Minimum pressure threshold */
+#define XPT2046_MAX_PRESSURE           4095    /**< Maximum pressure value */
+
+/* Touch states */
+#define XPT2046_STATE_RELEASED         0       /**< Touch released */
+#define XPT2046_STATE_PRESSED          1       /**< Touch pressed */
+#define XPT2046_STATE_HELD             2       /**< Touch held */
+
+/** @} */
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -86,289 +45,172 @@ extern "C" {
  * @brief XPT2046 Status enumeration
  */
 typedef enum {
-    XPT2046_OK = 0,                     /**< Operation completed successfully */
-    XPT2046_ERROR,                      /**< General error occurred */
-    XPT2046_BUSY,                       /**< Touch controller is busy */
-    XPT2046_TIMEOUT_ERROR,              /**< Operation timed out */
-    XPT2046_INVALID_PARAM,              /**< Invalid parameter provided */
-    XPT2046_NOT_INITIALIZED,            /**< Device not initialized */
-    XPT2046_COMMUNICATION_ERROR,        /**< SPI communication error */
-    XPT2046_NO_TOUCH                    /**< No touch detected */
+    XPT2046_OK = 0,                 /**< Operation completed successfully */
+    XPT2046_ERROR,                  /**< General error occurred */
+    XPT2046_BUSY,                   /**< Controller is busy */
+    XPT2046_TIMEOUT,                /**< Operation timed out */
+    XPT2046_INVALID_PARAM,          /**< Invalid parameter provided */
+    XPT2046_NOT_INITIALIZED,        /**< Driver not initialized */
+    XPT2046_NO_TOUCH                /**< No touch detected */
 } XPT2046_StatusTypeDef;
 
 /**
- * @brief Touch state enumeration
- */
-typedef enum {
-    XPT2046_TOUCH_RELEASED = 0,         /**< No touch detected */
-    XPT2046_TOUCH_PRESSED,              /**< Touch detected */
-    XPT2046_TOUCH_MOVING                /**< Touch moving */
-} XPT2046_TouchStateTypeDef;
-
-/**
- * @brief Touch gesture enumeration
- */
-typedef enum {
-    XPT2046_GESTURE_NONE = 0,           /**< No gesture */
-    XPT2046_GESTURE_TAP,                /**< Single tap */
-    XPT2046_GESTURE_DOUBLE_TAP,         /**< Double tap */
-    XPT2046_GESTURE_LONG_PRESS,         /**< Long press */
-    XPT2046_GESTURE_SWIPE_UP,           /**< Swipe up */
-    XPT2046_GESTURE_SWIPE_DOWN,         /**< Swipe down */
-    XPT2046_GESTURE_SWIPE_LEFT,         /**< Swipe left */
-    XPT2046_GESTURE_SWIPE_RIGHT         /**< Swipe right */
-} XPT2046_GestureTypeDef;
-
-/**
- * @brief Touch point structure
+ * @brief XPT2046 Touch point structure
  */
 typedef struct {
-    uint16_t X;                         /**< X coordinate (display space) */
-    uint16_t Y;                         /**< Y coordinate (display space) */
-    uint16_t Z;                         /**< Pressure (Z coordinate) */
-    uint16_t RawX;                      /**< Raw X coordinate (ADC value) */
-    uint16_t RawY;                      /**< Raw Y coordinate (ADC value) */
-    XPT2046_TouchStateTypeDef State;    /**< Touch state */
-    uint32_t Timestamp;                 /**< Touch timestamp */
-} XPT2046_TouchPointTypeDef;
+    uint16_t x;                     /**< X coordinate */
+    uint16_t y;                     /**< Y coordinate */
+    uint16_t pressure;              /**< Touch pressure */
+    uint8_t state;                  /**< Touch state */
+} XPT2046_TouchPoint_t;
 
 /**
- * @brief Touch data structure
+ * @brief XPT2046 Configuration structure
  */
 typedef struct {
-    uint8_t TouchCount;                 /**< Number of active touches */
-    XPT2046_TouchPointTypeDef Points[XPT2046_MAX_TOUCHES]; /**< Touch points */
-    XPT2046_GestureTypeDef Gesture;     /**< Detected gesture */
-    uint32_t GestureTimestamp;          /**< Gesture timestamp */
-} XPT2046_TouchDataTypeDef;
-
-/**
- * @brief Calibration data structure
- */
-typedef struct {
-    uint16_t MinX;                      /**< Minimum raw X value */
-    uint16_t MaxX;                      /**< Maximum raw X value */
-    uint16_t MinY;                      /**< Minimum raw Y value */
-    uint16_t MaxY;                      /**< Maximum raw Y value */
-    float ScaleX;                       /**< X scaling factor */
-    float ScaleY;                       /**< Y scaling factor */
-    int16_t OffsetX;                    /**< X offset */
-    int16_t OffsetY;                    /**< Y offset */
-    bool SwapXY;                        /**< Swap X and Y coordinates */
-    bool FlipX;                         /**< Flip X coordinate */
-    bool FlipY;                         /**< Flip Y coordinate */
-    bool IsCalibrated;                  /**< Calibration status */
-} XPT2046_CalibrationTypeDef;
-
-/**
- * @brief XPT2046 configuration structure
- */
-typedef struct {
-    uint8_t Samples;                    /**< Number of samples for averaging */
-    uint16_t PressureThreshold;         /**< Pressure threshold */
-    bool InterruptEnable;               /**< Interrupt enable */
-    uint8_t DebounceCount;              /**< Debounce count */
-    bool Use12Bit;                      /**< Use 12-bit mode (vs 8-bit) */
-} XPT2046_ConfigTypeDef;
+    GPIO_TypeDef *cs_port;          /**< Chip select port */
+    uint16_t cs_pin;                /**< Chip select pin */
+    GPIO_TypeDef *irq_port;         /**< Interrupt port */
+    uint16_t irq_pin;               /**< Interrupt pin */
+    uint16_t width;                 /**< Display width for coordinate mapping */
+    uint16_t height;                /**< Display height for coordinate mapping */
+    bool flip_x;                    /**< Flip X coordinates */
+    bool flip_y;                    /**< Flip Y coordinates */
+    uint16_t calibration[7];        /**< Calibration matrix (6 coefficients + offset) */
+} XPT2046_Config_t;
 
 /**
  * @brief XPT2046 Handle structure
  */
 typedef struct {
-    SPI_HandleTypeDef *hspi;            /**< SPI handle */
-    GPIO_TypeDef *CS_Port;              /**< Chip Select GPIO port */
-    uint16_t CS_Pin;                    /**< Chip Select GPIO pin */
-    GPIO_TypeDef *IRQ_Port;             /**< Interrupt GPIO port */
-    uint16_t IRQ_Pin;                   /**< Interrupt GPIO pin */
-    XPT2046_ConfigTypeDef Config;       /**< Configuration */
-    XPT2046_CalibrationTypeDef Calibration; /**< Calibration data */
-    XPT2046_TouchDataTypeDef TouchData; /**< Current touch data */
-    XPT2046_TouchDataTypeDef PrevTouchData; /**< Previous touch data */
-    bool IsInitialized;                 /**< Initialization status */
-    bool InterruptMode;                 /**< Interrupt mode status (driver-managed) */
-    uint32_t LastTouchTime;             /**< Last touch timestamp */
-} XPT2046_HandleTypeDef;
+    XPT2046_Config_t config;        /**< Configuration */
+    XPT2046_TouchPoint_t touch;     /**< Current touch point */
+    bool initialized;               /**< Initialization status */
+    uint32_t last_touch_time;       /**< Last touch timestamp */
+} XPT2046_Handle_t;
 
-/* Exported function prototypes ---------------------------------------------*/
+/* Exported functions -------------------------------------------------------*/
 
-/* Initialization and configuration functions */
+/** @defgroup XPT2046_Init Initialization and Configuration
+ * @{
+ */
 
 /**
  * @brief   Initialize XPT2046 touchscreen controller
- * @details Configures SPI and GPIO pins for the touchscreen. If the SPI
- *          peripheral is shared with a faster device (for example ILI9488),
- *          the driver will temporarily lower the SPI baud-rate prescaler to
- *          a safe value during ADC reads and restore it afterwards.
- * @param   hxpt Pointer to XPT2046 handle structure
- * @param   hspi Pointer to SPI handle
- * @param   cs_port Chip select GPIO port
- * @param   cs_pin Chip select GPIO pin
- * @param   irq_port Interrupt GPIO port
- * @param   irq_pin Interrupt GPIO pin
- * @retval  XPT2046_StatusTypeDef Status of the operation
+ * @details Configures SPI and initializes the touchscreen
+ * @param   hxpt Pointer to XPT2046 handle
+ * @param   cs_port Chip select port
+ * @param   cs_pin Chip select pin
+ * @param   irq_port Interrupt port
+ * @param   irq_pin Interrupt pin
+ * @param   width Display width
+ * @param   height Display height
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_Init(XPT2046_HandleTypeDef *hxpt,
-                                  SPI_HandleTypeDef *hspi,
+XPT2046_StatusTypeDef XPT2046_Init(XPT2046_Handle_t *hxpt,
                                   GPIO_TypeDef *cs_port, uint16_t cs_pin,
-                                  GPIO_TypeDef *irq_port, uint16_t irq_pin);
-
-
-void XPT2046_PrintRawCoordinates(XPT2046_HandleTypeDef *hxpt);
-
+                                  GPIO_TypeDef *irq_port, uint16_t irq_pin,
+                                  uint16_t width, uint16_t height);
 
 /**
  * @brief   Deinitialize XPT2046 touchscreen controller
- * @param   hxpt Pointer to XPT2046 handle structure
- * @retval  XPT2046_StatusTypeDef Status of the operation
+ * @details Releases resources and disables the touchscreen
+ * @param   hxpt Pointer to XPT2046 handle
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_DeInit(XPT2046_HandleTypeDef *hxpt);
+XPT2046_StatusTypeDef XPT2046_DeInit(XPT2046_Handle_t *hxpt);
 
 /**
  * @brief   Configure XPT2046 touchscreen parameters
- * @param   hxpt Pointer to XPT2046 handle structure
+ * @details Sets touchscreen configuration options
+ * @param   hxpt Pointer to XPT2046 handle
  * @param   config Pointer to configuration structure
- * @retval  XPT2046_StatusTypeDef Status of the operation
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_Configure(XPT2046_HandleTypeDef *hxpt,
-                                       XPT2046_ConfigTypeDef *config);
+XPT2046_StatusTypeDef XPT2046_Config(XPT2046_Handle_t *hxpt, XPT2046_Config_t *config);
 
 /**
- * @brief   Reset XPT2046 touchscreen controller
- * @param   hxpt Pointer to XPT2046 handle structure
- * @retval  XPT2046_StatusTypeDef Status of the operation
+ * @brief   Set calibration matrix
+ * @param   hxpt Pointer to XPT2046 handle
+ * @param   calibration Calibration matrix (7 values)
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_Reset(XPT2046_HandleTypeDef *hxpt);
+XPT2046_StatusTypeDef XPT2046_SetCalibration(XPT2046_Handle_t *hxpt, uint16_t *calibration);
 
-/* Touch detection and reading functions */
+/** @} */
+
+/** @defgroup XPT2046_Touch Touch Detection and Reading
+ * @{
+ */
 
 /**
- * @brief   Get touch state with coordinates and pressed status
- * @param   hxpt Pointer to XPT2046 handle structure
- * @param   x Pointer to store X coordinate
- * @param   y Pointer to store Y coordinate
- * @param   pressed Pointer to store pressed status
- * @retval  XPT2046_StatusTypeDef Status of the operation
- */
-XPT2046_StatusTypeDef XPT2046_GetTouchState(XPT2046_HandleTypeDef *hxpt,
-                                           uint16_t *x,
-                                           uint16_t *y,
-                                           uint8_t *pressed);
-
-/**
- * @brief   Check if touchscreen is currently touched
- * @param   hxpt Pointer to XPT2046 handle structure
+ * @brief   Check if touchscreen is touched
+ * @param   hxpt Pointer to XPT2046 handle
  * @retval  bool True if touched, false otherwise
  */
-bool XPT2046_IsTouched(XPT2046_HandleTypeDef *hxpt);
-
-/* Calibration functions */
+bool XPT2046_IsTouched(XPT2046_Handle_t *hxpt);
 
 /**
- * @brief   Calibrate touchscreen
- * @param   hxpt Pointer to XPT2046 handle structure
- * @retval  XPT2046_StatusTypeDef Status of the operation
- */
-XPT2046_StatusTypeDef XPT2046_Calibrate(XPT2046_HandleTypeDef *hxpt);
-
-/**
- * @brief   Set calibration data
- * @param   hxpt Pointer to XPT2046 handle structure
- * @param   calibration Pointer to calibration data
- * @retval  XPT2046_StatusTypeDef Status of the operation
- */
-XPT2046_StatusTypeDef XPT2046_SetCalibration(XPT2046_HandleTypeDef *hxpt,
-                                            XPT2046_CalibrationTypeDef *calibration);
-
-/**
- * @brief   Get calibration data
- * @param   hxpt Pointer to XPT2046 handle structure
- * @param   calibration Pointer to store calibration data
- * @retval  XPT2046_StatusTypeDef Status of the operation
- */
-XPT2046_StatusTypeDef XPT2046_GetCalibration(XPT2046_HandleTypeDef *hxpt,
-                                            XPT2046_CalibrationTypeDef *calibration);
-
-/* Gesture recognition is handled internally by the driver when needed. */
-
-/* Interrupt functions (minimal) */
-
-/**
- * @brief   Enable/disable interrupt handling for the touch IRQ
+ * @brief   Read touch coordinates and pressure
  * @param   hxpt Pointer to XPT2046 handle
- * @param   enable Enable/disable flag
- * @retval  XPT2046_StatusTypeDef
+ * @param   touch Pointer to touch point structure
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_EnableInterrupt(XPT2046_HandleTypeDef *hxpt, bool enable);
+XPT2046_StatusTypeDef XPT2046_ReadTouch(XPT2046_Handle_t *hxpt, XPT2046_TouchPoint_t *touch);
 
 /**
- * @brief   Ensure EXTI/NVIC is configured for touch IRQ
+ * @brief   Update touch state
  * @param   hxpt Pointer to XPT2046 handle
- * @retval  XPT2046_StatusTypeDef
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_ITConfig(XPT2046_HandleTypeDef *hxpt);
+XPT2046_StatusTypeDef XPT2046_Update(XPT2046_Handle_t *hxpt);
 
 /**
- * @brief   Service pending touch IRQs (call from main loop or LVGL task)
- * @note    ISR only sets a pending flag; call this to perform SPI reads and
- *          update driver's cached touch state.
+ * @brief   Get current touch point
+ * @param   hxpt Pointer to XPT2046 handle
+ * @param   touch Pointer to touch point structure to fill
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-void XPT2046_ServiceIRQ(void);
+XPT2046_StatusTypeDef XPT2046_GetTouch(XPT2046_Handle_t *hxpt, XPT2046_TouchPoint_t *touch);
 
+/** @} */
 
-
-/* Callbacks are not supported in the simplified driver. */
-
-/* Utility functions */
+/** @defgroup XPT2046_Calibration Touchscreen Calibration
+ * @{
+ */
 
 /**
- * @brief   Get pressure value
- * @param   hxpt Pointer to XPT2046 handle structure
- * @param   pressure Pointer to store pressure value
- * @retval  XPT2046_StatusTypeDef Status of the operation
+ * @brief   Start calibration process
+ * @param   hxpt Pointer to XPT2046 handle
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_GetPressure(XPT2046_HandleTypeDef *hxpt,
-                                         uint16_t *pressure);
+XPT2046_StatusTypeDef XPT2046_StartCalibration(XPT2046_Handle_t *hxpt);
 
 /**
- * @brief   Set pressure threshold
- * @param   hxpt Pointer to XPT2046 handle structure
- * @param   threshold Pressure threshold value
- * @retval  XPT2046_StatusTypeDef Status of the operation
+ * @brief   Get calibration point
+ * @param   hxpt Pointer to XPT2046 handle
+ * @param   point_index Calibration point index (0-4)
+ * @param   x_display Expected X coordinate on display
+ * @param   y_display Expected Y coordinate on display
+ * @param   x_touch Pointer to store raw X touch value
+ * @param   y_touch Pointer to store raw Y touch value
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_SetThreshold(XPT2046_HandleTypeDef *hxpt,
-                                          uint16_t threshold);
-
-/* Configuration helpers */
+XPT2046_StatusTypeDef XPT2046_GetCalibrationPoint(XPT2046_Handle_t *hxpt,
+                                                 uint8_t point_index,
+                                                 uint16_t x_display, uint16_t y_display,
+                                                 uint16_t *x_touch, uint16_t *y_touch);
 
 /**
- * @brief   Get default configuration
- * @retval  XPT2046_ConfigTypeDef Default configuration structure
+ * @brief   Compute calibration matrix
+ * @param   hxpt Pointer to XPT2046 handle
+ * @param   points Array of calibration points (5 points, each with display and touch coordinates)
+ * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_ConfigTypeDef XPT2046_GetDefaultConfig(void);
+XPT2046_StatusTypeDef XPT2046_ComputeCalibration(XPT2046_Handle_t *hxpt,
+                                                uint16_t points[5][4]); // [point][x_display, y_display, x_touch, y_touch]
 
-/* Board-specific MSP functions (implemented in xpt2046_board.c) */
-
-/**
- * @brief   Initialize MSP (GPIO pins and clocks)
- * @param   cs_port Chip select port
- * @param   cs_pin Chip select pin
- * @param   irq_port Interrupt port
- * @param   irq_pin Interrupt pin
- */
-void XPT2046_MspInit(GPIO_TypeDef *cs_port, uint16_t cs_pin,
-                    GPIO_TypeDef *irq_port, uint16_t irq_pin);
-
-/**
- * @brief   Deinitialize MSP
- * @param   cs_port Chip select port
- * @param   cs_pin Chip select pin
- * @param   irq_port Interrupt port
- * @param   irq_pin Interrupt pin
- */
-void XPT2046_MspDeInit(GPIO_TypeDef *cs_port, uint16_t cs_pin,
-                      GPIO_TypeDef *irq_port, uint16_t irq_pin);
-
-/* Global touchscreen handle removed (no deferred IRQ handling) */
+/** @} */
 
 #ifdef __cplusplus
 }

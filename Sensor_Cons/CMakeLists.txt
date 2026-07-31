@@ -271,13 +271,15 @@ endif()
 # Add your custom application .c files that aren't in Peripherals/
 # Example: target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/my_app.c)
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user application sources here
-    # Example: ${CMAKE_SOURCE_DIR}/App/my_module.c
+    # Application 1: Blink & Heartbeat
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/blink_heartbeat.c
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/heartbeat.c
 )
 
-
-
-
+# Make application headers available to the build
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat
+)
 
 # ------------------------------------------------------------------------------
 # Compile Definitions (Preprocessor Macros)
@@ -361,16 +363,14 @@ foreach(dir ${PERIPHERAL_DIRS})
 endforeach()
 
 # Step 3: Find all .c source files in peripheral subdirectories
-# CONFIGURE_DEPENDS re-runs the glob when files are added/removed
-file(GLOB_RECURSE PERIPHERALS_SOURCES CONFIGURE_DEPENDS
+file(GLOB_RECURSE PERIPHERALS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/Peripherals/*/*.c"
 )
 
 # Step 4: Add peripheral sources to the executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${PERIPHERALS_SOURCES})
 
-list(LENGTH PERIPHERAL_DIRS PERIPHERAL_DIR_COUNT)
-message(STATUS "Found ${PERIPHERAL_DIR_COUNT} peripheral directories")
+message(STATUS "Found ${CMAKE_MATCH_COUNT} peripheral directories")
 message(STATUS "Added peripheral sources from: Peripherals/*/")
 
 # ------------------------------------------------------------------------------

@@ -5,6 +5,7 @@
 
 #include "uart_interrupt.h"
 #include "uart_config.h"
+#include "log.h"
 
 /* External reference to global UART handle */
 extern UART_Handle_t uartHandle;
@@ -12,7 +13,7 @@ extern UART_Handle_t uartHandle;
 UART_Status_t UART_IT_Init(UART_Handle_t* handle)
 {
     if (handle == NULL || handle->huart == NULL) {
-        DEBUG_PRINT("UART handle or huart is NULL");
+        log_debug("UART handle or huart is NULL");
         return UART_ERROR;
     }
 
@@ -31,14 +32,14 @@ UART_Status_t UART_IT_Init(UART_Handle_t* handle)
 UART_Status_t UART_IT_Transmit(UART_Handle_t* handle, const uint8_t* data, uint16_t size, uint32_t timeout)
 {
     if (handle == NULL || handle->huart == NULL || data == NULL || size == 0) {
-        DEBUG_PRINT("UART handle, huart, data is NULL or size is 0");
+        log_debug("UART handle, huart, data is NULL or size is 0");
         return UART_ERROR;
     }
 
     txComplete = 0;
     HAL_StatusTypeDef status = HAL_UART_Transmit_IT(handle->huart, (uint8_t*)data, size);
     if (status != HAL_OK) {
-        DEBUG_PRINT("UART Transmit failed: %d", status);
+        log_debug("UART Transmit failed: %d", status);
         return UART_ERROR;
     }
 
@@ -46,7 +47,7 @@ UART_Status_t UART_IT_Transmit(UART_Handle_t* handle, const uint8_t* data, uint1
         uint32_t tickstart = HAL_GetTick();
         while (!txComplete) {
             if ((HAL_GetTick() - tickstart) > timeout) {
-                DEBUG_PRINT("UART Transmit timeout");
+                log_debug("UART Transmit timeout");
                 return UART_TIMEOUT_ERROR;
             }
         }
@@ -58,7 +59,7 @@ UART_Status_t UART_IT_Transmit(UART_Handle_t* handle, const uint8_t* data, uint1
 UART_Status_t UART_IT_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size, uint32_t timeout)
 {
     if (handle == NULL || handle->huart == NULL || data == NULL || size == 0) {
-        DEBUG_PRINT("UART handle, huart, data is NULL or size is 0");
+        log_debug("UART handle, huart, data is NULL or size is 0");
         return UART_ERROR;
     }
 
@@ -66,11 +67,11 @@ UART_Status_t UART_IT_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t siz
     /* Use HAL_UARTEx_ReceiveToIdle_IT for better command reception with IDLE detection */
     HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_IT(handle->huart, data, size);
     if (status != HAL_OK) {
-        DEBUG_PRINT("UART ReceiveToIdle failed: %d", status);
+        log_debug("UART ReceiveToIdle failed: %d", status);
         /* Fall back to regular interrupt reception if ReceiveToIdle fails */
         status = HAL_UART_Receive_IT(handle->huart, data, size);
         if (status != HAL_OK) {
-            DEBUG_PRINT("Regular UART Receive_IT also failed: %d", status);
+            log_debug("Regular UART Receive_IT also failed: %d", status);
             return UART_ERROR;
         }
     }
@@ -80,7 +81,7 @@ UART_Status_t UART_IT_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t siz
         uint32_t tickstart = HAL_GetTick();
         while (!uartExampleRxComplete) {
             if ((HAL_GetTick() - tickstart) > timeout) {
-                DEBUG_PRINT("UART Receive timeout");
+                log_debug("UART Receive timeout");
                 return UART_TIMEOUT_ERROR;
             }
         }
@@ -89,10 +90,13 @@ UART_Status_t UART_IT_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t siz
     return UART_OK;
 }
 
-/* UART interrupt handlers */
-void USART1_IRQHandler(void)
-{
-    if (uartHandle.huart && uartHandle.huart->Instance == USART1) {
-        HAL_UART_IRQHandler(uartHandle.huart);
-    }
-}
+/*
+ * UART interrupt handler belongs in Core/Src/stm32f4xx_it.c, not here.
+ * When you enable interrupt-driven UART, copy this stub to stm32f4xx_it.c:
+ *
+ *   void USART1_IRQHandler(void) {
+ *       if (uartHandle.huart && uartHandle.huart->Instance == USART1) {
+ *           HAL_UART_IRQHandler(uartHandle.huart);
+ *       }
+ *   }
+ */

@@ -8,7 +8,7 @@
  */
 
 #include "dma.h"
-#include "log.h"
+#include "../LOG/log.h"
 
 /* Static function prototypes */
 static void DMA_TransferCompleteCallback_Wrapper(DMA_HandleTypeDef *hdma);

@@ -39,6 +39,16 @@ void SYS_Init(void);
 void SystemClock_Config(void);
 
 /**
+ * @brief   Free-running microsecond counter
+ * @details Derived from the Cortex-M4 cycle counter (DWT). Intended for short
+ *          interval measurements: the value wraps roughly every 25 seconds at
+ *          168 MHz, so always compare with unsigned subtraction.
+ * @param   None
+ * @retval  Elapsed microseconds since SYS_Init()
+ */
+uint32_t SYS_GetMicros(void);
+
+/**
  * @brief   Error handler function
  * @details Called when a critical error occurs during peripheral initialization
  *          or operation. Implements failsafe behavior.

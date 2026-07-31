@@ -990,9 +990,13 @@ static uint32_t ADC_SamplingTimeToHAL(uint32_t sampling_time)
     }
 }
 
-void ADC_IRQHandler(void)
-{
-    HAL_ADC_IRQHandler(&hadc1.hal_handle);
-}
+/*
+ * ADC interrupt handler belongs in Core/Src/stm32f4xx_it.c, not here.
+ * When you enable ADC interrupts, copy this stub to stm32f4xx_it.c:
+ *
+ *   void ADC_IRQHandler(void) {
+ *       HAL_ADC_IRQHandler(&hadc1.hal_handle);
+ *   }
+ */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
