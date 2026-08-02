@@ -1,3 +1,11 @@
+/**
+ * @file    log.c
+ * @brief   Lightweight logging driver (printf and/or UART backends)
+ * @details Formats log lines with level + optional source location and emits
+ *          them via the selected backend (eyalroz printf or UART transmit).
+ * @version 1.0
+ */
+
 #include "log.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -7,41 +15,45 @@
 // UART handle for logging output
 static UART_HandleTypeDef *log_uart = NULL;
 
-// Buffer for log messages (used for UART)
-#define LOG_BUFFER_SIZE 256
+#if LOG_USE_UART
+// Scratch buffer used to assemble the full log line before UART transmission
 static char log_buffer[LOG_BUFFER_SIZE];
+#endif
 
 // Initialize logging with UART handle
 void log_init(UART_HandleTypeDef *huart) {
     log_uart = huart;
 }
 
+// Return the display form of a source file path (basename unless LOG_SHOW_FULLPATH)
+static const char *log_display_name(const char *file) {
+#if LOG_SHOW_FULLPATH
+    return file;
+#else
+    const char *base = strrchr(file, '/');
+#ifdef _WIN32
+    if (!base) base = strrchr(file, '\\');
+#endif
+    return base ? base + 1 : file;
+#endif
+}
+
 // Internal function to log messages with optional file/line
 static void log_message_loc(log_level_t level, const char *file, int line, const char *format, va_list args) {
-    const char *level_str;
+    const char *level_str = NULL;
     switch (level) {
-        case LOG_LEVEL_DEBUG: level_str = "[DEBUG] "; break;
-        case LOG_LEVEL_INFO: level_str = "[INFO] "; break;
+        case LOG_LEVEL_DEBUG:   level_str = "[DEBUG] "; break;
+        case LOG_LEVEL_INFO:    level_str = "[INFO] "; break;
         case LOG_LEVEL_WARNING: level_str = "[WARNING] "; break;
-        case LOG_LEVEL_ERROR: level_str = "[ERROR] "; break;
-        default: level_str = "[UNKNOWN] "; break;
+        case LOG_LEVEL_ERROR:   level_str = "[ERROR] "; break;
+        default:                level_str = "[UNKNOWN] "; break;
     }
 
 #if LOG_USE_PRINTF
-    // Use printf for logging
+    // Print the level and optional location, then the message
     printf("%s", level_str);
     if (file) {
-#if LOG_SHOW_FULLPATH
-        const char *file_to_print = file;
-#else
-        const char *file_to_print = file;
-        const char *p = strrchr(file, '/');
-#ifdef _WIN32
-        if (!p) p = strrchr(file, '\\');
-#endif
-        if (p) file_to_print = p + 1;
-#endif
-        printf("(%s:%d) ", file_to_print, line);
+        printf("(%s:%d) ", log_display_name(file), line);
     }
     vprintf(format, args);
     printf("\r\n");
@@ -49,28 +61,27 @@ static void log_message_loc(log_level_t level, const char *file, int line, const
     // Use UART for logging
     if (log_uart == NULL) return;
 
-    // Format header into buffer
-    int off = snprintf(log_buffer, LOG_BUFFER_SIZE, "%s", level_str);
-    if (file && off < LOG_BUFFER_SIZE) {
-#if LOG_SHOW_FULLPATH
-        const char *file_to_print = file;
-#else
-        const char *file_to_print = file;
-        const char *p = strrchr(file, '/');
-#ifdef _WIN32
-        if (!p) p = strrchr(file, '\\');
-#endif
-        if (p) file_to_print = p + 1;
-#endif
-        int n = snprintf(log_buffer + off, LOG_BUFFER_SIZE - off, "(%s:%d) ", file_to_print, line);
-        if (n > 0) off += n;
+    /* Build the log line in the scratch buffer. snprintf() returns the length
+       the text WOULD have had, so clamp `pos` after every append to keep it
+       in range and prevent a buffer overrun when a field is truncated. */
+    int pos = snprintf(log_buffer, LOG_BUFFER_SIZE, "%s", level_str);
+    if (pos > LOG_BUFFER_SIZE) pos = LOG_BUFFER_SIZE;
+
+    // Optional source location
+    if (file && pos < LOG_BUFFER_SIZE) {
+        int n = snprintf(log_buffer + pos, LOG_BUFFER_SIZE - pos, "(%s:%d) ", log_display_name(file), line);
+        if (n > 0) {
+            pos += n;
+            if (pos > LOG_BUFFER_SIZE) pos = LOG_BUFFER_SIZE;
+        }
     }
 
-    // Format the message
-    vsnprintf(log_buffer + off, LOG_BUFFER_SIZE - off, format, args);
+    // Message body
+    vsnprintf(log_buffer + pos, LOG_BUFFER_SIZE - pos, format, args);
 
-    // Add newline
-    strncat(log_buffer, "\r\n", LOG_BUFFER_SIZE - strlen(log_buffer) - 1);
+    // Terminating newline (bounded append at the end of the assembled line)
+    size_t len = strlen(log_buffer);
+    snprintf(log_buffer + len, LOG_BUFFER_SIZE - len, "\r\n");
 
     // Transmit via UART
     HAL_UART_Transmit(log_uart, (uint8_t *)log_buffer, strlen(log_buffer), HAL_MAX_DELAY);

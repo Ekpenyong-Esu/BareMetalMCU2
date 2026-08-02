@@ -33,6 +33,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "dac.h"                    /**< DAC driver header */
 #include "stm32f4xx_hal_dac.h"      /**< STM32 HAL DAC header */
+#include "gpio.h"                   /**< GPIO driver (port clock ownership) */
 #include "log.h"             /**< Logging utilities */
 #include <string.h>                 /**< For memset function */
 
@@ -60,10 +61,13 @@ HAL_StatusTypeDef DAC_Init(DAC_HandleStruct* hdac, const DAC_ConfigTypeDef* conf
 {
     log_debug("DAC: Initializing DAC");
 
-    HAL_StatusTypeDef status = HAL_ERROR;
-
     /* Parameter validation */
     if (!hdac || !config) {
+        return HAL_ERROR;
+    }
+
+    /* HAL_DAC_MspInit only wires PA4 (DAC_OUT1), so channel 2 would get the wrong pin. */
+    if (config->channel != DAC_CHANNEL_1) {
         return HAL_ERROR;
     }
 
@@ -94,11 +98,10 @@ HAL_StatusTypeDef DAC_Init(DAC_HandleStruct* hdac, const DAC_ConfigTypeDef* conf
 
     /* Mark as initialized */
     hdac->initialized = true;
-    status = HAL_OK;
 
     log_debug("DAC: DAC initialized successfully");
 
-    return status;
+    return HAL_OK;
 }
 
 /**
@@ -151,7 +154,7 @@ HAL_StatusTypeDef DAC_DeInit(DAC_HandleStruct* hdac)
 HAL_StatusTypeDef DAC_SetValue(DAC_HandleStruct* hdac, uint32_t channel, uint32_t value)
 {
     /* Parameter and state validation */
-    if (!hdac || !hdac->initialized) {
+    if (!hdac || !hdac->initialized || value > DAC_MAX_VALUE_12BIT) {
         return HAL_ERROR;
     }
 
@@ -302,17 +305,13 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
         /* Enable DAC peripheral clock */
         __HAL_RCC_DAC_CLK_ENABLE();
 
-        /* Enable GPIOA clock for DAC output pin */
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-
         /* Configure PA4 (DAC_OUT1) as analog, no pull-up/pull-down */
+        /* GPIO driver enables the GPIOA port clock */
         GPIO_InitStruct.Pin = GPIO_PIN_4;
         GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+        GPIO_Driver_Pin_Init(GPIOA, &GPIO_InitStruct);
     }
 }
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

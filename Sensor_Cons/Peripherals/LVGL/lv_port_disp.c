@@ -15,7 +15,7 @@
 #include <string.h>
 #include "stm32f4xx_hal.h"
 #include "cachel1_armv7.h"
-#include "../LOG/log.h"
+#include "log.h"
 
 /*-----------------------------------------------------------------------------
  * Display Configuration

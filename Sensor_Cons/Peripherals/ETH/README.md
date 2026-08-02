@@ -49,7 +49,6 @@ ETH_Config_t ethConfig = {
     .macAddr = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
     .speed = ETH_SPEED_100M,
     .duplexMode = ETH_MODE_FULLDUPLEX,
-    .checksumMode = ETH_CHECKSUM_BY_SOFTWARE,
     .mediaInterface = ETH_MEDIA_INTERFACE_RMII
 };
 ```
@@ -60,8 +59,6 @@ ETH_Config_t ethConfig = {
 // Assign buffers
 ethHandle.rxBuffer = rxBuffer;
 ethHandle.txBuffer = txBuffer;
-ethHandle.rxBufferSize = sizeof(rxBuffer);
-ethHandle.txBufferSize = sizeof(txBuffer);
 
 // Initialize
 if (ETH_Init(&ethHandle, &ethConfig) != HAL_OK) {

@@ -112,7 +112,6 @@ void setup(void)
 |----------|-------------|
 | `WWDG_Refresh()` | Refresh counter (must be in window) |
 | `WWDG_RefreshWithCounter(value)` | Refresh with specific counter value |
-| `WWDG_Start()` | Start watchdog (auto-started by Init) |
 
 ### Interrupt Functions
 

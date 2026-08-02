@@ -18,6 +18,13 @@ UART_Status_t UART_DMA_Init(UART_Handle_t* handle)
         return UART_ERROR;
     }
 
+    /* MspInit is what links the DMA streams. Without them HAL_UART_*_DMA would
+       dereference a NULL hdmatx/hdmarx on the first transfer. */
+    if (handle->huart->hdmatx == NULL || handle->huart->hdmarx == NULL) {
+        log_error("UART: DMA mode selected but no DMA stream is linked");
+        return UART_ERROR;
+    }
+
     /* Note: DMA hardware initialization is now handled in HAL_UART_MspInit() */
     /* This function only configures the application-level settings */
 
@@ -77,7 +84,7 @@ UART_Status_t UART_DMA_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t si
     }
 
     /* Reset reception complete flag */
-    uartExampleRxComplete = 0;
+    rxComplete = 0;
 
     /* Use IDLE line detection for more responsive reception */
     HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_DMA(handle->huart, handle->rxBuffer, handle->rxSize);
@@ -97,7 +104,7 @@ UART_Status_t UART_DMA_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t si
     /* If timeout is specified, wait for completion or timeout */
     if (timeout > 0) {
         uint32_t startTick = HAL_GetTick();
-        while (!uartExampleRxComplete) {
+        while (!rxComplete) {
             if ((HAL_GetTick() - startTick) > timeout) {
                 log_debug("DMA UART Receive timeout");
                 return UART_TIMEOUT_ERROR;
@@ -110,17 +117,14 @@ UART_Status_t UART_DMA_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t si
         }
     }
 
-    return UART_OK;
+    /* DMA lands in handle->rxBuffer, so the caller's buffer is only filled by
+       draining the ring buffer. Without this the function reported UART_OK
+       while leaving data untouched. */
+    return UART_RingBuffer_Receive(handle, data, size);
 }
 
 /*
- * DMA interrupt handlers belong in Core/Src/stm32f4xx_it.c, not here.
- * When you enable DMA UART, copy these stubs to stm32f4xx_it.c:
- *
- *   void DMA2_Stream7_IRQHandler(void) {
- *       HAL_DMA_IRQHandler(uartHandle.huart->hdmatx);
- *   }
- *   void DMA2_Stream5_IRQHandler(void) {
- *       HAL_DMA_IRQHandler(uartHandle.huart->hdmarx);
- *   }
+ * DMA interrupt vectors are owned by the interrupt layer, not this driver.
+ * DMA2_Stream7_IRQHandler() (TX) and DMA2_Stream5_IRQHandler() (RX) are
+ * defined in Core/Src/stm32f4xx_it.c and dispatch via HAL_DMA_IRQHandler().
  */

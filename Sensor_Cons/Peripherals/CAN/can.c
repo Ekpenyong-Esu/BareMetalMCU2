@@ -10,12 +10,8 @@
 #include "log.h"
 
 /* Private defines */
-#define CAN_TX_TIMEOUT_DEFAULT       100U
-#define CAN_RX_TIMEOUT_DEFAULT       100U
-#define CAN_INIT_TIMEOUT            1000U
 #define CAN_PRESCALER_250KBPS       18U
 #define CAN_PRESCALER_125KBPS       36U
-#define CAN_ALL_INTERRUPTS_MASK     0xFFFFFFFFU
 #define CAN_ID_HIGH_SHIFT           16U
 
 /* Private variables */
@@ -311,26 +307,33 @@ HAL_StatusTypeDef CAN_SetMode(CAN_OperatingMode mode)
 {
     HAL_StatusTypeDef status = HAL_OK;
 
-    /* Note: Changing CAN mode requires stopping and restarting CAN peripheral */
-    /* This is a simplified implementation for demonstration */
-
-    /* Stop CAN peripheral */
+    /* Changing the mode requires stopping and re-initialising the peripheral */
     status = HAL_CAN_Stop(&hcan);
     if (status != HAL_OK) {
+        /* Still running in the previous mode, so the handle stays valid */
         return status;
     }
 
-    /* Update mode configuration */
+    uint32_t previousMode = hcan.Init.Mode;
     hcan.Init.Mode = mode;
 
     /* Reinitialize with new mode */
     status = HAL_CAN_Init(&hcan);
     if (status != HAL_OK) {
+        /* The peripheral is now stopped and un-initialised; leaving
+           can_status.initialized set would let callers keep transmitting into
+           dead hardware. Restore the mode so a retry does not reuse a value
+           that has already been rejected. */
+        hcan.Init.Mode = previousMode;
+        can_status.initialized = false;
         return status;
     }
 
     /* Restart CAN peripheral */
     status = HAL_CAN_Start(&hcan);
+    if (status != HAL_OK) {
+        can_status.initialized = false;
+    }
 
     return status;
 }

@@ -7,6 +7,7 @@
 
 #include "ili9341.h"
 #include "spi.h"
+#include "gpio.h"
 #include "stm32f4xx_hal.h"
 
 /* Local constants - match ST BSP */
@@ -26,9 +27,7 @@ void ILI9341_MspInit(void)
         Is_LCD_IO_Initialized = 1;
 
         /* Enable clocks */
-        __HAL_RCC_GPIOC_CLK_ENABLE();
-        __HAL_RCC_GPIOD_CLK_ENABLE();
-        __HAL_RCC_SPI5_CLK_ENABLE();
+        __HAL_RCC_SPI5_CLK_ENABLE();  /* GPIO port clocks enabled by GPIO driver */
 
         GPIO_InitTypeDef GPIO_InitStruct = {0};
 
@@ -39,21 +38,21 @@ void ILI9341_MspInit(void)
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;  /* ST BSP uses FAST */
-        HAL_GPIO_Init(ILI9341_WRX_PORT, &GPIO_InitStruct);
+        GPIO_Driver_Pin_Init(ILI9341_WRX_PORT, &GPIO_InitStruct);
 
         /* RDX pin (PD12) - Output Push-Pull (used by ST BSP for read operations) */
         GPIO_InitStruct.Pin = LCD_RDX_PIN;
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(LCD_RDX_PORT, &GPIO_InitStruct);
+        GPIO_Driver_Pin_Init(LCD_RDX_PORT, &GPIO_InitStruct);
 
         /* NCS/CS pin (PC2) - Output Push-Pull */
         GPIO_InitStruct.Pin = ILI9341_CS_PIN;
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(ILI9341_CS_PORT, &GPIO_InitStruct);
+        GPIO_Driver_Pin_Init(ILI9341_CS_PORT, &GPIO_InitStruct);
 
         /* ST BSP does a toggle: Set or Reset the control line */
         HAL_GPIO_WritePin(ILI9341_CS_PORT, ILI9341_CS_PIN, GPIO_PIN_RESET);

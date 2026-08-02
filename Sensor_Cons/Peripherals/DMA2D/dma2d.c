@@ -29,7 +29,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 DMA2D_HandleTypeDef hdma2d;              /**< DMA2D HAL handle */
-static DMA2D_Status dma2d_status = {0};  /**< DMA2D status structure */
+static DMA2D_Status dma2d_status = {false};  /**< DMA2D status structure */
 
 /* Callback function pointers */
 static DMA2D_TransferCompleteCallback transfer_complete_callback = NULL;
@@ -882,26 +882,6 @@ HAL_StatusTypeDef DMA2D_EnableLCDMode(void)
 }
 
 /**
- * @brief Configure DMA2D for optimal SDRAM access
- */
-HAL_StatusTypeDef DMA2D_EnableSDRAMMode(void)
-{
-    log_info("Enabling DMA2D SDRAM mode");
-
-    if (!dma2d_status.initialized) {
-        log_error("DMA2D not initialized");
-        return HAL_ERROR;
-    }
-
-    /* Configure for optimal SDRAM access */
-    // Note: Specific SDRAM optimizations would depend on the memory controller setup
-    // This is a placeholder for SDRAM-specific configurations
-
-    log_info("DMA2D SDRAM mode enabled");
-    return HAL_OK;
-}
-
-/**
  * @brief Perform DMA2D self-test
  */
 HAL_StatusTypeDef DMA2D_SelfTest(void)
@@ -932,41 +912,6 @@ HAL_StatusTypeDef DMA2D_SelfTest(void)
 
     log_info("DMA2D self-test passed");
     return HAL_OK;
-}
-
-/* Version Information -------------------------------------------------------*/
-
-/**
- * @brief Get DMA2D driver version
- */
-const char* DMA2D_GetVersion(void)
-{
-    return "2.0.0";
-}
-
-/**
- * @brief Get DMA2D driver capabilities
- */
-uint32_t DMA2D_GetCapabilities(void)
-{
-    uint32_t capabilities = 0;
-
-    // Basic capabilities
-    capabilities |= (1 << 0); // R2M support
-    capabilities |= (1 << 1); // M2M support
-    capabilities |= (1 << 2); // M2M_PFC support
-    capabilities |= (1 << 3); // M2M_BLEND support
-    capabilities |= (1 << 4); // Interrupt mode support
-    capabilities |= (1 << 5); // Polling mode support
-
-    // Color format support
-    capabilities |= (1 << 8);  // ARGB8888
-    capabilities |= (1 << 9);  // RGB888
-    capabilities |= (1 << 10); // RGB565
-    capabilities |= (1 << 11); // ARGB1555
-    capabilities |= (1 << 12); // ARGB4444
-
-    return capabilities;
 }
 
 /* HAL DMA2D Callbacks ------------------------------------------------------*/

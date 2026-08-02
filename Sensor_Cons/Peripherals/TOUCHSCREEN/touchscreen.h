@@ -213,31 +213,24 @@ typedef struct {
 
 /**
  * @brief Calibration data structure
+ * @details Raw ADC bounds of the panel; TS_Init seeds them with typical values
+ *          and the application overwrites them with corner measurements.
  */
 typedef struct {
-    uint16_t MinX;                      /**< Minimum X value */
-    uint16_t MaxX;                      /**< Maximum X value */
-    uint16_t MinY;                      /**< Minimum Y value */
-    uint16_t MaxY;                      /**< Maximum Y value */
-    float ScaleX;                       /**< X scaling factor */
-    float ScaleY;                       /**< Y scaling factor */
-    int16_t OffsetX;                    /**< X offset */
-    int16_t OffsetY;                    /**< Y offset */
-    bool IsCalibrated;                  /**< Calibration status */
+    uint16_t MinX;                      /**< Raw X at one horizontal edge */
+    uint16_t MaxX;                      /**< Raw X at the opposite horizontal edge */
+    uint16_t MinY;                      /**< Raw Y at one vertical edge */
+    uint16_t MaxY;                      /**< Raw Y at the opposite vertical edge */
+    bool IsCalibrated;                  /**< False while the seeded defaults are in use */
 } TS_CalibrationTypeDef;
 
 /**
  * @brief Touchscreen configuration structure
+ * @note  The STMPE811 sampling, settling and FIFO registers are written from a
+ *        fixed sequence in the driver, so they are not exposed here.
  */
 typedef struct {
-    uint8_t SampleTime;                 /**< ADC sample time */
-    uint8_t AverageControl;             /**< Averaging control */
-    uint8_t TouchDetectDelay;           /**< Touch detection delay */
-    uint8_t PanelDriverSettlingTime;    /**< Panel driver settling time */
-    uint16_t PressureThreshold;         /**< Pressure threshold */
     bool InterruptEnable;               /**< Interrupt enable */
-    bool FIFOEnable;                    /**< FIFO enable */
-    uint8_t FIFOThreshold;              /**< FIFO threshold */
 } TS_ConfigTypeDef;
 
 
@@ -251,9 +244,9 @@ typedef struct {
     TS_TouchDataTypeDef TouchData;      /**< Current touch data */
     TS_TouchDataTypeDef PrevTouchData;  /**< Previous touch data */
     bool IsInitialized;                 /**< Initialization status */
-    bool InterruptMode;                 /**< Interrupt mode status */
     uint32_t LastTouchTime;             /**< Last touch timestamp */
-    uint16_t DeviceID;                  /**< Device ID */
+    uint16_t FilterX;                   /**< Last reported X after smoothing */
+    uint16_t FilterY;                   /**< Last reported Y after smoothing */
     void (*TouchCallback)(void);        /**< Touch detected callback */
     void (*ReleaseCallback)(void);      /**< Touch released callback */
     void (*GestureCallback)(TS_GestureTypeDef gesture); /**< Gesture callback */
@@ -275,8 +268,7 @@ TS_StatusTypeDef TS_GetSingleTouch(TS_HandleTypeDef *hts,
 bool TS_IsTouched(TS_HandleTypeDef *hts);
 uint8_t TS_GetTouchCount(TS_HandleTypeDef *hts);
 
-/* Calibration functions */
-TS_StatusTypeDef TS_Calibrate(TS_HandleTypeDef *hts);
+/* Calibration functions. Collecting the corner touches is the application's job. */
 TS_StatusTypeDef TS_SetCalibration(TS_HandleTypeDef *hts, TS_CalibrationTypeDef *calibration);
 TS_StatusTypeDef TS_GetCalibration(TS_HandleTypeDef *hts, TS_CalibrationTypeDef *calibration);
 /* Interrupt functions */
@@ -301,13 +293,9 @@ void TS_ServiceIRQ(void);
 bool TS_IrqPending(void);
 
 /* Utility functions */
-TS_StatusTypeDef TS_GetDeviceInfo(TS_HandleTypeDef *hts, uint16_t *device_id, uint8_t *version);
-//TS_StatusTypeDef TS_ConvertCoordinates(TS_HandleTypeDef *hts, uint16_t raw_x, uint16_t raw_y,
- //                                     uint16_t *display_x, uint16_t *display_y);
  TS_StatusTypeDef TS_GetTouchState(TS_HandleTypeDef *hts,
                                   uint16_t *x, uint16_t *y,
                                   uint8_t *pressed);
-TS_StatusTypeDef TS_SetThreshold(TS_HandleTypeDef *hts, uint16_t threshold);
 TS_StatusTypeDef TS_GetPressure(TS_HandleTypeDef *hts, uint16_t *pressure);
 
 /* Low-level I/O functions */

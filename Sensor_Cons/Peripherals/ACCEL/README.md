@@ -86,7 +86,6 @@ status = ACCEL_SetOffset(10, -5, 20);  // X, Y, Z offsets
 
 ### Interrupt Configuration
 ```c
-ACCEL_IntConfigTypeDef intConfig = {
     .DataReady = true,     // Interrupt on new data
     .Motion = false,       // Motion detection disabled
     .Freefall = false,     // Freefall detection disabled

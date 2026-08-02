@@ -56,7 +56,7 @@ QSPI_StatusTypeDef QSPI_ReadUniqueID(QSPI_HandleStructTypeDef *hqspi_struct, uin
 ```c
 QSPI_StatusTypeDef QSPI_Read(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, uint8_t *data, uint32_t size);
 QSPI_StatusTypeDef QSPI_FastRead(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, uint8_t *data, uint32_t size);
-QSPI_StatusTypeDef QSPI_QuadRead(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, uint8_t *data, uint32_t size);
+QSPI_StatusTypeDef QSPI_FastRead(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, uint8_t *data, uint32_t size);
 ```
 
 ### Write Operations (Stub Implementations)

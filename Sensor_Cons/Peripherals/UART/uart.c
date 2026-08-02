@@ -9,17 +9,35 @@
 #include "uart_interrupt.h"
 #include "uart_blocking.h"
 #include "sys.h"
+#include "gpio.h"
 #include "log.h"
 #include <string.h>
-
-/** @brief Delay after deinitialization to allow hardware to settle */
-#define UART_DEINIT_DELAY_MS (1000U)
-
-
 
 /* Ensure uartHandle is declared globally */
 extern UART_Handle_t uartHandle;
 
+/* Transfer completion flags. They live here rather than in uart_example.c
+   because the HAL callbacks below are what set them, and the driver must link
+   without the example. */
+volatile uint8_t txComplete = 0;
+volatile uint8_t rxComplete = 0;
+
+/* Re-arms reception for the configured mode; the plain HAL call is the fallback
+   when ReceiveToIdle is refused. */
+static void UART_RestartReceive(UART_HandleTypeDef* huart)
+{
+    if (uartHandle.config.mode == UART_MODE_DMA) {
+        if (HAL_UARTEx_ReceiveToIdle_DMA(huart, uartHandle.rxBuffer, uartHandle.rxSize) != HAL_OK) {
+            log_debug("Failed to restart DMA ReceiveToIdle");
+            HAL_UART_Receive_DMA(huart, uartHandle.rxBuffer, uartHandle.rxSize);
+        }
+    } else if (uartHandle.config.mode == UART_MODE_INTERRUPT) {
+        if (HAL_UARTEx_ReceiveToIdle_IT(huart, uartHandle.rxBuffer, uartHandle.rxSize) != HAL_OK) {
+            log_debug("Failed to restart interrupt ReceiveToIdle");
+            HAL_UART_Receive_IT(huart, uartHandle.rxBuffer, uartHandle.rxSize);
+        }
+    }
+}
 
 UART_Status_t UART_Init(UART_Handle_t* handle, const UART_Config_t* config)
 {
@@ -45,8 +63,6 @@ UART_Status_t UART_Init(UART_Handle_t* handle, const UART_Config_t* config)
     }
 
     memset(handle->huart, 0, sizeof(UART_HandleTypeDef));
-
-    __HAL_RCC_USART1_CLK_ENABLE();
 
     /* Configure UART base settings */
     handle->huart->Instance = config->instance;
@@ -110,20 +126,14 @@ UART_Status_t UART_DeInit(UART_Handle_t* handle)
     /* Deinitialize MSP resources */
     HAL_UART_MspDeInit(handle->huart);
 
-    handle->isInitialized = false;
-
     /* Reset handle state */
     handle->isInitialized = false;
     handle->rxBuffer = NULL;
     handle->txBuffer = NULL;
     handle->rxSize = 0;
-    handle->txSize = 0;
     memset(&handle->config, 0, sizeof(UART_Config_t));
 
-    HAL_Delay(UART_DEINIT_DELAY_MS); // Allow time for deinitialization
-
     return UART_OK;
-
 }
 
 /* Helper function to handle UART mode-specific operations */
@@ -170,38 +180,16 @@ UART_Status_t UART_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size, 
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    if (huart != uartHandle.huart) {
-        return;  // Not our UART
+    if (huart != uartHandle.huart || Size == 0) {
+        return;
     }
 
-    if (uartHandle.config.mode == UART_MODE_DMA) {
+    if (uartHandle.config.mode == UART_MODE_DMA ||
+        uartHandle.config.mode == UART_MODE_INTERRUPT) {
         log_debug("UART Rx Event (IDLE) - Size: %d", Size);
-        if (Size > 0) {
-            uartExampleRxComplete = 1;
-            UART_RingBuffer_PutData(uartHandle.rxBuffer, Size);
-            HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_DMA(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-            if (status != HAL_OK) {
-                log_debug("Failed to restart DMA ReceiveToIdle: %d", status);
-                HAL_UART_Receive_DMA(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-            }
-        }
-    }else if (uartHandle.config.mode == UART_MODE_INTERRUPT) {
-        log_debug("UART Rx Event (IDLE) - Size: %d", Size);
-        if (Size > 0) {
-            // Put received data into ring buffer
-            UART_RingBuffer_PutData(uartHandle.rxBuffer, Size);
-            uartExampleRxComplete = 1;
-
-            HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_IT(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-            if (status != HAL_OK) {
-                log_debug("Failed to restart interrupt reception: %d", status);
-                /* Fall back to basic interrupt reception if ReceiveToIdle fails */
-                status = HAL_UART_Receive_IT(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-                if (status != HAL_OK) {
-                    log_debug("Failed to fall back to regular interrupt reception: %d", status);
-                }
-            }
-        }
+        UART_RingBuffer_PutData(uartHandle.rxBuffer, Size);
+        rxComplete = 1;
+        UART_RestartReceive(huart);
     }
 }
 
@@ -231,33 +219,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
 
     if (uartHandle.config.mode == UART_MODE_INTERRUPT) {
-        uartExampleRxComplete = 1;
         log_debug("IT Received data complete");
 
-        // Put received data into the ring buffer (only one byte for HAL_UART_Receive_IT)
+        /* HAL_UART_Receive_IT delivers a single byte; ReceiveToIdle reports via RxEvent. */
         if (huart->RxXferSize == 1) {
             UART_RingBuffer_PutData(uartHandle.rxBuffer, 1);
         }
-
-        /* Restart interrupt reception immediately rather than waiting for PreProcess */
-        HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_IT(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-        if (status != HAL_OK) {
-            log_debug("Failed to restart interrupt reception: %d", status);
-            /* Fall back to basic interrupt reception if ReceiveToIdle fails */
-            status = HAL_UART_Receive_IT(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-            if (status != HAL_OK) {
-                log_debug("Failed to fall back to regular interrupt reception: %d", status);
-            }
-        }
+        rxComplete = 1;
+        UART_RestartReceive(huart);
     } else if (uartHandle.config.mode == UART_MODE_DMA) {
-        uartExampleRxComplete = 1;
         log_debug("DMA Full Buffer Received: %d bytes", uartHandle.rxSize);
+
         UART_RingBuffer_PutData(uartHandle.rxBuffer, uartHandle.rxSize);
-        HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_DMA(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-        if (status != HAL_OK) {
-            log_debug("Failed to restart DMA ReceiveToIdle: %d", status);
-            HAL_UART_Receive_DMA(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-        }
+        rxComplete = 1;
+        UART_RestartReceive(huart);
     }
 }
 
@@ -288,42 +263,15 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
         __HAL_UART_CLEAR_PEFLAG(huart);
     }
 
-    /* Clear error flags */
-    huart->ErrorCode = HAL_UART_ERROR_NONE;
-
     /* Reset the UART peripheral first to clear stuck errors */
     HAL_UART_AbortReceive(huart);
-
-    /* Clear error flags */
     huart->ErrorCode = HAL_UART_ERROR_NONE;
 
-    /* Short delay to ensure UART is ready */
-    volatile uint32_t delayCounter = 0;
-    for (delayCounter = 0; delayCounter < UART_ERROR_RECOVERY_DELAY; delayCounter++) {
-        /* Short delay */
+    if (uartHandle.config.mode == UART_MODE_INTERRUPT) {
+        HAL_UART_Init(huart);
     }
 
-    /* Restart reception if it was stopped due to error */
-    if (uartHandle.config.mode == UART_MODE_DMA) {
-        HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_DMA(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-        if (status != HAL_OK) {
-            log_debug("Failed to restart DMA ReceiveToIdle after error: %d", status);
-            /* Fallback to regular DMA if ReceiveToIdle fails */
-            HAL_UART_Receive_DMA(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-        }
-    } else if (uartHandle.config.mode == UART_MODE_INTERRUPT) {
-        HAL_UART_Init(huart);
-        /* Restart interrupt reception after error using ReceiveToIdle */
-        HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_IT(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-        if (status != HAL_OK) {
-            log_debug("Failed to restart ReceiveToIdle after error: %d", status);
-            /* Fall back to regular interrupt reception */
-            status = HAL_UART_Receive_IT(huart, uartHandle.rxBuffer, uartHandle.rxSize);
-            if (status != HAL_OK) {
-                log_debug("Failed to restart interrupt reception after error: %d", status);
-            }
-        }
-    }
+    UART_RestartReceive(huart);
 }
 
 /**
@@ -339,15 +287,16 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 
     if (huart->Instance == USART1) {
 
+        __HAL_RCC_USART1_CLK_ENABLE();
 
         /* USART1 GPIO Configuration: PA9 -> USART1_TX, PA10 -> USART1_RX */
+        /* GPIO driver enables the GPIOA port clock */
         GPIO_InitTypeDef GPIO_InitStruct = {0};
-        __HAL_RCC_GPIOA_CLK_ENABLE();
         GPIO_InitStruct.Pin = GPIO_PIN_9 | GPIO_PIN_10;
         GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+        GPIO_Driver_Pin_Init(GPIOA, &GPIO_InitStruct);
 
         if (uartHandle.config.mode == UART_MODE_DMA) {
             __HAL_RCC_DMA2_CLK_ENABLE();

@@ -8,6 +8,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "lcd.h"
+#include "gpio.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -26,6 +27,7 @@ static const uint8_t rowOffsets_16x4[] = {0x00, 0x40, 0x10, 0x50};
 /* Private function prototypes -----------------------------------------------*/
 static void LCD_DelayUs(uint32_t us);
 static void LCD_DelayMs(uint32_t ms);
+static void LCD_InitPin(GPIO_TypeDef *port, uint16_t pin);
 static void LCD_SetPin(const LCD_PinTypeDef* pin, GPIO_PinState state);
 static void LCD_PulseEnable(LCD_HandleTypeDef* handle);
 static void LCD_WriteNibble(LCD_HandleTypeDef* handle, uint8_t nibble);
@@ -140,80 +142,63 @@ static void LCD_WriteByte(LCD_HandleTypeDef* handle, uint8_t byte, uint8_t rs)
  * @brief   Initialize GPIO pins for LCD
  * @param   handle LCD handle
  */
-static void LCD_InitGPIO(LCD_HandleTypeDef* handle)
+/**
+ * @brief   Configure a single LCD pin as push-pull output
+ * @param   port GPIO port
+ * @param   pin  GPIO pin
+ */
+static void LCD_InitPin(GPIO_TypeDef *port, uint16_t pin)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-    /* Configure control pins */
+    GPIO_InitStruct.Pin = pin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_Driver_Pin_Init(port, &GPIO_InitStruct);
+}
 
-    /* RS pin */
+/**
+ * @brief   Initialize GPIO pins for LCD
+ * @param   handle LCD handle
+ */
+static void LCD_InitGPIO(LCD_HandleTypeDef* handle)
+{
+    /* Control pins */
     if (handle->config.pins.rs.port != NULL) {
-        GPIO_InitStruct.Pin = handle->config.pins.rs.pin;
-        HAL_GPIO_Init(handle->config.pins.rs.port, &GPIO_InitStruct);
-        HAL_GPIO_WritePin(handle->config.pins.rs.port, handle->config.pins.rs.pin, GPIO_PIN_RESET);
+        LCD_InitPin(handle->config.pins.rs.port, handle->config.pins.rs.pin);
+        LCD_SetPin(&handle->config.pins.rs, GPIO_PIN_RESET);
     }
 
     /* RW pin (if used) */
     if (handle->config.useRW && handle->config.pins.rw.port != NULL) {
-        GPIO_InitStruct.Pin = handle->config.pins.rw.pin;
-        HAL_GPIO_Init(handle->config.pins.rw.port, &GPIO_InitStruct);
-        HAL_GPIO_WritePin(handle->config.pins.rw.port, handle->config.pins.rw.pin, GPIO_PIN_RESET);
+        LCD_InitPin(handle->config.pins.rw.port, handle->config.pins.rw.pin);
+        LCD_SetPin(&handle->config.pins.rw, GPIO_PIN_RESET);
     }
 
     /* EN pin */
     if (handle->config.pins.en.port != NULL) {
-        GPIO_InitStruct.Pin = handle->config.pins.en.pin;
-        HAL_GPIO_Init(handle->config.pins.en.port, &GPIO_InitStruct);
-        HAL_GPIO_WritePin(handle->config.pins.en.port, handle->config.pins.en.pin, GPIO_PIN_RESET);
+        LCD_InitPin(handle->config.pins.en.port, handle->config.pins.en.pin);
+        LCD_SetPin(&handle->config.pins.en, GPIO_PIN_RESET);
     }
 
     /* Data pins D4-D7 (always used) */
-    if (handle->config.pins.d4.port != NULL) {
-        GPIO_InitStruct.Pin = handle->config.pins.d4.pin;
-        HAL_GPIO_Init(handle->config.pins.d4.port, &GPIO_InitStruct);
-    }
-    if (handle->config.pins.d5.port != NULL) {
-        GPIO_InitStruct.Pin = handle->config.pins.d5.pin;
-        HAL_GPIO_Init(handle->config.pins.d5.port, &GPIO_InitStruct);
-    }
-    if (handle->config.pins.d6.port != NULL) {
-        GPIO_InitStruct.Pin = handle->config.pins.d6.pin;
-        HAL_GPIO_Init(handle->config.pins.d6.port, &GPIO_InitStruct);
-    }
-    if (handle->config.pins.d7.port != NULL) {
-        GPIO_InitStruct.Pin = handle->config.pins.d7.pin;
-        HAL_GPIO_Init(handle->config.pins.d7.port, &GPIO_InitStruct);
-    }
+    if (handle->config.pins.d4.port != NULL) LCD_InitPin(handle->config.pins.d4.port, handle->config.pins.d4.pin);
+    if (handle->config.pins.d5.port != NULL) LCD_InitPin(handle->config.pins.d5.port, handle->config.pins.d5.pin);
+    if (handle->config.pins.d6.port != NULL) LCD_InitPin(handle->config.pins.d6.port, handle->config.pins.d6.pin);
+    if (handle->config.pins.d7.port != NULL) LCD_InitPin(handle->config.pins.d7.port, handle->config.pins.d7.pin);
 
     /* Data pins D0-D3 (8-bit mode only) */
     if (handle->config.mode == LCD_MODE_8BIT) {
-        if (handle->config.pins.d0.port != NULL) {
-            GPIO_InitStruct.Pin = handle->config.pins.d0.pin;
-            HAL_GPIO_Init(handle->config.pins.d0.port, &GPIO_InitStruct);
-        }
-        if (handle->config.pins.d1.port != NULL) {
-            GPIO_InitStruct.Pin = handle->config.pins.d1.pin;
-            HAL_GPIO_Init(handle->config.pins.d1.port, &GPIO_InitStruct);
-        }
-        if (handle->config.pins.d2.port != NULL) {
-            GPIO_InitStruct.Pin = handle->config.pins.d2.pin;
-            HAL_GPIO_Init(handle->config.pins.d2.port, &GPIO_InitStruct);
-        }
-        if (handle->config.pins.d3.port != NULL) {
-            GPIO_InitStruct.Pin = handle->config.pins.d3.pin;
-            HAL_GPIO_Init(handle->config.pins.d3.port, &GPIO_InitStruct);
-        }
+        if (handle->config.pins.d0.port != NULL) LCD_InitPin(handle->config.pins.d0.port, handle->config.pins.d0.pin);
+        if (handle->config.pins.d1.port != NULL) LCD_InitPin(handle->config.pins.d1.port, handle->config.pins.d1.pin);
+        if (handle->config.pins.d2.port != NULL) LCD_InitPin(handle->config.pins.d2.port, handle->config.pins.d2.pin);
+        if (handle->config.pins.d3.port != NULL) LCD_InitPin(handle->config.pins.d3.port, handle->config.pins.d3.pin);
     }
 
     /* Backlight pin (if used) */
     if (handle->config.useBacklight && handle->config.pins.backlight.port != NULL) {
-        GPIO_InitStruct.Pin = handle->config.pins.backlight.pin;
-        HAL_GPIO_Init(handle->config.pins.backlight.port, &GPIO_InitStruct);
-        HAL_GPIO_WritePin(handle->config.pins.backlight.port,
-                          handle->config.pins.backlight.pin, GPIO_PIN_SET);
+        LCD_InitPin(handle->config.pins.backlight.port, handle->config.pins.backlight.pin);
+        LCD_SetPin(&handle->config.pins.backlight, GPIO_PIN_SET);
     }
 }
 
@@ -298,6 +283,24 @@ LCD_StatusTypeDef LCD_Init(LCD_HandleTypeDef* handle, const LCD_ConfigTypeDef* c
         return LCD_INVALID_PARAM;
     }
 
+    /* LCD_SetPin silently ignores a NULL port, so an unwired config would
+       otherwise "initialize" successfully and never drive the panel. */
+    if (config->pins.rs.port == NULL || config->pins.en.port == NULL ||
+        config->pins.d4.port == NULL || config->pins.d5.port == NULL ||
+        config->pins.d6.port == NULL || config->pins.d7.port == NULL) {
+        return LCD_INVALID_PARAM;
+    }
+
+    if (config->mode == LCD_MODE_8BIT &&
+        (config->pins.d0.port == NULL || config->pins.d1.port == NULL ||
+         config->pins.d2.port == NULL || config->pins.d3.port == NULL)) {
+        return LCD_INVALID_PARAM;
+    }
+
+    if (config->useRW && config->pins.rw.port == NULL) {
+        return LCD_INVALID_PARAM;
+    }
+
     /* Copy configuration */
     memcpy(&handle->config, config, sizeof(LCD_ConfigTypeDef));
 
@@ -315,7 +318,6 @@ LCD_StatusTypeDef LCD_Init(LCD_HandleTypeDef* handle, const LCD_ConfigTypeDef* c
     handle->displayOn = true;
     handle->cursorOn = false;
     handle->blinkOn = false;
-    handle->backlightOn = true;
     handle->initialized = false;
 
     /* Initialize GPIO pins */
@@ -333,18 +335,18 @@ LCD_StatusTypeDef LCD_Init(LCD_HandleTypeDef* handle, const LCD_ConfigTypeDef* c
     if (handle->config.mode == LCD_MODE_4BIT) {
         /* 4-bit initialization sequence */
         /* First: try to set 8-bit mode 3 times (in case LCD is in unknown state) */
-        LCD_WriteNibble(handle, 0x03);
+        LCD_WriteNibble(handle, LCD_INIT_NIBBLE_8BIT);
         LCD_DelayMs(5);
 
-        LCD_WriteNibble(handle, 0x03);
-        LCD_DelayUs(150);
+        LCD_WriteNibble(handle, LCD_INIT_NIBBLE_8BIT);
+        LCD_DelayUs(LCD_INIT_SETTLE_US);
 
-        LCD_WriteNibble(handle, 0x03);
-        LCD_DelayUs(150);
+        LCD_WriteNibble(handle, LCD_INIT_NIBBLE_8BIT);
+        LCD_DelayUs(LCD_INIT_SETTLE_US);
 
         /* Now set 4-bit mode */
-        LCD_WriteNibble(handle, 0x02);
-        LCD_DelayUs(150);
+        LCD_WriteNibble(handle, LCD_INIT_NIBBLE_4BIT);
+        LCD_DelayUs(LCD_INIT_SETTLE_US);
 
         /* Function set: 4-bit, 2-line, 5x8 dots */
         LCD_WriteByte(handle, LCD_CMD_FUNCTION_SET | LCD_4BIT_MODE | LCD_2LINE | LCD_5x8_DOTS, 0);
@@ -354,7 +356,7 @@ LCD_StatusTypeDef LCD_Init(LCD_HandleTypeDef* handle, const LCD_ConfigTypeDef* c
         LCD_DelayMs(5);
 
         LCD_WriteByte(handle, LCD_CMD_FUNCTION_SET | LCD_8BIT_MODE | LCD_2LINE | LCD_5x8_DOTS, 0);
-        LCD_DelayUs(150);
+        LCD_DelayUs(LCD_INIT_SETTLE_US);
 
         LCD_WriteByte(handle, LCD_CMD_FUNCTION_SET | LCD_8BIT_MODE | LCD_2LINE | LCD_5x8_DOTS, 0);
     }
@@ -487,7 +489,6 @@ LCD_StatusTypeDef LCD_BacklightOn(LCD_HandleTypeDef* handle)
 
     if (handle->config.useBacklight) {
         LCD_SetPin(&handle->config.pins.backlight, GPIO_PIN_SET);
-        handle->backlightOn = true;
     }
 
     return LCD_OK;
@@ -503,7 +504,6 @@ LCD_StatusTypeDef LCD_BacklightOff(LCD_HandleTypeDef* handle)
 
     if (handle->config.useBacklight) {
         LCD_SetPin(&handle->config.pins.backlight, GPIO_PIN_RESET);
-        handle->backlightOn = false;
     }
 
     return LCD_OK;

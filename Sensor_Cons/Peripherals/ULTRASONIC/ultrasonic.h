@@ -39,7 +39,6 @@ typedef enum {
  * @brief Ultrasonic sensor configuration structure
  */
 typedef struct {
-    uint32_t triggerTimeout;     /**< Trigger pulse timeout in ms */
     uint32_t measurementTimeout; /**< Echo measurement timeout in ms */
     uint16_t minDistance;        /**< Minimum measurable distance in mm */
     uint16_t maxDistance;        /**< Maximum measurable distance in mm */
@@ -76,7 +75,6 @@ typedef struct {
 /* Exported constants --------------------------------------------------------*/
 
 /* Default configuration values */
-#define ULTRASONIC_DEFAULT_TRIGGER_TIMEOUT    1000U   /* 1 second */
 #define ULTRASONIC_DEFAULT_MEASUREMENT_TIMEOUT 100000U /* 100ms */
 #define ULTRASONIC_DEFAULT_MIN_DISTANCE       20U     /* 2cm */
 #define ULTRASONIC_DEFAULT_MAX_DISTANCE       4000U   /* 4m */

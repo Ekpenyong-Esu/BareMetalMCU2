@@ -58,8 +58,7 @@ This driver provides a comprehensive interface for infrared (IR) communication o
 
 ```c
 HAL_StatusTypeDef IR_Init(IR_Handle_t *handle, TIM_HandleTypeDef *htimCarrier,
-                         TIM_HandleTypeDef *htimCapture, GPIO_TypeDef *txPort,
-                         uint16_t txPin, GPIO_TypeDef *rxPort, uint16_t rxPin,
+                         TIM_HandleTypeDef *htimCapture,
                          uint32_t txChannel, uint32_t rxChannel, IR_Config_t *config);
 HAL_StatusTypeDef IR_DeInit(IR_Handle_t *handle);
 ```
@@ -148,8 +147,7 @@ IR_Config_t config = {
 };
 
 // Initialize IR driver
-if (IR_Init(&hir, &htim3, &htim4, GPIOB, GPIO_PIN_5,
-           GPIOB, GPIO_PIN_6, TIM_CHANNEL_2, TIM_CHANNEL_1, &config) == HAL_OK) {
+if (IR_Init(&hir, &htim3, &htim4, TIM_CHANNEL_2, TIM_CHANNEL_1, &config) == HAL_OK) {
     printf("IR driver initialized successfully!\\n");
 }
 ```

@@ -27,16 +27,9 @@
 /* Speed of sound correction factor per degree Celsius */
 #define ULTRASONIC_SPEED_CORRECTION    0.6f    /* m/s per °C */
 
-/** @} */
-
-/* Private variables ---------------------------------------------------------*/
-
-/** @defgroup ULTRASONIC_Private_Variables Private Variables
- * @{
- */
-
-/* Global ultrasonic handle for interrupt handling */
-static ULTRASONIC_Handle_t *g_hultra = NULL;
+/* Echo width is measured in microseconds, so the capture timer is prescaled
+   to tick at exactly 1 MHz. */
+#define ULTRASONIC_TIMER_TICK_HZ       1000000U
 
 /** @} */
 
@@ -46,6 +39,7 @@ static void ULTRASONIC_MspDeInit(ULTRASONIC_Handle_t *hultra);
 static ULTRASONIC_StatusTypeDef ULTRASONIC_ValidateConfig(ULTRASONIC_Config_t *config);
 static uint16_t ULTRASONIC_CalculateDistance(uint32_t echoTime, uint8_t temperature);
 static float ULTRASONIC_GetSpeedOfSound(uint8_t temperature);
+static uint32_t ULTRASONIC_GetTimerPrescaler(const TIM_TypeDef *instance);
 
 /* Exported functions -------------------------------------------------------*/
 
@@ -75,14 +69,16 @@ ULTRASONIC_StatusTypeDef ULTRASONIC_Init(ULTRASONIC_Handle_t *hultra,
     hultra->htim = htim;
     hultra->channel = channel;
     hultra->pins = *pins;
-    g_hultra = hultra;
+
+    /* No measurement is in flight yet, so the sensor is ready to be triggered */
+    hultra->measurementDone = true;
 
     /* Initialize MSP (GPIO pins) */
     ULTRASONIC_MspInit(hultra);
     log_debug("ULTRASONIC: GPIO pins initialized");
 
-    /* Configure timer for input capture */
-    if (TIM_IC_Init(htim, htim->Instance, 0, 0xFFFF) != HAL_OK) {
+    /* Configure timer for input capture at a 1 us resolution */
+    if (TIM_IC_Init(htim, htim->Instance, ULTRASONIC_GetTimerPrescaler(htim->Instance), 0xFFFF) != HAL_OK) {
         log_error("ULTRASONIC: Failed to initialize timer for input capture");
         return ULTRASONIC_ERROR;
     }
@@ -127,7 +123,6 @@ ULTRASONIC_StatusTypeDef ULTRASONIC_DeInit(ULTRASONIC_Handle_t *hultra)
     ULTRASONIC_MspDeInit(hultra);
 
     hultra->isInitialized = false;
-    g_hultra = NULL;
 
     return ULTRASONIC_OK;
 }
@@ -309,7 +304,6 @@ ULTRASONIC_StatusTypeDef ULTRASONIC_SetTemperature(ULTRASONIC_Handle_t *hultra,
 ULTRASONIC_Config_t ULTRASONIC_GetDefaultConfig(void)
 {
     ULTRASONIC_Config_t config = {
-        .triggerTimeout = ULTRASONIC_DEFAULT_TRIGGER_TIMEOUT,
         .measurementTimeout = ULTRASONIC_DEFAULT_MEASUREMENT_TIMEOUT,
         .minDistance = ULTRASONIC_DEFAULT_MIN_DISTANCE,
         .maxDistance = ULTRASONIC_DEFAULT_MAX_DISTANCE,
@@ -382,29 +376,14 @@ static void ULTRASONIC_MspInit(ULTRASONIC_Handle_t *hultra)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* Enable GPIO clocks */
-    if (hultra->pins.triggerPort == GPIOA) {
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-    } else if (hultra->pins.triggerPort == GPIOB) {
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-    } else if (hultra->pins.triggerPort == GPIOC) {
-        __HAL_RCC_GPIOC_CLK_ENABLE();
-    }
-
-    if (hultra->pins.echoPort == GPIOA) {
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-    } else if (hultra->pins.echoPort == GPIOB) {
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-    } else if (hultra->pins.echoPort == GPIOC) {
-        __HAL_RCC_GPIOC_CLK_ENABLE();
-    }
+    /* GPIO driver enables the port clocks */
 
     /* Configure trigger pin as output */
     GPIO_InitStruct.Pin = hultra->pins.triggerPin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(hultra->pins.triggerPort, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(hultra->pins.triggerPort, &GPIO_InitStruct);
 
     /* Configure echo pin as input with interrupt */
     GPIO_InitStruct.Pin = hultra->pins.echoPin;
@@ -425,7 +404,7 @@ static void ULTRASONIC_MspInit(ULTRASONIC_Handle_t *hultra)
         GPIO_InitStruct.Alternate = GPIO_AF2_TIM5;
     }
 
-    HAL_GPIO_Init(hultra->pins.echoPort, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(hultra->pins.echoPort, &GPIO_InitStruct);
 }
 
 /**
@@ -469,8 +448,7 @@ static ULTRASONIC_StatusTypeDef ULTRASONIC_ValidateConfig(ULTRASONIC_Config_t *c
  */
 static uint16_t ULTRASONIC_CalculateDistance(uint32_t echoTime, uint8_t temperature)
 {
-    /* Convert timer ticks to microseconds */
-    /* Assuming 1MHz timer frequency (1us per tick) */
+    /* The capture timer is prescaled to 1 MHz, so one tick is one microsecond */
     uint32_t echoTimeUs = echoTime;
 
     /* Calculate speed of sound at given temperature */
@@ -493,4 +471,32 @@ static float ULTRASONIC_GetSpeedOfSound(uint8_t temperature)
 {
     /* Speed of sound = 331.3 + (0.6 * temperature) m/s */
     return 331.3f + (ULTRASONIC_SPEED_CORRECTION * temperature);
+}
+
+/**
+ * @brief   Compute the prescaler that yields a 1 MHz capture timebase
+ * @details TIM1/TIM8..TIM11 are clocked from APB2, the remaining timers from
+ *          APB1. Either bus doubles its timer clock whenever its prescaler is
+ *          not 1, which is why the raw PCLK value alone is not enough.
+ * @param   instance Timer peripheral used for input capture
+ * @retval  uint32_t Prescaler value to load into TIMx_PSC
+ */
+static uint32_t ULTRASONIC_GetTimerPrescaler(const TIM_TypeDef *instance)
+{
+    uint32_t timerClock;
+
+    if (instance == TIM1 || instance == TIM8 || instance == TIM9 ||
+        instance == TIM10 || instance == TIM11) {
+        timerClock = HAL_RCC_GetPCLK2Freq();
+        if ((RCC->CFGR & RCC_CFGR_PPRE2) != RCC_CFGR_PPRE2_DIV1) {
+            timerClock *= 2U;
+        }
+    } else {
+        timerClock = HAL_RCC_GetPCLK1Freq();
+        if ((RCC->CFGR & RCC_CFGR_PPRE1) != RCC_CFGR_PPRE1_DIV1) {
+            timerClock *= 2U;
+        }
+    }
+
+    return (timerClock / ULTRASONIC_TIMER_TICK_HZ) - 1U;
 }

@@ -107,7 +107,6 @@ typedef struct {
     bool displayOn;             /**< Display on/off state */
     bool cursorOn;              /**< Cursor on/off state */
     bool blinkOn;               /**< Cursor blink on/off state */
-    bool backlightOn;           /**< Backlight on/off state */
     bool initialized;           /**< Initialization flag */
 } LCD_HandleTypeDef;
 
@@ -178,6 +177,9 @@ typedef struct {
 #define LCD_COMMAND_DELAY_US        50U     /**< Command execution delay (us) */
 #define LCD_CLEAR_DELAY_MS          2U      /**< Clear/home command delay (ms) */
 #define LCD_INIT_DELAY_MS           50U     /**< Power-on initialization delay (ms) */
+#define LCD_INIT_SETTLE_US          150U    /**< Delay between HD44780 wake-up nibbles (us) */
+#define LCD_INIT_NIBBLE_8BIT        0x03U   /**< Wake-up nibble: request 8-bit interface */
+#define LCD_INIT_NIBBLE_4BIT        0x02U   /**< Switch the interface to 4-bit */
 
 /** @} */
 

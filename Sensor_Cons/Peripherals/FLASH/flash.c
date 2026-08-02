@@ -15,6 +15,12 @@
 
 /* Private defines -----------------------------------------------------------*/
 
+/** @brief HAL_FLASHEx_Erase reports this sector index when every sector succeeded */
+#define FLASH_ERASE_ALL_OK      0xFFFFFFFFU
+
+/** @brief Returned by FLASH_GetSector when the address is outside Flash */
+#define FLASH_SECTOR_NOT_FOUND  0xFFFFFFFFU
+
 /* Sector addresses for STM32F429 (2MB Flash) */
 static const uint32_t FLASH_SECTOR_ADDRESSES[] = {
     /* Bank 1 */
@@ -48,7 +54,6 @@ static const uint32_t FLASH_SECTOR_ADDRESSES[] = {
 
 /* Private function prototypes -----------------------------------------------*/
 static FLASH_StatusTypeDef FLASH_ConvertHALStatus(HAL_StatusTypeDef halStatus);
-static uint32_t FLASH_GetSectorSize(uint32_t sector);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -75,26 +80,33 @@ static FLASH_StatusTypeDef FLASH_ConvertHALStatus(HAL_StatusTypeDef halStatus)
 }
 
 /**
- * @brief   Get sector size
- * @param   sector Sector number
- * @retval  uint32_t Sector size in bytes
+ * @brief   Unlock, program one scalar value, then re-lock
+ * @details Shared body of the byte/half-word/word/double-word writers
+ * @param   typeProgram HAL program type (FLASH_TYPEPROGRAM_xxx)
+ * @param   address Flash address to write
+ * @param   data Value to program
+ * @param   alignMask Address bits that must be zero for this width
+ * @retval  FLASH_StatusTypeDef Operation status
  */
-static uint32_t FLASH_GetSectorSize(uint32_t sector)
+static FLASH_StatusTypeDef FLASH_ProgramScalar(uint32_t typeProgram, uint32_t address,
+                                               uint64_t data, uint32_t alignMask)
 {
-    uint32_t sectorInBank = sector % 12;
+    if (!FLASH_IsValidAddress(address) || (address & alignMask) != 0U)
+    {
+        return FLASH_STATUS_INVALID_ADDRESS;
+    }
 
-    if (sectorInBank < 4)
+    FLASH_StatusTypeDef status = FLASH_Unlock();
+    if (status != FLASH_STATUS_OK)
     {
-        return FLASH_SECTOR_SIZE_16KB;
+        return status;
     }
-    else if (sectorInBank == 4)
-    {
-        return FLASH_SECTOR_SIZE_64KB;
-    }
-    else
-    {
-        return FLASH_SECTOR_SIZE_128KB;
-    }
+
+    HAL_StatusTypeDef halStatus = HAL_FLASH_Program(typeProgram, address, data);
+
+    FLASH_Lock();
+
+    return FLASH_ConvertHALStatus(halStatus);
 }
 
 /* Public functions ----------------------------------------------------------*/
@@ -131,44 +143,7 @@ FLASH_StatusTypeDef FLASH_Lock(void)
  */
 FLASH_StatusTypeDef FLASH_EraseSector(uint32_t sector)
 {
-    if (sector >= FLASH_SECTOR_TOTAL)
-    {
-        return FLASH_STATUS_INVALID_PARAM;
-    }
-
-    FLASH_StatusTypeDef status = FLASH_Unlock();
-    if (status != FLASH_STATUS_OK)
-    {
-        return status;
-    }
-
-    /* Clear pending flags */
-    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR |
-                           FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
-
-    FLASH_EraseInitTypeDef eraseInit;
-    uint32_t sectorError = 0;
-
-    eraseInit.TypeErase = FLASH_TYPEERASE_SECTORS;
-    eraseInit.VoltageRange = FLASH_VOLTAGE_RANGE_3;  /* 2.7V to 3.6V */
-    eraseInit.Sector = sector;
-    eraseInit.NbSectors = 1;
-
-    HAL_StatusTypeDef halStatus = HAL_FLASHEx_Erase(&eraseInit, &sectorError);
-
-    FLASH_Lock();
-
-    if (halStatus != HAL_OK)
-    {
-        return FLASH_STATUS_ERROR;
-    }
-
-    if (sectorError != 0xFFFFFFFFU)
-    {
-        return FLASH_STATUS_ERROR;
-    }
-
-    return FLASH_STATUS_OK;
+    return FLASH_EraseSectors(sector, sector);
 }
 
 /**
@@ -199,7 +174,7 @@ FLASH_StatusTypeDef FLASH_EraseSectors(uint32_t startSector, uint32_t endSector)
     uint32_t sectorError = 0;
 
     eraseInit.TypeErase = FLASH_TYPEERASE_SECTORS;
-    eraseInit.VoltageRange = FLASH_VOLTAGE_RANGE_3;
+    eraseInit.VoltageRange = FLASH_VOLTAGE_RANGE_3;  /* 2.7V to 3.6V */
     eraseInit.Sector = startSector;
     eraseInit.NbSectors = endSector - startSector + 1;
 
@@ -207,7 +182,7 @@ FLASH_StatusTypeDef FLASH_EraseSectors(uint32_t startSector, uint32_t endSector)
 
     FLASH_Lock();
 
-    if (halStatus != HAL_OK || sectorError != 0xFFFFFFFFU)
+    if (halStatus != HAL_OK || sectorError != FLASH_ERASE_ALL_OK)
     {
         return FLASH_STATUS_ERROR;
     }
@@ -235,22 +210,7 @@ FLASH_StatusTypeDef FLASH_EraseUserSector(void)
  */
 FLASH_StatusTypeDef FLASH_WriteByte(uint32_t address, uint8_t data)
 {
-    if (!FLASH_IsValidAddress(address))
-    {
-        return FLASH_STATUS_INVALID_ADDRESS;
-    }
-
-    FLASH_StatusTypeDef status = FLASH_Unlock();
-    if (status != FLASH_STATUS_OK)
-    {
-        return status;
-    }
-
-    HAL_StatusTypeDef halStatus = HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, address, data);
-
-    FLASH_Lock();
-
-    return FLASH_ConvertHALStatus(halStatus);
+    return FLASH_ProgramScalar(FLASH_TYPEPROGRAM_BYTE, address, data, 0x00U);
 }
 
 /**
@@ -262,22 +222,7 @@ FLASH_StatusTypeDef FLASH_WriteByte(uint32_t address, uint8_t data)
  */
 FLASH_StatusTypeDef FLASH_WriteHalfWord(uint32_t address, uint16_t data)
 {
-    if (!FLASH_IsValidAddress(address) || (address & 0x01))
-    {
-        return FLASH_STATUS_INVALID_ADDRESS;
-    }
-
-    FLASH_StatusTypeDef status = FLASH_Unlock();
-    if (status != FLASH_STATUS_OK)
-    {
-        return status;
-    }
-
-    HAL_StatusTypeDef halStatus = HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, address, data);
-
-    FLASH_Lock();
-
-    return FLASH_ConvertHALStatus(halStatus);
+    return FLASH_ProgramScalar(FLASH_TYPEPROGRAM_HALFWORD, address, data, 0x01U);
 }
 
 /**
@@ -289,22 +234,7 @@ FLASH_StatusTypeDef FLASH_WriteHalfWord(uint32_t address, uint16_t data)
  */
 FLASH_StatusTypeDef FLASH_WriteWord(uint32_t address, uint32_t data)
 {
-    if (!FLASH_IsValidAddress(address) || (address & 0x03))
-    {
-        return FLASH_STATUS_INVALID_ADDRESS;
-    }
-
-    FLASH_StatusTypeDef status = FLASH_Unlock();
-    if (status != FLASH_STATUS_OK)
-    {
-        return status;
-    }
-
-    HAL_StatusTypeDef halStatus = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, data);
-
-    FLASH_Lock();
-
-    return FLASH_ConvertHALStatus(halStatus);
+    return FLASH_ProgramScalar(FLASH_TYPEPROGRAM_WORD, address, data, 0x03U);
 }
 
 /**
@@ -316,22 +246,7 @@ FLASH_StatusTypeDef FLASH_WriteWord(uint32_t address, uint32_t data)
  */
 FLASH_StatusTypeDef FLASH_WriteDoubleWord(uint32_t address, uint64_t data)
 {
-    if (!FLASH_IsValidAddress(address) || (address & 0x07))
-    {
-        return FLASH_STATUS_INVALID_ADDRESS;
-    }
-
-    FLASH_StatusTypeDef status = FLASH_Unlock();
-    if (status != FLASH_STATUS_OK)
-    {
-        return status;
-    }
-
-    HAL_StatusTypeDef halStatus = HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, address, data);
-
-    FLASH_Lock();
-
-    return FLASH_ConvertHALStatus(halStatus);
+    return FLASH_ProgramScalar(FLASH_TYPEPROGRAM_DOUBLEWORD, address, data, 0x07U);
 }
 
 /**
@@ -502,7 +417,7 @@ uint32_t FLASH_GetSector(uint32_t address)
 {
     if (!FLASH_IsValidAddress(address))
     {
-        return 0xFFFFFFFFU;
+        return FLASH_SECTOR_NOT_FOUND;
     }
 
     for (uint32_t i = 0; i < FLASH_SECTOR_TOTAL; i++)
@@ -514,7 +429,7 @@ uint32_t FLASH_GetSector(uint32_t address)
         }
     }
 
-    return 0xFFFFFFFFU;
+    return FLASH_SECTOR_NOT_FOUND;
 }
 
 /**
@@ -533,7 +448,8 @@ FLASH_StatusTypeDef FLASH_GetSectorInfo(uint32_t sector, FLASH_SectorInfoTypeDef
 
     info->SectorNumber = sector;
     info->StartAddress = FLASH_SECTOR_ADDRESSES[sector];
-    info->Size = FLASH_GetSectorSize(sector);
+    /* The address table is the single source of truth for sector geometry */
+    info->Size = FLASH_SECTOR_ADDRESSES[sector + 1] - FLASH_SECTOR_ADDRESSES[sector];
 
     return FLASH_STATUS_OK;
 }
@@ -558,6 +474,11 @@ bool FLASH_IsValidAddress(uint32_t address)
  */
 bool FLASH_IsErased(uint32_t address, uint32_t length)
 {
+    if (length == 0U)
+    {
+        return false;
+    }
+
     if (!FLASH_IsValidAddress(address) || !FLASH_IsValidAddress(address + length - 1))
     {
         return false;

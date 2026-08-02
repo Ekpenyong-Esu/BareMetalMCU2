@@ -46,7 +46,7 @@ typedef enum {
 /**
  * @brief RNG timeout value
  */
-#define RNG_TIMEOUT_DEFAULT     1000U   /**< Default timeout in milliseconds */
+#define RNG_TIMEOUT_DEFAULT     1000U   /**< Reserved: HAL applies its own timeout */
 
 /**
  * @brief RNG generation modes
@@ -91,15 +91,6 @@ RNG_StatusTypeDef RNG_DeInit(void);
  * @retval  RNG_StatusTypeDef Operation status
  */
 RNG_StatusTypeDef RNG_Generate(uint32_t* randomNumber);
-
-/**
- * @brief   Generate a random number with timeout
- * @details Generates random number with specified timeout
- * @param   randomNumber Pointer to store the random number
- * @param   timeout Timeout in milliseconds
- * @retval  RNG_StatusTypeDef Operation status
- */
-RNG_StatusTypeDef RNG_GenerateWithTimeout(uint32_t* randomNumber, uint32_t timeout);
 
 /**
  * @brief   Generate multiple random numbers

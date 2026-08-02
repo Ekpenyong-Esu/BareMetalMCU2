@@ -57,7 +57,6 @@ typedef struct ADC_HandleStruct {
     DMA_HandleTypeDef   hdma_adc;       /*!< DMA handle for ADC */
     ADC_ConfigTypeDef   config;         /*!< ADC configuration */
     bool                initialized;    /*!< Initialization status */
-    bool                calibrated;     /*!< Calibration status */
     /* Optional user callbacks for interrupt/DMA driven operation */
     void (*conv_complete_cb)(struct ADC_HandleStruct* hadc, uint32_t value);
     void (*error_cb)(struct ADC_HandleStruct* hadc);
@@ -143,17 +142,6 @@ HAL_StatusTypeDef ADC_DeInit(ADC_HandleStruct* hadc);
  */
 HAL_StatusTypeDef ADC_ConfigChannel(ADC_HandleStruct* hadc, uint32_t channel,
                                    uint32_t sampling_time);
-
-/* ADC Calibration */
-/**
- * @brief Calibrate ADC for better accuracy
- * @param hadc: Pointer to ADC handle structure
- * @retval ADC_StatusTypeDef: Status of the operation
- *
- * @note STM32F4 has limited calibration compared to newer STM32 series
- * @note Call this after ADC_Init for best accuracy
- */
-HAL_StatusTypeDef ADC_Calibrate(ADC_HandleStruct* hadc);
 
 /* ADC Single Conversion Operations */
 /**

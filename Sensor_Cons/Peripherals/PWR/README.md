@@ -69,7 +69,8 @@ PWR_ConfigureAfterStop();
 
 ```c
 /* Save important data first */
-PWR_WriteBackupRegister(0, myData);
+PWR_EnableBackupAccess();
+HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, myData);
 
 /* Enable wakeup pin */
 PWR_EnableWakeupPin(true);
@@ -126,8 +127,9 @@ PWR_EnterStandbyMode();
 |----------|-------------|
 | `PWR_EnableBackupAccess()` | Enable backup domain access |
 | `PWR_DisableBackupAccess()` | Disable backup domain access |
-| `PWR_WriteBackupRegister(idx, data)` | Write to backup register |
-| `PWR_ReadBackupRegister(idx, data)` | Read from backup register |
+
+The backup registers themselves live in the RTC domain; read and write them with
+`HAL_RTCEx_BKUPRead()` / `HAL_RTCEx_BKUPWrite()` once backup access is enabled.
 
 ## Standby Wakeup Detection
 
@@ -146,8 +148,7 @@ int main(void)
         PWR_ClearStandbyFlag();
 
         /* Recover saved data */
-        uint32_t savedData;
-        PWR_ReadBackupRegister(0, &savedData);
+        uint32_t savedData = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0);
     }
 
     /* Rest of initialization... */
@@ -190,15 +191,15 @@ void HAL_PWR_PVDCallback(void)
 
 ```c
 /* Write configuration */
-PWR_WriteBackupRegister(0, CONFIG_MAGIC);
-PWR_WriteBackupRegister(1, deviceId);
-PWR_WriteBackupRegister(2, calibrationValue);
+PWR_EnableBackupAccess();
+HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, CONFIG_MAGIC);
+HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, deviceId);
+HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR2, calibrationValue);
 
 /* Read back after wake */
-uint32_t magic, id, cal;
-PWR_ReadBackupRegister(0, &magic);
-PWR_ReadBackupRegister(1, &id);
-PWR_ReadBackupRegister(2, &cal);
+uint32_t magic = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0);
+uint32_t id    = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1);
+uint32_t cal   = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR2);
 ```
 
 ## Important Notes

@@ -85,7 +85,7 @@ RNG_GenerateFloat(&probability);  /* Returns [0.0, 1.0) */
 | Function | Description |
 |----------|-------------|
 | `RNG_Generate(uint32_t*)` | Generate 32-bit random |
-| `RNG_GenerateWithTimeout(uint32_t*, timeout)` | Generate with timeout |
+| `RNG_Generate(uint32_t*)` | Generate one 32-bit random number |
 | `RNG_GenerateBuffer(uint32_t*, count)` | Fill buffer with randoms |
 | `RNG_GenerateBytes(uint8_t*, length)` | Generate random bytes |
 

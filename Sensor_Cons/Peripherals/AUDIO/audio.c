@@ -11,12 +11,13 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "audio.h"
+#include "gpio.h"
+#include "i2c.h"
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_sai.h"
 #include "stm32f4xx_hal_i2s.h"
 #include "stm32f4xx_hal_dma.h"
 #include <string.h>
-#include <stdlib.h>
 
 /* Private defines -----------------------------------------------------------*/
 
@@ -30,7 +31,6 @@
 #define AUDIO_SAI_INSTANCE               SAI1_Block_A
 #define AUDIO_SAI_CLK_ENABLE()           __HAL_RCC_SAI1_CLK_ENABLE()
 #define AUDIO_SAI_CLK_DISABLE()          __HAL_RCC_SAI1_CLK_DISABLE()
-#define AUDIO_SAI_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOE_CLK_ENABLE()
 #define AUDIO_SAI_MCK_PIN                GPIO_PIN_2
 #define AUDIO_SAI_MCK_GPIO_PORT          GPIOE
 #define AUDIO_SAI_SD_PIN                 GPIO_PIN_4
@@ -46,7 +46,6 @@
 #define AUDIO_I2S_INSTANCE               SPI3
 #define AUDIO_I2S_CLK_ENABLE()           __HAL_RCC_SPI3_CLK_ENABLE()
 #define AUDIO_I2S_CLK_DISABLE()          __HAL_RCC_SPI3_CLK_DISABLE()
-#define AUDIO_I2S_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOC_CLK_ENABLE()
 #define AUDIO_I2S_WS_PIN                 GPIO_PIN_0
 #define AUDIO_I2S_WS_GPIO_PORT           GPIOC
 #define AUDIO_I2S_CK_PIN                 GPIO_PIN_10
@@ -72,18 +71,21 @@
 #define AUDIO_PLL_Q                      7U
 
 /**
- * @brief Codec I2C configuration
+ * @brief Codec control interface (Cirrus Logic CS43L22)
+ * @note  Control is I2C, audio data is I2S/SAI. The address is the 8-bit write
+ *        address; the CS43L22 7-bit address is 0x4A with AD0 tied low.
  */
-#define AUDIO_CODEC_I2C_INSTANCE         I2C1
-#define AUDIO_CODEC_I2C_ADDRESS          0x34U  /* WM8994 default address */
+#define AUDIO_CODEC_I2C_ADDRESS          0x94U
+#define AUDIO_CODEC_I2C_TIMEOUT          I2C_TIMEOUT_DEFAULT
+#define AUDIO_CODEC_RESET_GPIO_PORT      GPIOD
+#define AUDIO_CODEC_RESET_PIN            GPIO_PIN_4
 
 /**
  * @brief Codec constants
  */
-#define AUDIO_CODEC_VOLUME_MAX           63U    /* WM8994 volume range 0-63 */
 #define AUDIO_VOLUME_SCALE               100U   /* Volume percentage scale */
-#define AUDIO_CODEC_VOLUME_ENABLE_MASK   0x100U /* Volume enable bit */
-#define AUDIO_CODEC_MUTE_MASK            0x0100U /* Mute bit in WM8994 */
+#define AUDIO_CODEC_CHIP_ID              0xE0U  /* CS43L22 part number field */
+#define AUDIO_CODEC_CHIP_ID_MASK         0xF8U  /* Upper 5 bits hold the part number */
 
 /**
  * @brief SAI frame configuration
@@ -95,13 +97,14 @@
 /**
  * @brief Codec register values
  */
-#define AUDIO_CODEC_RESET_VALUE          0x0000U /* Software reset value */
-#define AUDIO_CODEC_PM1_VALUE            0x0003U /* Power management 1 default */
-#define AUDIO_CODEC_PM2_VALUE            0x6000U /* Power management 2 default */
-#define AUDIO_CODEC_PM3_VALUE            0x0030U /* Power management 3 default */
-#define AUDIO_CODEC_AI1_VALUE            0x0010U /* Audio interface 1 default */
-#define AUDIO_CODEC_CLK1_VALUE           0x000CU /* Clocking 1 default */
-#define AUDIO_CODEC_DAC1_VALUE           0x0000U /* DAC control 1 default */
+#define AUDIO_CODEC_POWER_DOWN           0x01U  /* Power control 1: powered down */
+#define AUDIO_CODEC_POWER_UP             0x9EU  /* Power control 1: powered up */
+#define AUDIO_CODEC_OUTPUT_HEADPHONE     0xAFU  /* Power control 2: headphone on, speaker off */
+#define AUDIO_CODEC_CLOCK_AUTODETECT     0x81U  /* Clocking control: auto-detect MCLK ratio */
+#define AUDIO_CODEC_INTERFACE_I2S        0x04U  /* Interface control 1: I2S slave, 16-bit */
+#define AUDIO_CODEC_ANALOG_ZC_SR         0x00U  /* No zero-cross / soft-ramp on the analog path */
+#define AUDIO_CODEC_HEADPHONE_MUTE       0xC0U  /* Playback control 2: mute both HP channels */
+#define AUDIO_CODEC_HEADPHONE_UNMUTE     0x00U
 
 /** @} */
 
@@ -119,31 +122,22 @@ typedef enum {
     AUDIO_STATE_READY,
     AUDIO_STATE_PLAYING,
     AUDIO_STATE_PAUSED,
-    AUDIO_STATE_RECORDING,
     AUDIO_STATE_ERROR
 } AUDIO_StateTypeDef;
 
 /**
- * @brief Audio codec registers (WM8994 example)
+ * @brief Audio codec registers (CS43L22)
  */
 typedef enum {
-    CODEC_REG_SOFTWARE_RESET = 0x00,
-    CODEC_REG_POWER_MANAGEMENT_1 = 0x01,
-    CODEC_REG_POWER_MANAGEMENT_2 = 0x02,
-    CODEC_REG_POWER_MANAGEMENT_3 = 0x03,
-    CODEC_REG_AUDIO_INTERFACE_1 = 0x04,
-    CODEC_REG_AUDIO_INTERFACE_2 = 0x05,
-    CODEC_REG_CLOCKING_1 = 0x06,
-    CODEC_REG_CLOCKING_2 = 0x07,
-    CODEC_REG_AUDIO_INTERFACE_3 = 0x08,
-    CODEC_REG_AUDIO_INTERFACE_4 = 0x09,
-    CODEC_REG_DAC_CONTROL_1 = 0x0A,
-    CODEC_REG_DAC_CONTROL_2 = 0x0B,
-    CODEC_REG_LEFT_DAC_DIGITAL_VOLUME = 0x0C,
-    CODEC_REG_RIGHT_DAC_DIGITAL_VOLUME = 0x0D,
-    CODEC_REG_DIGITAL_SIDE_TONE = 0x0E,
-    CODEC_REG_ADC_CONTROL_1 = 0x0F,
-    CODEC_REG_ADC_CONTROL_2 = 0x10
+    CODEC_REG_ID = 0x01,
+    CODEC_REG_POWER_CTL1 = 0x02,
+    CODEC_REG_POWER_CTL2 = 0x04,
+    CODEC_REG_CLOCKING_CTL = 0x05,
+    CODEC_REG_INTERFACE_CTL1 = 0x06,
+    CODEC_REG_ANALOG_ZC_SR = 0x0A,
+    CODEC_REG_PLAYBACK_CTL2 = 0x0F,
+    CODEC_REG_MASTER_VOL_A = 0x20,
+    CODEC_REG_MASTER_VOL_B = 0x21
 } AUDIO_CodecRegTypeDef;
 
 /** @} */
@@ -157,15 +151,13 @@ typedef enum {
 static AUDIO_StateTypeDef AudioState = AUDIO_STATE_RESET;
 static AUDIO_ConfigTypeDef AudioConfig;
 static AUDIO_BufferTypeDef OutputBuffer;
-static AUDIO_BufferTypeDef InputBuffer;
 static AUDIO_StatsTypeDef AudioStats;
 
 static SAI_HandleTypeDef SaiHandle;
 static I2S_HandleTypeDef I2sHandle;
 static DMA_HandleTypeDef DmaHandle;
 
-static uint8_t* OutputBufferMemory = NULL;
-static uint8_t* InputBufferMemory = NULL;
+static uint8_t OutputBufferMemory[AUDIO_BUFFER_SIZE_DEFAULT];
 
 static uint8_t CurrentVolume = AUDIO_VOLUME_DEFAULT;
 static bool IsMuted = false;
@@ -182,14 +174,13 @@ static AUDIO_StatusTypeDef AUDIO_SAI_Init(void);
 static AUDIO_StatusTypeDef AUDIO_I2S_Init(void);
 static AUDIO_StatusTypeDef AUDIO_DMA_Init(void);
 static AUDIO_StatusTypeDef AUDIO_Buffer_Init(void);
-static AUDIO_StatusTypeDef AUDIO_Codec_WriteRegister(uint8_t reg, uint16_t value);
-static AUDIO_StatusTypeDef AUDIO_Codec_ReadRegister(uint8_t reg, uint16_t* value);
-static AUDIO_StatusTypeDef AUDIO_SetAudioPLL(void);
-static void AUDIO_Error_Handler(void);
+static AUDIO_StatusTypeDef AUDIO_Codec_WriteRegister(uint8_t reg, uint8_t value);
+static AUDIO_StatusTypeDef AUDIO_Codec_ReadRegister(uint8_t reg, uint8_t *value);
+static uint32_t AUDIO_SampleRateHz(AUDIO_FreqTypeDef rate);
 
 /* DMA and interrupt handlers */
-static void AUDIO_DMA_Complete_Callback(DMA_HandleTypeDef* hdma);
-static void AUDIO_DMA_Error_Callback(DMA_HandleTypeDef* hdma);
+static void AUDIO_DMA_Complete_Callback(void);
+static void AUDIO_DMA_Error_Callback(void);
 
 /** @} */
 
@@ -213,8 +204,7 @@ AUDIO_StatusTypeDef AUDIO_Init(void)
         .BitDepth = AUDIO_FORMAT_16BIT,
         .Channels = AUDIO_CHANNEL_STEREO,
         .BufferSize = AUDIO_BUFFER_SIZE_DEFAULT,
-        .EnableDMA = true,
-        .EnableInterrupts = true
+        .EnableDMA = true
     };
 
     return AUDIO_Init_Custom(&defaultConfig);
@@ -239,12 +229,6 @@ AUDIO_StatusTypeDef AUDIO_Init_Custom(const AUDIO_ConfigTypeDef* config)
 
     /* Reset statistics */
     memset(&AudioStats, 0, sizeof(AUDIO_StatsTypeDef));
-
-    /* Initialize audio PLL */
-    status = AUDIO_SetAudioPLL();
-    if (status != AUDIO_OK) {
-        return status;
-    }
 
     /* Initialize buffers */
     status = AUDIO_Buffer_Init();
@@ -302,9 +286,6 @@ AUDIO_StatusTypeDef AUDIO_DeInit(void)
     /* Stop any ongoing operations */
     AUDIO_Stop();
 
-    /* Deinitialize codec */
-    AUDIO_CodecPowerControl(false);
-
     /* Deinitialize audio interface */
     switch (AudioConfig.Interface) {
         case AUDIO_INTERFACE_SAI:
@@ -324,15 +305,8 @@ AUDIO_StatusTypeDef AUDIO_DeInit(void)
         HAL_DMA_DeInit(&DmaHandle);
     }
 
-    /* Free buffers */
-    if (OutputBufferMemory != NULL) {
-        free(OutputBufferMemory);
-        OutputBufferMemory = NULL;
-    }
-    if (InputBufferMemory != NULL) {
-        free(InputBufferMemory);
-        InputBufferMemory = NULL;
-    }
+    /* Detach the static buffers */
+    OutputBuffer.Buffer = NULL;
 
     /* Reset state */
     AudioState = AUDIO_STATE_RESET;
@@ -465,40 +439,6 @@ AUDIO_StatusTypeDef AUDIO_Resume(void)
 }
 
 /**
- * @brief   Start audio recording
- * @details Begins audio input to the configured buffer
- * @param   None
- * @retval  AUDIO_StatusTypeDef Operation status
- */
-AUDIO_StatusTypeDef AUDIO_Record(void)
-{
-    if (AudioState != AUDIO_STATE_READY) {
-        return AUDIO_NOT_READY;
-    }
-
-    /* Start audio interface for recording */
-    switch (AudioConfig.Interface) {
-        case AUDIO_INTERFACE_SAI:
-            if (HAL_SAI_Receive_DMA(&SaiHandle, InputBuffer.Buffer,
-                                  InputBuffer.Size / 2) != HAL_OK) {
-                return AUDIO_ERROR;
-            }
-            break;
-        case AUDIO_INTERFACE_I2S:
-            if (HAL_I2S_Receive_DMA(&I2sHandle, (uint16_t*)InputBuffer.Buffer,
-                                  InputBuffer.Size / 2) != HAL_OK) {
-                return AUDIO_ERROR;
-            }
-            break;
-        default:
-            return AUDIO_ERROR;
-    }
-
-    AudioState = AUDIO_STATE_RECORDING;
-    return AUDIO_OK;
-}
-
-/**
  * @brief   Write audio data to output buffer
  * @details Adds audio samples to the playback buffer
  * @param   data Pointer to audio data buffer
@@ -514,8 +454,10 @@ AUDIO_StatusTypeDef AUDIO_WriteBuffer(uint8_t* data, uint32_t size)
         return AUDIO_INVALID_PARAM;
     }
 
-    /* Check available space in circular buffer */
-    if (OutputBuffer.WriteIndex >= OutputBuffer.ReadIndex) {
+    /* Equal indices mean either full or empty, so the flag decides. */
+    if (OutputBuffer.IsFull) {
+        spaceAvailable = 0;
+    } else if (OutputBuffer.WriteIndex >= OutputBuffer.ReadIndex) {
         spaceAvailable = OutputBuffer.Size - (OutputBuffer.WriteIndex - OutputBuffer.ReadIndex);
     } else {
         spaceAvailable = OutputBuffer.ReadIndex - OutputBuffer.WriteIndex;
@@ -538,57 +480,6 @@ AUDIO_StatusTypeDef AUDIO_WriteBuffer(uint8_t* data, uint32_t size)
         OutputBuffer.IsFull = true;
     }
 
-    AudioStats.SampleCount += size / (AudioConfig.BitDepth == AUDIO_FORMAT_16BIT ? 2 : 4);
-
-    return AUDIO_OK;
-}
-
-/**
- * @brief   Read audio data from input buffer
- * @details Retrieves audio samples from the recording buffer
- * @param   data Pointer to buffer for audio data
- * @param   size Size of buffer in bytes
- * @param   bytesRead Pointer to store actual bytes read
- * @retval  AUDIO_StatusTypeDef Operation status
- */
-AUDIO_StatusTypeDef AUDIO_ReadBuffer(uint8_t* data, uint32_t size, uint32_t* bytesRead)
-{
-    uint32_t bytesToRead = 0;
-
-    if (data == NULL || bytesRead == NULL) {
-        return AUDIO_INVALID_PARAM;
-    }
-
-    *bytesRead = 0;
-
-    /* Check available data in circular buffer */
-    if (InputBuffer.IsEmpty) {
-        return AUDIO_UNDERFLOW;
-    }
-
-    /* Calculate bytes available */
-    if (InputBuffer.ReadIndex <= InputBuffer.WriteIndex) {
-        bytesToRead = InputBuffer.WriteIndex - InputBuffer.ReadIndex;
-    } else {
-        bytesToRead = InputBuffer.Size - (InputBuffer.ReadIndex - InputBuffer.WriteIndex);
-    }
-
-    if (bytesToRead > size) {
-        bytesToRead = size;
-    }
-
-    /* Copy data from buffer */
-    for (uint32_t i = 0; i < bytesToRead; i++) {
-        data[i] = InputBuffer.Buffer[InputBuffer.ReadIndex];
-        InputBuffer.ReadIndex = (InputBuffer.ReadIndex + 1) % InputBuffer.Size;
-        (*bytesRead)++;
-    }
-
-    if (InputBuffer.ReadIndex == InputBuffer.WriteIndex) {
-        InputBuffer.IsEmpty = true;
-    }
-    InputBuffer.IsFull = false;
-
     return AUDIO_OK;
 }
 
@@ -604,24 +495,22 @@ AUDIO_StatusTypeDef AUDIO_SetVolume(uint8_t volume)
         volume = AUDIO_VOLUME_MAX;
     }
 
+    /* Master volume is a 256-code ramp that wraps: 0x19 is the quietest, it
+       climbs to 0xFF (-0.5 dB), then 0x00 (0 dB) up to 0x18 (+12 dB). */
+    uint8_t code = (uint8_t)(((uint32_t)volume * 255U) / AUDIO_VOLUME_SCALE);
+    uint8_t regValue = (code > 0xE6U) ? (uint8_t)(code - 0xE7U) : (uint8_t)(code + 0x19U);
+
+    AUDIO_StatusTypeDef status = AUDIO_Codec_WriteRegister(CODEC_REG_MASTER_VOL_A, regValue);
+    if (status != AUDIO_OK) {
+        return status;
+    }
+
+    status = AUDIO_Codec_WriteRegister(CODEC_REG_MASTER_VOL_B, regValue);
+    if (status != AUDIO_OK) {
+        return status;
+    }
+
     CurrentVolume = volume;
-
-    /* Convert volume to codec register value */
-    uint8_t codecVolume = (volume * AUDIO_CODEC_VOLUME_MAX) / AUDIO_VOLUME_SCALE;
-
-    /* Write to codec registers */
-    AUDIO_StatusTypeDef status = AUDIO_OK;
-    status = AUDIO_Codec_WriteRegister(CODEC_REG_LEFT_DAC_DIGITAL_VOLUME,
-                                     (codecVolume << 1) | AUDIO_CODEC_VOLUME_ENABLE_MASK);
-    if (status != AUDIO_OK) {
-        return status;
-    }
-
-    status = AUDIO_Codec_WriteRegister(CODEC_REG_RIGHT_DAC_DIGITAL_VOLUME,
-                                     (codecVolume << 1) | AUDIO_CODEC_VOLUME_ENABLE_MASK);
-    if (status != AUDIO_OK) {
-        return status;
-    }
 
     return AUDIO_OK;
 }
@@ -650,12 +539,16 @@ AUDIO_StatusTypeDef AUDIO_GetVolume(uint8_t* volume)
  */
 AUDIO_StatusTypeDef AUDIO_SetMute(bool mute)
 {
+    uint8_t regValue = mute ? AUDIO_CODEC_HEADPHONE_MUTE : AUDIO_CODEC_HEADPHONE_UNMUTE;
+
+    AUDIO_StatusTypeDef status = AUDIO_Codec_WriteRegister(CODEC_REG_PLAYBACK_CTL2, regValue);
+    if (status != AUDIO_OK) {
+        return status;
+    }
+
     IsMuted = mute;
 
-    /* Control codec mute */
-    uint16_t regValue = mute ? AUDIO_CODEC_MUTE_MASK : 0x0000U;
-
-    return AUDIO_Codec_WriteRegister(CODEC_REG_DAC_CONTROL_1, regValue);
+    return AUDIO_OK;
 }
 
 /**
@@ -737,7 +630,7 @@ const char* AUDIO_GetStatusString(AUDIO_StatusTypeDef status)
 static AUDIO_StatusTypeDef AUDIO_SAI_Init(void)
 {
     AUDIO_SAI_CLK_ENABLE();
-    AUDIO_SAI_GPIO_CLK_ENABLE();
+    /* GPIO driver enables the GPIOE port clock */
 
     /* Configure SAI pins */
     GPIO_InitTypeDef gpioInit = {0};
@@ -747,7 +640,7 @@ static AUDIO_StatusTypeDef AUDIO_SAI_Init(void)
     gpioInit.Pull = GPIO_NOPULL;
     gpioInit.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     gpioInit.Alternate = GPIO_AF6_SAI1;
-    HAL_GPIO_Init(AUDIO_SAI_MCK_GPIO_PORT, &gpioInit);
+    GPIO_Driver_Pin_Init(AUDIO_SAI_MCK_GPIO_PORT, &gpioInit);
 
     /* Configure SAI */
     SaiHandle.Instance = AUDIO_SAI_INSTANCE;
@@ -756,7 +649,7 @@ static AUDIO_StatusTypeDef AUDIO_SAI_Init(void)
     SaiHandle.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE;
     SaiHandle.Init.NoDivider = SAI_MASTERDIVIDER_ENABLE;
     SaiHandle.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_EMPTY;
-    SaiHandle.Init.AudioFrequency = SAI_AUDIO_FREQUENCY_44K;
+    SaiHandle.Init.AudioFrequency = AUDIO_SampleRateHz(AudioConfig.SampleRate);
     SaiHandle.Init.Protocol = SAI_FREE_PROTOCOL;
     SaiHandle.Init.DataSize = SAI_DATASIZE_16;
     SaiHandle.Init.FirstBit = SAI_FIRSTBIT_MSB;
@@ -789,7 +682,7 @@ static AUDIO_StatusTypeDef AUDIO_SAI_Init(void)
 static AUDIO_StatusTypeDef AUDIO_I2S_Init(void)
 {
     AUDIO_I2S_CLK_ENABLE();
-    AUDIO_I2S_GPIO_CLK_ENABLE();
+    /* GPIO driver enables the GPIOC port clock */
 
     /* Configure I2S pins */
     GPIO_InitTypeDef gpioInit = {0};
@@ -798,7 +691,7 @@ static AUDIO_StatusTypeDef AUDIO_I2S_Init(void)
     gpioInit.Pull = GPIO_NOPULL;
     gpioInit.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     gpioInit.Alternate = GPIO_AF6_SPI3;
-    HAL_GPIO_Init(AUDIO_I2S_WS_GPIO_PORT, &gpioInit);
+    GPIO_Driver_Pin_Init(AUDIO_I2S_WS_GPIO_PORT, &gpioInit);
 
     /* Configure I2S */
     I2sHandle.Instance = AUDIO_I2S_INSTANCE;
@@ -806,7 +699,7 @@ static AUDIO_StatusTypeDef AUDIO_I2S_Init(void)
     I2sHandle.Init.Standard = I2S_STANDARD_PHILIPS;
     I2sHandle.Init.DataFormat = I2S_DATAFORMAT_16B;
     I2sHandle.Init.MCLKOutput = I2S_MCLKOUTPUT_ENABLE;
-    I2sHandle.Init.AudioFreq = I2S_AUDIOFREQ_44K;
+    I2sHandle.Init.AudioFreq = AUDIO_SampleRateHz(AudioConfig.SampleRate);
     I2sHandle.Init.CPOL = I2S_CPOL_LOW;
     I2sHandle.Init.ClockSource = I2S_CLOCK_PLL;
     I2sHandle.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
@@ -863,23 +756,13 @@ static AUDIO_StatusTypeDef AUDIO_DMA_Init(void)
 
 /**
  * @brief   Initialize audio buffers
- * @details Allocates and initializes audio input/output buffers
+ * @details Binds the static buffer memory to the input/output ring buffers
  * @param   None
  * @retval  AUDIO_StatusTypeDef Operation status
  */
 static AUDIO_StatusTypeDef AUDIO_Buffer_Init(void)
 {
-    /* Allocate output buffer */
-    OutputBufferMemory = (uint8_t*)malloc(AudioConfig.BufferSize);
-    if (OutputBufferMemory == NULL) {
-        return AUDIO_ERROR;
-    }
-
-    /* Allocate input buffer */
-    InputBufferMemory = (uint8_t*)malloc(AudioConfig.BufferSize);
-    if (InputBufferMemory == NULL) {
-        free(OutputBufferMemory);
-        OutputBufferMemory = NULL;
+    if (AudioConfig.BufferSize > sizeof(OutputBufferMemory)) {
         return AUDIO_ERROR;
     }
 
@@ -891,76 +774,65 @@ static AUDIO_StatusTypeDef AUDIO_Buffer_Init(void)
     OutputBuffer.IsEmpty = true;
     OutputBuffer.IsFull = false;
 
-    /* Initialize input buffer structure */
-    InputBuffer.Buffer = InputBufferMemory;
-    InputBuffer.Size = AudioConfig.BufferSize;
-    InputBuffer.ReadIndex = 0;
-    InputBuffer.WriteIndex = 0;
-    InputBuffer.IsEmpty = true;
-    InputBuffer.IsFull = false;
-
     return AUDIO_OK;
 }
 
 /**
  * @brief   Initialize audio codec
- * @details Configures the connected audio codec (WM8994 example)
+ * @details Brings the CS43L22 out of reset and configures it for I2S playback
  * @param   None
  * @retval  AUDIO_StatusTypeDef Operation status
  */
 AUDIO_StatusTypeDef AUDIO_CodecInit(void)
 {
-    AUDIO_StatusTypeDef status = AUDIO_OK;
+    static const struct {
+        uint8_t reg;
+        uint8_t value;
+    } codecInitSequence[] = {
+        {CODEC_REG_POWER_CTL1,     AUDIO_CODEC_POWER_DOWN},
+        {CODEC_REG_POWER_CTL2,     AUDIO_CODEC_OUTPUT_HEADPHONE},
+        {CODEC_REG_CLOCKING_CTL,   AUDIO_CODEC_CLOCK_AUTODETECT},
+        {CODEC_REG_INTERFACE_CTL1, AUDIO_CODEC_INTERFACE_I2S},
+        {CODEC_REG_ANALOG_ZC_SR,   AUDIO_CODEC_ANALOG_ZC_SR},
+    };
 
-    /* Reset codec */
-    status = AUDIO_Codec_WriteRegister(CODEC_REG_SOFTWARE_RESET, AUDIO_CODEC_RESET_VALUE);
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Pin = AUDIO_CODEC_RESET_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_Driver_Pin_Init(AUDIO_CODEC_RESET_GPIO_PORT, &GPIO_InitStruct);
+
+    /* RESET is active low and must be released before the codec answers on I2C. */
+    HAL_GPIO_WritePin(AUDIO_CODEC_RESET_GPIO_PORT, AUDIO_CODEC_RESET_PIN, GPIO_PIN_RESET);
+    HAL_Delay(AUDIO_SAI_RESET_DELAY);
+    HAL_GPIO_WritePin(AUDIO_CODEC_RESET_GPIO_PORT, AUDIO_CODEC_RESET_PIN, GPIO_PIN_SET);
+    HAL_Delay(AUDIO_SAI_RESET_DELAY);
+
+    I2C_Init();
+
+    uint8_t chipId = 0;
+    AUDIO_StatusTypeDef status = AUDIO_Codec_ReadRegister(CODEC_REG_ID, &chipId);
     if (status != AUDIO_OK) {
         return status;
     }
-
-    HAL_Delay(AUDIO_SAI_RESET_DELAY);  /* Wait for reset */
-
-    /* Power management */
-    status = AUDIO_Codec_WriteRegister(CODEC_REG_POWER_MANAGEMENT_1, AUDIO_CODEC_PM1_VALUE);
-    if (status != AUDIO_OK) {
-        return status;
+    if ((chipId & AUDIO_CODEC_CHIP_ID_MASK) != AUDIO_CODEC_CHIP_ID) {
+        return AUDIO_ERROR;
     }
 
-    status = AUDIO_Codec_WriteRegister(CODEC_REG_POWER_MANAGEMENT_2, AUDIO_CODEC_PM2_VALUE);
-    if (status != AUDIO_OK) {
-        return status;
+    for (uint32_t i = 0; i < (sizeof(codecInitSequence) / sizeof(codecInitSequence[0])); i++) {
+        status = AUDIO_Codec_WriteRegister(codecInitSequence[i].reg, codecInitSequence[i].value);
+        if (status != AUDIO_OK) {
+            return status;
+        }
     }
 
-    status = AUDIO_Codec_WriteRegister(CODEC_REG_POWER_MANAGEMENT_3, AUDIO_CODEC_PM3_VALUE);
-    if (status != AUDIO_OK) {
-        return status;
-    }
-
-    /* Audio interface configuration */
-    status = AUDIO_Codec_WriteRegister(CODEC_REG_AUDIO_INTERFACE_1, AUDIO_CODEC_AI1_VALUE);
-    if (status != AUDIO_OK) {
-        return status;
-    }
-
-    /* Clocking configuration */
-    status = AUDIO_Codec_WriteRegister(CODEC_REG_CLOCKING_1, AUDIO_CODEC_CLK1_VALUE);
-    if (status != AUDIO_OK) {
-        return status;
-    }
-
-    /* DAC configuration */
-    status = AUDIO_Codec_WriteRegister(CODEC_REG_DAC_CONTROL_1, AUDIO_CODEC_DAC1_VALUE);
-    if (status != AUDIO_OK) {
-        return status;
-    }
-
-    /* Set initial volume */
     status = AUDIO_SetVolume(CurrentVolume);
     if (status != AUDIO_OK) {
         return status;
     }
 
-    return AUDIO_OK;
+    return AUDIO_Codec_WriteRegister(CODEC_REG_POWER_CTL1, AUDIO_CODEC_POWER_UP);
 }
 
 /**
@@ -970,104 +842,119 @@ AUDIO_StatusTypeDef AUDIO_CodecInit(void)
  * @param   value Value to write
  * @retval  AUDIO_StatusTypeDef Operation status
  */
-static AUDIO_StatusTypeDef AUDIO_Codec_WriteRegister(uint8_t reg, uint16_t value)
+static AUDIO_StatusTypeDef AUDIO_Codec_WriteRegister(uint8_t reg, uint8_t value)
 {
-    /* This would use I2C to communicate with the codec */
-    /* Implementation depends on the specific codec and I2C setup */
-
-    /* Placeholder - actual implementation would use I2C functions */
-    (void)reg;
-    (void)value;
+    if (I2C_Mem_Write(AUDIO_CODEC_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT,
+                      &value, 1, AUDIO_CODEC_I2C_TIMEOUT) != I2C_OK) {
+        return AUDIO_ERROR;
+    }
 
     return AUDIO_OK;
 }
 
 /**
- * @brief   Read from codec register
- * @details Reads a value from a codec register via I2C
+ * @brief   Read a codec register
  * @param   reg Register address
- * @param   value Pointer to store read value
+ * @param   value Pointer to store the register contents
  * @retval  AUDIO_StatusTypeDef Operation status
  */
-static AUDIO_StatusTypeDef AUDIO_Codec_ReadRegister(uint8_t reg, uint16_t* value)
+static AUDIO_StatusTypeDef AUDIO_Codec_ReadRegister(uint8_t reg, uint8_t *value)
 {
-    /* This would use I2C to communicate with the codec */
-    /* Implementation depends on the specific codec and I2C setup */
+    if (value == NULL) {
+        return AUDIO_INVALID_PARAM;
+    }
 
-    /* Placeholder - actual implementation would use I2C functions */
-    (void)reg;
-    (void)value;
+    if (I2C_Mem_Read(AUDIO_CODEC_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT,
+                     value, 1, AUDIO_CODEC_I2C_TIMEOUT) != I2C_OK) {
+        return AUDIO_ERROR;
+    }
 
     return AUDIO_OK;
 }
 
 /**
- * @brief   Configure audio PLL
- * @details Sets up the audio PLL for proper clock generation
- * @param   None
- * @retval  AUDIO_StatusTypeDef Operation status
+ * @brief   Translate the configured sample rate to hertz
+ * @param   rate Configured sample rate
+ * @retval  uint32_t Sample rate in Hz
  */
-static AUDIO_StatusTypeDef AUDIO_SetAudioPLL(void)
+static uint32_t AUDIO_SampleRateHz(AUDIO_FreqTypeDef rate)
 {
-    /* For STM32F429, SAI clock is typically configured in the main system clock setup */
-    /* This function can be expanded based on specific clock requirements */
-
-    /* Enable SAI1 clock */
-    AUDIO_SAI_CLK_ENABLE();
-
-    return AUDIO_OK;
+    switch (rate) {
+        case AUDIO_FREQ_8K:  return 8000U;
+        case AUDIO_FREQ_11K: return 11025U;
+        case AUDIO_FREQ_16K: return 16000U;
+        case AUDIO_FREQ_22K: return 22050U;
+        case AUDIO_FREQ_32K: return 32000U;
+        case AUDIO_FREQ_48K: return 48000U;
+        case AUDIO_FREQ_96K: return 96000U;
+        case AUDIO_FREQ_44K:
+        default:             return 44100U;
+    }
 }
 
 /**
  * @brief   DMA transfer complete callback
- * @details Called when DMA transfer is complete
- * @param   hdma DMA handle
+ * @details Advances the output ring buffer by one half-buffer
+ * @param   None
  * @retval  None
  */
-static void AUDIO_DMA_Complete_Callback(DMA_HandleTypeDef* hdma)
+static void AUDIO_DMA_Complete_Callback(void)
 {
-    /* Suppress unused parameter warning */
-    (void)hdma;
-
     /* Update buffer read index */
-    OutputBuffer.ReadIndex = (OutputBuffer.ReadIndex + AudioConfig.BufferSize / 2) % OutputBuffer.Size;
+    OutputBuffer.ReadIndex = (OutputBuffer.ReadIndex + OutputBuffer.Size / 2) % OutputBuffer.Size;
 
     if (OutputBuffer.ReadIndex == OutputBuffer.WriteIndex) {
         OutputBuffer.IsEmpty = true;
     }
     OutputBuffer.IsFull = false;
 
-    /* Update statistics */
-    AudioStats.SampleCount += AudioConfig.BufferSize / 4;  /* 16-bit stereo samples */
+    uint32_t bytesPerSample = (AudioConfig.BitDepth == AUDIO_FORMAT_16BIT) ? 2U : 4U;
+    if (AudioConfig.Channels == AUDIO_CHANNEL_STEREO) {
+        bytesPerSample *= 2U;
+    }
+    AudioStats.SampleCount += (OutputBuffer.Size / 2U) / bytesPerSample;
 }
 
 /**
  * @brief   DMA error callback
  * @details Called when DMA transfer encounters an error
- * @param   hdma DMA handle
+ * @param   None
  * @retval  None
  */
-static void AUDIO_DMA_Error_Callback(DMA_HandleTypeDef* hdma)
+static void AUDIO_DMA_Error_Callback(void)
 {
-    /* Suppress unused parameter warning */
-    (void)hdma;
-
     AudioState = AUDIO_STATE_ERROR;
     AudioStats.SyncErrors++;
 }
 
-/**
- * @brief   Error handler
- * @details Handles audio subsystem errors
- * @param   None
- * @retval  None
- */
-static void AUDIO_Error_Handler(void)
-{
-    /* Set error state */
-    AudioState = AUDIO_STATE_ERROR;
+/* HAL transfer callbacks — only act on handles owned by this driver */
 
-    /* Could add error recovery logic here */
+void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
+{
+    if (hsai == &SaiHandle) {
+        AUDIO_DMA_Complete_Callback();
+    }
+}
+
+void HAL_SAI_ErrorCallback(SAI_HandleTypeDef *hsai)
+{
+    if (hsai == &SaiHandle) {
+        AUDIO_DMA_Error_Callback();
+    }
+}
+
+void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
+{
+    if (hi2s == &I2sHandle) {
+        AUDIO_DMA_Complete_Callback();
+    }
+}
+
+void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s)
+{
+    if (hi2s == &I2sHandle) {
+        AUDIO_DMA_Error_Callback();
+    }
 }
 
 /** @} */

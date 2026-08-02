@@ -32,11 +32,10 @@ ILI9488_Clear(&hili, ILI9488_COLOR_BLACK);
 
 // Draw some graphics
 ILI9488_DrawPixel(&hili, 100, 100, ILI9488_COLOR_RED);
-ILI9488_DrawRectangle(&hili, 50, 50, 100, 100, ILI9488_COLOR_BLUE);
 
 // Write text
 ILI9488_SetCursor(&hili, 10, 10);
-ILI9488_WriteString(&hili, "Hello World!", ILI9488_COLOR_WHITE, ILI9488_COLOR_BLACK);
+ILI9488_WriteChar(&hili, 'A', ILI9488_COLOR_WHITE, ILI9488_COLOR_BLACK);
 ```
 
 ## Pin Configuration

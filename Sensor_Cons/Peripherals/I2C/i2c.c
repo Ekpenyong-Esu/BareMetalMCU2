@@ -11,6 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "i2c.h"
+#include "gpio.h"
 #include "log.h"
 #include "main.h"
 
@@ -89,7 +90,11 @@ void I2C_Init(void)
   hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;    /* Clock stretching enabled */
 
   /* Initialize the I2C peripheral with the specified parameters */
-  HAL_I2C_Init(&hi2c3);
+  if (HAL_I2C_Init(&hi2c3) != HAL_OK)
+  {
+    log_error("I2C: I2C3 initialization failed");
+    return;
+  }
   log_debug("I2C: I2C3 initialized successfully");
 }
 
@@ -190,8 +195,10 @@ I2C_StatusTypeDef I2C_Master_Receive(uint16_t DevAddress, uint8_t* pData, uint16
 }
 
 /**
- * @brief   Transmit and receive data in single transaction
- * @details Performs write followed by read operation with automatic error recovery
+ * @brief   Transmit then receive data from the same device
+ * @details Performs a write transfer followed by a separate read transfer, with
+ *          automatic error recovery. A STOP is generated between the two; use
+ *          I2C_Mem_Read() for devices that require a repeated START.
  * @param   DevAddress Target device address (7-bit or 10-bit)
  * @param   pTxData Pointer to transmit data buffer
  * @param   TxSize Number of bytes to transmit
@@ -306,44 +313,6 @@ I2C_StatusTypeDef I2C_Mem_Read(uint16_t DevAddress, uint16_t MemAddress,
 
 
 /**
- * @brief   Read data from I2C memory device with error recovery
- * @details Reads data from specified memory address in I2C EEPROM/Memory device.
- *          Includes automatic bus re-initialization on communication errors for robustness.
- * @param   DevAddress Target device address
- * @param   MemAddress Memory address to read from
- * @param   MemAddSize Size of memory address (1 or 2 bytes)
- * @param   pData Pointer to data buffer to read into
- * @param   Size Number of bytes to read
- * @param   Timeout Timeout duration in milliseconds
- * @retval  I2C_StatusTypeDef Operation status
- * @note    On HAL error, automatically calls I2Cx_Error() to reset the I2C bus
- */
-I2C_StatusTypeDef I2C_Mem_Read_Multi(uint16_t DevAddress, uint16_t MemAddress,
-                              uint16_t MemAddSize, uint8_t* pData,
-                              uint16_t Size, uint32_t Timeout)
-{
-    if (pData == NULL || Size == 0)
-    {
-        return I2C_INVALID_PARAM;
-    }
-
-    HAL_StatusTypeDef halStatus = HAL_I2C_Mem_Read(&hi2c3, DevAddress, MemAddress,
-                                                  MemAddSize, pData, Size, Timeout);
-
-    if (halStatus == HAL_OK)
-    {
-        return I2C_OK;
-    }
-    else
-    {
-        /* Re-Initialize the BUS on error for automatic recovery */
-        I2Cx_Error();
-        return I2C_ConvertHALStatus(halStatus);
-    }
-}
-
-
-/**
  * @brief   Check if I2C device is ready/responding
  * @details Tests if target device acknowledges its address
  * @param   DevAddress Target device address
@@ -409,8 +378,13 @@ static void I2Cx_Error(void)
     /* Attempt to recover the bus if lines are stuck */
     I2C_BusRecovery();
 
-    /* Re-Initialize the I2C communication BUS */
-    I2C_Init();
+    /* Re-init from hi2c3.Init, which HAL_I2C_DeInit leaves untouched. Calling
+       I2C_Init() here instead would force the bus back to the 100 kHz default
+       and silently discard an I2C_Init_Custom() configuration. */
+    if (HAL_I2C_Init(&hi2c3) != HAL_OK)
+    {
+        log_error("I2C: bus recovery failed to re-initialize I2C3");
+    }
 }
 
 /**
@@ -421,9 +395,7 @@ static void I2C_BusRecovery(void)
 {
         GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-        /* Enable GPIO clocks for I2C3 pins */
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-        __HAL_RCC_GPIOC_CLK_ENABLE();
+        /* GPIO driver enables the port clocks */
 
         /* Configure SCL and SDA as open-drain outputs with pull-up */
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
@@ -431,10 +403,10 @@ static void I2C_BusRecovery(void)
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
         GPIO_InitStruct.Pin = I2C3_SCL_Pin;
-        HAL_GPIO_Init(I2C3_SCL_GPIO_Port, &GPIO_InitStruct);
+        GPIO_Driver_Pin_Init(I2C3_SCL_GPIO_Port, &GPIO_InitStruct);
 
         GPIO_InitStruct.Pin = I2C3_SDA_Pin;
-        HAL_GPIO_Init(I2C3_SDA_GPIO_Port, &GPIO_InitStruct);
+        GPIO_Driver_Pin_Init(I2C3_SDA_GPIO_Port, &GPIO_InitStruct);
 
         /* Release lines high */
         HAL_GPIO_WritePin(I2C3_SCL_GPIO_Port, I2C3_SCL_Pin, GPIO_PIN_SET);

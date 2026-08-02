@@ -76,7 +76,8 @@ bool LedPwm_Update(LedPwm_t* pwm, uint32_t nowUs)
         elapsedUs = 0u;
     }
 
-    uint32_t onTimeUs = (pwm->periodUs / LED_PWM_MAX_BRIGHTNESS) * pwm->brightness;
+    /* Multiply before dividing: periodUs is not necessarily a multiple of 100. */
+    uint32_t onTimeUs = (pwm->periodUs * pwm->brightness) / LED_PWM_MAX_BRIGHTNESS;
     LedState_t wanted = (elapsedUs < onTimeUs) ? LED_ON : LED_OFF;
 
     if (Led_GetState(pwm->led) != wanted) {

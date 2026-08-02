@@ -127,14 +127,6 @@ IWDG_StatusTypeDef IWDG_Init_TimeoutMs(uint32_t timeout_ms);
  */
 IWDG_StatusTypeDef IWDG_Refresh(void);
 
-/**
- * @brief   Start the watchdog (cannot be stopped once started)
- * @details Once started, IWDG cannot be stopped except by reset
- * @param   None
- * @retval  IWDG_StatusTypeDef Operation status
- */
-IWDG_StatusTypeDef IWDG_Start(void);
-
 /** @} */
 
 /** @defgroup IWDG_Utility_Functions Utility Functions

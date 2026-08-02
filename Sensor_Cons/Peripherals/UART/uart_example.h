@@ -50,27 +50,6 @@ UART_Status_t UART_Example_Init(UART_Mode_t mode);
 UART_Status_t UART_Example_ProcessCommand(const char* cmd);
 
 /**
- * @brief Example of DMA mode transmission
- * @param data Data to transmit
- * @return UART_Status_t Status of transmission
- */
-UART_Status_t UART_Example_DMAMode(const char* data);
-
-/**
- * @brief Example of Interrupt mode transmission
- * @param data Data to transmit
- * @return UART_Status_t Status of transmission
- */
-UART_Status_t UART_Example_InterruptMode(const char* data);
-
-/**
- * @brief Example of Blocking mode transmission
- * @param data Data to transmit
- * @return UART_Status_t Status of transmission
- */
-UART_Status_t UART_Example_BlockingMode(const char* data);
-
-/**
  * @brief Send a message using current UART mode
  * @param msg Message to send
  * @return UART_Status_t Status of operation

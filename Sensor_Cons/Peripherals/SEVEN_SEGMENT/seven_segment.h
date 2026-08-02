@@ -110,7 +110,6 @@ typedef struct {
 typedef struct {
     SegHT1621Pins_t pins;           /**< HT1621 GPIO pins */
     uint8_t digitCount;             /**< Number of digits */
-    uint8_t* segmentMap;            /**< Custom segment mapping (optional) */
     uint8_t bias;                   /**< LCD bias (2, 3, or 4) */
     uint8_t commons;                /**< Number of commons (2, 3, or 4) */
 } SegHT1621Config_t;
@@ -137,7 +136,6 @@ typedef struct {
     uint8_t currentDigit;           /**< Current digit for multiplexing */
     bool initialized;               /**< Initialization flag */
     bool enabled;                   /**< Display enabled flag */
-    uint8_t brightness;             /**< Brightness level (0-100) for HT1621 */
 } SegDisplayHandle_t;
 
 /* Exported constants --------------------------------------------------------*/
@@ -242,14 +240,6 @@ SegStatus_t Seg_Disable(SegDisplayHandle_t* handle);
  * @retval  SegStatus_t Operation status
  */
 SegStatus_t Seg_Clear(SegDisplayHandle_t* handle);
-
-/**
- * @brief   Set display brightness (HT1621 only)
- * @param   handle Pointer to display handle
- * @param   brightness Brightness level (0-100)
- * @retval  SegStatus_t Operation status
- */
-SegStatus_t Seg_SetBrightness(SegDisplayHandle_t* handle, uint8_t brightness);
 
 /** @} */
 

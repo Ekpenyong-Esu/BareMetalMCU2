@@ -9,6 +9,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "lcd.h"
 
+/** One 5-pixel glyph row, MSB = leftmost pixel. Spelled out as digits so the
+    bitmaps stay legible without the non-standard 0b literal extension. */
+#define GLYPH_ROW(b4, b3, b2, b1, b0) \
+    ((uint8_t)(((b4) << 4) | ((b3) << 3) | ((b2) << 2) | ((b1) << 1) | (b0)))
+
 /* Example Handles -----------------------------------------------------------*/
 static LCD_HandleTypeDef hLCD;
 
@@ -16,62 +21,62 @@ static LCD_HandleTypeDef hLCD;
 
 /** Heart symbol */
 static const uint8_t charHeart[] = {
-    0b00000,
-    0b01010,
-    0b11111,
-    0b11111,
-    0b01110,
-    0b00100,
-    0b00000,
-    0b00000
+    GLYPH_ROW(0,0,0,0,0),
+    GLYPH_ROW(0,1,0,1,0),
+    GLYPH_ROW(1,1,1,1,1),
+    GLYPH_ROW(1,1,1,1,1),
+    GLYPH_ROW(0,1,1,1,0),
+    GLYPH_ROW(0,0,1,0,0),
+    GLYPH_ROW(0,0,0,0,0),
+    GLYPH_ROW(0,0,0,0,0)
 };
 
 /** Battery full symbol */
 static const uint8_t charBattery[] = {
-    0b01110,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111
+    GLYPH_ROW(0,1,1,1,0),
+    GLYPH_ROW(1,1,1,1,1),
+    GLYPH_ROW(1,1,1,1,1),
+    GLYPH_ROW(1,1,1,1,1),
+    GLYPH_ROW(1,1,1,1,1),
+    GLYPH_ROW(1,1,1,1,1),
+    GLYPH_ROW(1,1,1,1,1),
+    GLYPH_ROW(1,1,1,1,1)
 };
 
 /** Degree symbol */
 static const uint8_t charDegree[] = {
-    0b01100,
-    0b10010,
-    0b10010,
-    0b01100,
-    0b00000,
-    0b00000,
-    0b00000,
-    0b00000
+    GLYPH_ROW(0,1,1,0,0),
+    GLYPH_ROW(1,0,0,1,0),
+    GLYPH_ROW(1,0,0,1,0),
+    GLYPH_ROW(0,1,1,0,0),
+    GLYPH_ROW(0,0,0,0,0),
+    GLYPH_ROW(0,0,0,0,0),
+    GLYPH_ROW(0,0,0,0,0),
+    GLYPH_ROW(0,0,0,0,0)
 };
 
 /** Bell symbol */
 static const uint8_t charBell[] = {
-    0b00100,
-    0b01110,
-    0b01110,
-    0b01110,
-    0b11111,
-    0b00000,
-    0b00100,
-    0b00000
+    GLYPH_ROW(0,0,1,0,0),
+    GLYPH_ROW(0,1,1,1,0),
+    GLYPH_ROW(0,1,1,1,0),
+    GLYPH_ROW(0,1,1,1,0),
+    GLYPH_ROW(1,1,1,1,1),
+    GLYPH_ROW(0,0,0,0,0),
+    GLYPH_ROW(0,0,1,0,0),
+    GLYPH_ROW(0,0,0,0,0)
 };
 
 /** Smiley face */
 static const uint8_t charSmiley[] = {
-    0b00000,
-    0b01010,
-    0b01010,
-    0b00000,
-    0b10001,
-    0b01110,
-    0b00000,
-    0b00000
+    GLYPH_ROW(0,0,0,0,0),
+    GLYPH_ROW(0,1,0,1,0),
+    GLYPH_ROW(0,1,0,1,0),
+    GLYPH_ROW(0,0,0,0,0),
+    GLYPH_ROW(1,0,0,0,1),
+    GLYPH_ROW(0,1,1,1,0),
+    GLYPH_ROW(0,0,0,0,0),
+    GLYPH_ROW(0,0,0,0,0)
 };
 
 /* Example Functions ---------------------------------------------------------*/
@@ -383,12 +388,16 @@ void LCD_Example_ProgressBar(void)
 {
     /* Custom characters for progress bar */
     static const uint8_t charFull[] = {
-        0b11111, 0b11111, 0b11111, 0b11111,
-        0b11111, 0b11111, 0b11111, 0b11111
+        GLYPH_ROW(1,1,1,1,1), GLYPH_ROW(1,1,1,1,1),
+        GLYPH_ROW(1,1,1,1,1), GLYPH_ROW(1,1,1,1,1),
+        GLYPH_ROW(1,1,1,1,1), GLYPH_ROW(1,1,1,1,1),
+        GLYPH_ROW(1,1,1,1,1), GLYPH_ROW(1,1,1,1,1)
     };
     static const uint8_t charEmpty[] = {
-        0b11111, 0b10001, 0b10001, 0b10001,
-        0b10001, 0b10001, 0b10001, 0b11111
+        GLYPH_ROW(1,1,1,1,1), GLYPH_ROW(1,0,0,0,1),
+        GLYPH_ROW(1,0,0,0,1), GLYPH_ROW(1,0,0,0,1),
+        GLYPH_ROW(1,0,0,0,1), GLYPH_ROW(1,0,0,0,1),
+        GLYPH_ROW(1,0,0,0,1), GLYPH_ROW(1,1,1,1,1)
     };
 
     /* Assume LCD already initialized */

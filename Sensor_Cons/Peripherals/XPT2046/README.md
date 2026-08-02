@@ -40,7 +40,7 @@ if (XPT2046_IsTouched(&hxpt)) {
 // Or use update method for state tracking
 XPT2046_Update(&hxpt);
 XPT2046_TouchPoint_t current_touch;
-XPT2046_GetTouch(&hxpt, &current_touch);
+XPT2046_ReadTouch(&hxpt, &current_touch);
 ```
 
 ## Pin Configuration
@@ -52,17 +52,15 @@ XPT2046_GetTouch(&hxpt, &current_touch);
 
 ## Calibration
 
-The driver supports touchscreen calibration for accurate coordinate mapping:
+A resistive panel never reaches the ADC rails, so the driver maps from a measured raw
+span rather than from 0..4095. `XPT2046_Init` seeds a typical span; replace it with the
+raw values you read at two opposite corners:
 
 ```c
-// Set custom calibration matrix
-uint16_t calibration[7] = {scale_x, offset_x, coeff_xy, scale_y, offset_y, coeff_yx, divisor};
-XPT2046_SetCalibration(&hxpt, calibration);
-
-// Or perform calibration
-XPT2046_StartCalibration(&hxpt);
-// Touch calibration points and compute matrix
+XPT2046_SetCalibration(&hxpt, raw_x_min, raw_x_max, raw_y_min, raw_y_max);
 ```
+
+Drawing the calibration crosshairs and storing the result belong to the application.
 
 ## Touch States
 

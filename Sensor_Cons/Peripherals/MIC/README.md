@@ -174,8 +174,6 @@ printf("Zero crossing rate: %.3f\n", analysis.ZeroCrossingRate);
 - `MIC_GAIN_24DB` - 24 dB gain
 
 ### Audio Formats
-- `MIC_FORMAT_PCM16` - 16-bit PCM (default)
-- `MIC_FORMAT_PCM32` - 32-bit PCM
 
 ## Performance Characteristics
 

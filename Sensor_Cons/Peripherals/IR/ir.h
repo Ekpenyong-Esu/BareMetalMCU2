@@ -137,10 +137,6 @@ typedef struct {
     /* Hardware handles */
     TIM_HandleTypeDef *htimCarrier;     /* Timer for carrier generation */
     TIM_HandleTypeDef *htimCapture;     /* Timer for input capture */
-    GPIO_TypeDef *txPort;               /* TX GPIO port */
-    uint16_t txPin;                     /* TX GPIO pin */
-    GPIO_TypeDef *rxPort;               /* RX GPIO port */
-    uint16_t rxPin;                     /* RX GPIO pin */
     uint32_t txChannel;                 /* PWM channel for TX */
     uint32_t rxChannel;                 /* Input capture channel for RX */
 
@@ -149,7 +145,6 @@ typedef struct {
 
     /* State variables */
     IR_State_t state;                   /* Current state */
-    IR_Event_t lastEvent;               /* Last event */
     uint32_t errorCode;                 /* Last error code */
     bool initialized;                   /* Initialization flag */
 
@@ -163,7 +158,6 @@ typedef struct {
     IR_Pulse_t txBuffer[IR_TX_BUFFER_SIZE]; /* Transmit pulse buffer */
     uint16_t txIndex;                       /* Current transmit index */
     uint16_t txCount;                       /* Total pulses to transmit */
-    bool txActive;                          /* Transmission active flag */
 
     /* Callback function */
     void (*eventCallback)(IR_Event_t event, IR_Frame_t *frame);
@@ -176,18 +170,13 @@ typedef struct {
  * @param handle: Pointer to IR handle structure
  * @param htimCarrier: Pointer to carrier timer handle
  * @param htimCapture: Pointer to capture timer handle
- * @param txPort: TX GPIO port
- * @param txPin: TX GPIO pin
- * @param rxPort: RX GPIO port
- * @param rxPin: RX GPIO pin
  * @param txChannel: PWM channel for carrier
  * @param rxChannel: Input capture channel
  * @param config: Pointer to configuration structure
  * @return HAL_StatusTypeDef: HAL status
  */
 HAL_StatusTypeDef IR_Init(IR_Handle_t *handle, TIM_HandleTypeDef *htimCarrier,
-                         TIM_HandleTypeDef *htimCapture, GPIO_TypeDef *txPort,
-                         uint16_t txPin, GPIO_TypeDef *rxPort, uint16_t rxPin,
+                         TIM_HandleTypeDef *htimCapture,
                          uint32_t txChannel, uint32_t rxChannel, IR_Config_t *config);
 
 /**
@@ -316,13 +305,6 @@ void IR_InputCaptureCallback(IR_Handle_t *handle, uint32_t captureValue);
  * @return void
  */
 void IR_TimerOverflowCallback(IR_Handle_t *handle);
-
-/**
- * @brief PWM pulse finished callback (to be called from HAL interrupt)
- * @param handle: Pointer to IR handle structure
- * @return void
- */
-void IR_PWMPulseFinishedCallback(IR_Handle_t *handle);
 
 /* Utility Functions ---------------------------------------------------------*/
 

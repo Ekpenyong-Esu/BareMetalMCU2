@@ -98,7 +98,6 @@ EEPROM_ConfigTypeDef config = {
     .totalSize = 4096,
     .pageSize = 32,
     .addressSize = 2,
-    .writeTime = 5
 };
 
 EEPROM_InitCustom(&eeprom, &config);

@@ -1,4 +1,5 @@
 #include "relay.h"
+#include "gpio.h"
 
 static inline GPIO_PinState relay_active_state(RelayPolarity_t polarity)
 {
@@ -25,7 +26,7 @@ HAL_StatusTypeDef Relay_Init(Relay_t *relay, GPIO_TypeDef *port, uint16_t pin, R
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(port, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(port, &GPIO_InitStruct);
 
     HAL_GPIO_WritePin(port, pin, relay_inactive_state(polarity));
     return HAL_OK;
@@ -53,5 +54,5 @@ bool Relay_IsOn(const Relay_t *relay)
         return false;
     }
     GPIO_PinState state = HAL_GPIO_ReadPin(relay->port, relay->pin);
-    return (relay->polarity == RELAY_ACTIVE_HIGH) ? (state == GPIO_PIN_SET) : (state == GPIO_PIN_RESET);
+    return (state == relay_active_state(relay->polarity));
 }

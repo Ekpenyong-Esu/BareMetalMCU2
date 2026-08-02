@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    button_simple.c
+  * @file    button.c
   * @brief   Simplified Button implementation for STM32F429
   * @details Streamlined button driver with essential functionality only
   * @version 2.0
@@ -14,30 +14,28 @@
 
 /* Private functions ---------------------------------------------------------*/
 
+/* Reads the pin without the initialized guard, so init can seed the state. */
+static ButtonState_t Button_ReadPin(const ButtonConfig_t* config)
+{
+    GPIO_PinState pinState = GPIO_Driver_ReadPin(config->port, config->pin);
+    GPIO_PinState activeLevel = (int)config->activeLow ? GPIO_PIN_RESET : GPIO_PIN_SET;
+
+    return (pinState == activeLevel) ? BUTTON_PRESSED : BUTTON_RELEASED;
+}
+
 static void Button_GPIO_Init(const ButtonConfig_t* config)
 {
     GPIO_InitTypeDef gpioInit = {0};
 
     gpioInit.Pin = config->pin;
-    gpioInit.Mode = config->enableInterrupt ? GPIO_MODE_IT_FALLING : GPIO_MODE_INPUT;
+    gpioInit.Mode = (int)config->enableInterrupt ? GPIO_MODE_IT_FALLING : GPIO_MODE_INPUT;
     gpioInit.Speed = GPIO_SPEED_FREQ_LOW;
-    gpioInit.Pull = config->activeLow ? GPIO_PULLUP : GPIO_PULLDOWN;
+    gpioInit.Pull = (int)config->activeLow ? GPIO_PULLUP : GPIO_PULLDOWN;
 
     GPIO_Driver_Pin_Init(config->port, &gpioInit);
 
     if (config->enableInterrupt) {
-        uint32_t irq = 0;
-        if (config->pin == GPIO_PIN_0) irq = EXTI0_IRQn;
-        else if (config->pin == GPIO_PIN_1) irq = EXTI1_IRQn;
-        else if (config->pin == GPIO_PIN_2) irq = EXTI2_IRQn;
-        else if (config->pin == GPIO_PIN_3) irq = EXTI3_IRQn;
-        else if (config->pin == GPIO_PIN_4) irq = EXTI4_IRQn;
-        else if (config->pin >= GPIO_PIN_5 && config->pin <= GPIO_PIN_9) irq = EXTI9_5_IRQn;
-        else if (config->pin >= GPIO_PIN_10 && config->pin <= GPIO_PIN_15) irq = EXTI15_10_IRQn;
-        if (irq) {
-            HAL_NVIC_SetPriority(irq, 2, 0);
-            HAL_NVIC_EnableIRQ(irq);
-        }
+        GPIO_Driver_EnableIRQ(config->pin, BUTTON_IRQ_PRIORITY, 0);
     }
 }
 
@@ -63,16 +61,14 @@ bool Button_InitCustom(ButtonHandle_t* handle, const ButtonConfig_t* config)
     }
 
     handle->config = *config;
-    handle->state = BUTTON_RELEASED;
-    handle->lastState = BUTTON_RELEASED;
-    handle->lastChangeTime = 0;
-    handle->initialized = false;
+    handle->lastChangeTime = HAL_GetTick();
+    handle->pressEvent = false;
+    handle->releaseEvent = false;
 
     Button_GPIO_Init(&handle->config);
 
-    handle->state = Button_ReadRaw(handle);
+    handle->state = Button_ReadPin(&handle->config);
     handle->lastState = handle->state;
-    handle->lastChangeTime = HAL_GetTick();
     handle->initialized = true;
 
     return true;
@@ -84,7 +80,7 @@ ButtonState_t Button_Read(ButtonHandle_t* handle)
         return BUTTON_RELEASED;
     }
 
-    ButtonState_t rawState = Button_ReadRaw(handle);
+    ButtonState_t rawState = Button_ReadPin(&handle->config);
     uint32_t currentTime = HAL_GetTick();
 
     if (rawState != handle->lastState) {
@@ -92,7 +88,14 @@ ButtonState_t Button_Read(ButtonHandle_t* handle)
         handle->lastState = rawState;
     }
 
-    if ((currentTime - handle->lastChangeTime) >= handle->config.debounceMs) {
+    if ((currentTime - handle->lastChangeTime) >= handle->config.debounceMs &&
+        rawState != handle->state) {
+        /* Latch the edge so each Was* query can consume it independently. */
+        if (rawState == BUTTON_PRESSED) {
+            handle->pressEvent = true;
+        } else {
+            handle->releaseEvent = true;
+        }
         handle->state = rawState;
     }
 
@@ -110,10 +113,11 @@ bool Button_WasPressed(ButtonHandle_t* handle)
         return false;
     }
 
-    ButtonState_t oldState = handle->state;
-    ButtonState_t newState = Button_Read(handle);
+    Button_Read(handle);
 
-    return (oldState == BUTTON_RELEASED && newState == BUTTON_PRESSED);
+    bool pressed = handle->pressEvent;
+    handle->pressEvent = false;
+    return pressed;
 }
 
 bool Button_WasReleased(ButtonHandle_t* handle)
@@ -122,10 +126,11 @@ bool Button_WasReleased(ButtonHandle_t* handle)
         return false;
     }
 
-    ButtonState_t oldState = handle->state;
-    ButtonState_t newState = Button_Read(handle);
+    Button_Read(handle);
 
-    return (oldState == BUTTON_PRESSED && newState == BUTTON_RELEASED);
+    bool released = handle->releaseEvent;
+    handle->releaseEvent = false;
+    return released;
 }
 
 ButtonState_t Button_ReadRaw(ButtonHandle_t* handle)
@@ -134,12 +139,5 @@ ButtonState_t Button_ReadRaw(ButtonHandle_t* handle)
         return BUTTON_RELEASED;
     }
 
-    GPIO_PinState pinState = HAL_GPIO_ReadPin(handle->config.port, handle->config.pin);
-
-    /* Determine button state based on active level */
-    if (handle->config.activeLow) {
-        return (pinState == GPIO_PIN_RESET) ? BUTTON_PRESSED : BUTTON_RELEASED;
-    }
-
-    return (pinState == GPIO_PIN_SET) ? BUTTON_PRESSED : BUTTON_RELEASED;
+    return Button_ReadPin(&handle->config);
 }

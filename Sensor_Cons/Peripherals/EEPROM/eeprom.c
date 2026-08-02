@@ -9,7 +9,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "eeprom.h"
-#include "../I2C/i2c.h"
+#include "i2c.h"
 #include <string.h>
 #include "log.h"
 
@@ -25,8 +25,7 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .i2cAddressAlt = EEPROM_I2C_ADDRESS_A02,
         .totalSize = EEPROM_SIZE_8KB,
         .pageSize = EEPROM_PAGESIZE_4,
-        .addressSize = 2,
-        .writeTime = 5
+        .addressSize = 2
     },
     /* M24C01 - 1Kbit (128B) */
     {
@@ -35,7 +34,6 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .totalSize = EEPROM_SIZE_128B,
         .pageSize = EEPROM_PAGESIZE_16,
         .addressSize = 1,
-        .writeTime = 5
     },
     /* M24C02 - 2Kbit (256B) */
     {
@@ -44,7 +42,6 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .totalSize = EEPROM_SIZE_256B,
         .pageSize = EEPROM_PAGESIZE_16,
         .addressSize = 1,
-        .writeTime = 5
     },
     /* M24C04 - 4Kbit (512B) */
     {
@@ -53,7 +50,6 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .totalSize = EEPROM_SIZE_512B,
         .pageSize = EEPROM_PAGESIZE_16,
         .addressSize = 1,
-        .writeTime = 5
     },
     /* M24C08 - 8Kbit (1KB) */
     {
@@ -62,7 +58,6 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .totalSize = EEPROM_SIZE_1KB,
         .pageSize = EEPROM_PAGESIZE_16,
         .addressSize = 1,
-        .writeTime = 5
     },
     /* M24C16 - 16Kbit (2KB) */
     {
@@ -71,7 +66,6 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .totalSize = EEPROM_SIZE_2KB,
         .pageSize = EEPROM_PAGESIZE_16,
         .addressSize = 1,
-        .writeTime = 5
     },
     /* M24C32 - 32Kbit (4KB) */
     {
@@ -79,8 +73,7 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .i2cAddressAlt = 0x50,
         .totalSize = EEPROM_SIZE_4KB,
         .pageSize = EEPROM_PAGESIZE_32,
-        .addressSize = 2,
-        .writeTime = 5
+        .addressSize = 2
     },
     /* M24C64 - 64Kbit (8KB) */
     {
@@ -88,8 +81,7 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .i2cAddressAlt = 0x50,
         .totalSize = EEPROM_SIZE_8KB,
         .pageSize = EEPROM_PAGESIZE_32,
-        .addressSize = 2,
-        .writeTime = 5
+        .addressSize = 2
     },
     /* M24C128 - 128Kbit (16KB) */
     {
@@ -97,8 +89,7 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .i2cAddressAlt = 0x50,
         .totalSize = EEPROM_SIZE_16KB,
         .pageSize = EEPROM_PAGESIZE_64,
-        .addressSize = 2,
-        .writeTime = 5
+        .addressSize = 2
     },
     /* M24C256 - 256Kbit (32KB) */
     {
@@ -106,8 +97,7 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .i2cAddressAlt = 0x50,
         .totalSize = EEPROM_SIZE_32KB,
         .pageSize = EEPROM_PAGESIZE_64,
-        .addressSize = 2,
-        .writeTime = 5
+        .addressSize = 2
     },
     /* M24C512 - 512Kbit (64KB) */
     {
@@ -115,8 +105,7 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .i2cAddressAlt = 0x50,
         .totalSize = EEPROM_SIZE_64KB,
         .pageSize = EEPROM_PAGESIZE_128,
-        .addressSize = 2,
-        .writeTime = 5
+        .addressSize = 2
     },
     /* AT24C256 - 256Kbit (32KB) */
     {
@@ -124,8 +113,7 @@ static const EEPROM_ConfigTypeDef eepromConfigs[] = {
         .i2cAddressAlt = 0x50,
         .totalSize = EEPROM_SIZE_32KB,
         .pageSize = EEPROM_PAGESIZE_64,
-        .addressSize = 2,
-        .writeTime = 5
+        .addressSize = 2
     }
 };
 
@@ -169,8 +157,10 @@ EEPROM_StatusTypeDef EEPROM_InitType(EEPROM_HandleTypeDef* handle, EEPROM_TypeDe
     memcpy(&handle->config, &eepromConfigs[type], sizeof(EEPROM_ConfigTypeDef));
     handle->type = type;
 
-    /* Initialize I2C */
-    I2C_Init();
+    /* Only init the shared bus if the application hasn't already configured it */
+    if (hi2c3.Instance == NULL) {
+        I2C_Init();
+    }
 
     /* Try primary address first */
     handle->activeAddress = handle->config.i2cAddress;
@@ -211,8 +201,10 @@ EEPROM_StatusTypeDef EEPROM_InitCustom(EEPROM_HandleTypeDef* handle,
     memcpy(&handle->config, config, sizeof(EEPROM_ConfigTypeDef));
     handle->type = EEPROM_TYPE_CUSTOM;
 
-    /* Initialize I2C */
-    I2C_Init();
+    /* Only init the shared bus if the application hasn't already configured it */
+    if (hi2c3.Instance == NULL) {
+        I2C_Init();
+    }
 
     /* Try primary address */
     handle->activeAddress = handle->config.i2cAddress;

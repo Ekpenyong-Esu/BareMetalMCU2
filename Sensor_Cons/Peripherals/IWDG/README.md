@@ -92,7 +92,6 @@ IWDG_Init_Custom(&config);
 | Function | Description |
 |----------|-------------|
 | `IWDG_Refresh()` | Reset watchdog counter (must call periodically) |
-| `IWDG_Start()` | Start watchdog (auto-started by Init) |
 
 ### Utility Functions
 

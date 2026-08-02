@@ -127,20 +127,6 @@ RNG_StatusTypeDef RNG_DeInit(void)
  */
 RNG_StatusTypeDef RNG_Generate(uint32_t* randomNumber)
 {
-    return RNG_GenerateWithTimeout(randomNumber, RNG_TIMEOUT_DEFAULT);
-}
-
-/**
- * @brief   Generate a random number with timeout
- * @details Generates random number with specified timeout
- * @param   randomNumber Pointer to store the random number
- * @param   timeout Timeout in milliseconds (reserved for future use)
- * @retval  RNG_StatusTypeDef Operation status
- */
-RNG_StatusTypeDef RNG_GenerateWithTimeout(uint32_t* randomNumber, uint32_t timeout)
-{
-    (void)timeout;  /* Currently unused - HAL handles timeout internally */
-
     if (randomNumber == NULL)
     {
         return RNG_ERROR;

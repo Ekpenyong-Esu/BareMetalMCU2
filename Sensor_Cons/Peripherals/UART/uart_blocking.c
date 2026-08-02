@@ -4,6 +4,8 @@
  */
 
 #include "uart_blocking.h"
+#include "log.h"
+#include <string.h>
 
 UART_Status_t UART_Blocking_Init(UART_Handle_t* handle)
 {

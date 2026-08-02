@@ -23,9 +23,9 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>   /* size_t */
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -107,24 +107,6 @@ typedef enum {
 } RTC_StatusTypeDef;
 
 /* Exported constants --------------------------------------------------------*/
-
-/* Exported macro ------------------------------------------------------------*/
-
-/**
- * @brief  Convert a 2 digit decimal to BCD format.
- * @param  VALUE: Byte to be converted
- * @retval Converted byte
- */
-#define RTC_ByteToBcd2(VALUE) \
-    ((uint8_t)(((VALUE) / 10) << 4) | ((VALUE) % 10))
-
-/**
- * @brief  Convert from 2 digit BCD to Binary.
- * @param  VALUE: BCD value to be converted
- * @retval Converted word
- */
-#define RTC_Bcd2ToByte(VALUE) \
-    (uint8_t)(((uint8_t)((VALUE) & 0xF0U) >> 4) * 10 + ((VALUE) & 0x0FU))
 
 /* Exported functions --------------------------------------------------------*/
 
@@ -228,6 +210,15 @@ void RTC_FormatDateString(RTC_Date_t* sDate, char* buffer, size_t size);
  * @retval None
  */
 void RTC_AlarmCallback(uint32_t Alarm);
+
+/**
+ * @brief  RTC Alarm interrupt dispatcher
+ * @note   Called from RTC_Alarm_IRQHandler() in Core/Src/stm32f4xx_it.c.
+ *         Keeps the RTC handle private while letting the interrupt layer
+ *         own the vector-table entry point.
+ * @retval None
+ */
+void RTC_ISR_Dispatch(void);
 
 #ifdef __cplusplus
 }

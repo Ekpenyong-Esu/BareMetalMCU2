@@ -13,6 +13,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "qspi.h"
+#include "gpio.h"
 #include "log.h"
 #include <string.h>
 #include <stdio.h>
@@ -30,9 +31,8 @@
 #define QSPI_RESET_ENABLE_CMD           0x66    /* Reset Enable command */
 #define QSPI_RESET_CMD                  0x99    /* Reset command */
 #define QSPI_CHIP_ERASE_TIMEOUT         60000   /* Chip erase timeout (60 seconds) */
-
-/* Private variables ---------------------------------------------------------*/
-static QSPI_HandleStructTypeDef *g_hqspi = NULL;
+#define QSPI_FLASH_SIZE_BYTES           (16U * 1024U * 1024U)  /* Addressable range, 16 MB */
+#define QSPI_HAL_MAX_TRANSFER           0xFFFFU /* HAL_SPI_* count is a uint16_t */
 
 /* Private function prototypes -----------------------------------------------*/
 static QSPI_StatusTypeDef QSPI_InitGPIO(void);
@@ -43,7 +43,7 @@ static QSPI_StatusTypeDef QSPI_SendCommandWithAddress(QSPI_HandleStructTypeDef *
 static QSPI_StatusTypeDef QSPI_SendData(QSPI_HandleStructTypeDef *hqspi_struct,
                                         const uint8_t *data, uint16_t size);
 static QSPI_StatusTypeDef QSPI_ReceiveData(QSPI_HandleStructTypeDef *hqspi_struct,
-                                          uint8_t *data, uint16_t size);
+                                          uint8_t *data, uint32_t size);
 static void QSPI_ChipSelect(bool select);
 static QSPI_StatusTypeDef QSPI_AutoDetectMemory(QSPI_HandleStructTypeDef *hqspi_struct);
 
@@ -68,7 +68,6 @@ QSPI_StatusTypeDef QSPI_Init(QSPI_HandleStructTypeDef *hqspi_struct)
     /* Initialize structure */
     memset(hqspi_struct, 0, sizeof(QSPI_HandleStructTypeDef));
     hqspi_struct->Timeout = QSPI_TIMEOUT_DEFAULT;
-    g_hqspi = hqspi_struct;
 
     /* Set default configuration */
     hqspi_struct->Config = QSPI_GetDefaultConfig();
@@ -115,11 +114,6 @@ QSPI_StatusTypeDef QSPI_DeInit(QSPI_HandleStructTypeDef *hqspi_struct)
 {
     if (hqspi_struct == NULL || !hqspi_struct->IsInitialized) {
         return QSPI_INVALID_PARAM;
-    }
-
-    /* Disable memory mapped mode if enabled */
-    if (hqspi_struct->IsMemoryMapped) {
-        QSPI_DisableMemoryMappedMode(hqspi_struct);
     }
 
     /* Put device in deep power down */
@@ -173,15 +167,23 @@ QSPI_StatusTypeDef QSPI_Reset(QSPI_HandleStructTypeDef *hqspi_struct)
     /* Software reset sequence - varies by manufacturer */
     QSPI_ChipSelect(true);
     uint8_t reset_enable = QSPI_RESET_ENABLE_CMD;  /* Reset Enable command */
-    QSPI_SendData(hqspi_struct, &reset_enable, 1);
+    QSPI_StatusTypeDef status = QSPI_SendData(hqspi_struct, &reset_enable, 1);
     QSPI_ChipSelect(false);
+
+    if (status != QSPI_OK) {
+        return status;
+    }
 
     QSPI_DELAY_MS(1);
 
     QSPI_ChipSelect(true);
     uint8_t reset_cmd = QSPI_RESET_CMD;     /* Reset command */
-    QSPI_SendData(hqspi_struct, &reset_cmd, 1);
+    status = QSPI_SendData(hqspi_struct, &reset_cmd, 1);
     QSPI_ChipSelect(false);
+
+    if (status != QSPI_OK) {
+        return status;
+    }
 
     QSPI_DELAY_MS(10);  /* Wait for reset completion */
 
@@ -196,13 +198,7 @@ QSPI_ConfigTypeDef QSPI_GetDefaultConfig(void)
 {
     QSPI_ConfigTypeDef config;
 
-    config.ClockPrescaler = QSPI_CLOCK_PRESCALER;
-    config.FifoThreshold = QSPI_FIFO_THRESHOLD;
-    config.SampleShifting = 0;
-    config.FlashSize = QSPI_FLASH_SIZE;
-    config.ChipSelectHighTime = QSPI_CHIP_SELECT_HIGH_TIME;
-    config.ClockMode = 0;
-    config.DualFlash = false;
+    config.BaudRatePrescaler = QSPI_DEFAULT_BAUDRATE_PRESCALER;
 
     return config;
 }
@@ -475,20 +471,6 @@ QSPI_StatusTypeDef QSPI_FastRead(QSPI_HandleStructTypeDef *hqspi_struct, uint32_
     return status;
 }
 
-/**
- * @brief Quad read data from Flash memory (emulated using SPI)
- * @param hqspi_struct Pointer to QSPI handle structure
- * @param address Start address to read from
- * @param data Pointer to data buffer
- * @param size Number of bytes to read
- * @retval QSPI_StatusTypeDef Status of the operation
- */
-QSPI_StatusTypeDef QSPI_QuadRead(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, uint8_t *data, uint32_t size)
-{
-    /* For STM32F429 without hardware QSPI, fall back to fast read */
-    return QSPI_FastRead(hqspi_struct, address, data, size);
-}
-
 /* Private function implementations ------------------------------------------*/
 
 /**
@@ -499,9 +481,7 @@ static QSPI_StatusTypeDef QSPI_InitGPIO(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* Enable GPIO clocks */
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOF_CLK_ENABLE();
+    /* GPIO driver enables the port clocks */
 
     /* Configure SPI pins */
     /* SCK pin */
@@ -510,22 +490,22 @@ static QSPI_StatusTypeDef QSPI_InitGPIO(void)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(GPIOB, &GPIO_InitStruct);
 
     /* MISO pin */
     GPIO_InitStruct.Pin = GPIO_PIN_4;  /* PB4 - SPI1_MISO */
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(GPIOB, &GPIO_InitStruct);
 
     /* MOSI pin */
     GPIO_InitStruct.Pin = GPIO_PIN_5;  /* PB5 - SPI1_MOSI */
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(GPIOB, &GPIO_InitStruct);
 
     /* CS pin - software controlled */
     GPIO_InitStruct.Pin = GPIO_PIN_6;  /* PB6 - CS */
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Alternate = 0;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(GPIOB, &GPIO_InitStruct);
 
     /* Set CS high initially */
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
@@ -553,7 +533,7 @@ static QSPI_StatusTypeDef QSPI_InitSPI(QSPI_HandleStructTypeDef *hqspi_struct)
     hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
     hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
     hspi1.Init.NSS = SPI_NSS_SOFT;
-    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;  /* Adjust as needed */
+    hspi1.Init.BaudRatePrescaler = hqspi_struct->Config.BaudRatePrescaler;
     hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
     hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
     hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -628,10 +608,20 @@ static QSPI_StatusTypeDef QSPI_SendData(QSPI_HandleStructTypeDef *hqspi_struct,
  * @retval QSPI_StatusTypeDef Status of the operation
  */
 static QSPI_StatusTypeDef QSPI_ReceiveData(QSPI_HandleStructTypeDef *hqspi_struct,
-                                          uint8_t *data, uint16_t size)
+                                          uint8_t *data, uint32_t size)
 {
-    if (HAL_SPI_Receive(hqspi_struct->hspi, data, size, hqspi_struct->Timeout) != HAL_OK) {
-        return QSPI_ERROR;
+    /* HAL_SPI_Receive counts in uint16_t, so a longer read has to be split.
+       Passing size straight through truncated it (100000 -> 34464 bytes) and
+       still reported QSPI_OK. */
+    while (size > 0) {
+        uint16_t chunk = (size > QSPI_HAL_MAX_TRANSFER) ? QSPI_HAL_MAX_TRANSFER : (uint16_t)size;
+
+        if (HAL_SPI_Receive(hqspi_struct->hspi, data, chunk, hqspi_struct->Timeout) != HAL_OK) {
+            return QSPI_ERROR;
+        }
+
+        data += chunk;
+        size -= chunk;
     }
     return QSPI_OK;
 }
@@ -642,7 +632,7 @@ static QSPI_StatusTypeDef QSPI_ReceiveData(QSPI_HandleStructTypeDef *hqspi_struc
  */
 static void QSPI_ChipSelect(bool select)
 {
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, select ? GPIO_PIN_RESET : GPIO_PIN_SET);
+    HAL_GPIO_WritePin(QSPI_NCS_GPIO_PORT, QSPI_NCS_PIN, select ? GPIO_PIN_RESET : GPIO_PIN_SET);
     /* Small delay for signal stability */
     for (volatile int i = 0; i < 10; i++);
 }
@@ -671,24 +661,21 @@ static QSPI_StatusTypeDef QSPI_AutoDetectMemory(QSPI_HandleStructTypeDef *hqspi_
     hqspi_struct->MemInfo.PageSize = QSPI_PAGE_SIZE;
     hqspi_struct->MemInfo.SectorSize = QSPI_SECTOR_SIZE;
     hqspi_struct->MemInfo.BlockSize = QSPI_BLOCK_SIZE;
+    hqspi_struct->MemInfo.FlashSize = QSPI_FLASH_SIZE_BYTES;
 
     /* Identify common Flash memories */
     switch (jedec_id[0]) {
         case 0x20: /* Micron/ST */
             strcpy(hqspi_struct->MemInfo.DeviceName, "Micron/ST Flash");
-            hqspi_struct->MemInfo.FlashSize = 16 * 1024 * 1024; /* 16MB default */
             break;
         case 0xEF: /* Winbond */
             strcpy(hqspi_struct->MemInfo.DeviceName, "Winbond Flash");
-            hqspi_struct->MemInfo.FlashSize = 16 * 1024 * 1024; /* 16MB default */
             break;
         case 0xC2: /* Macronix */
             strcpy(hqspi_struct->MemInfo.DeviceName, "Macronix Flash");
-            hqspi_struct->MemInfo.FlashSize = 16 * 1024 * 1024; /* 16MB default */
             break;
         default:
             strcpy(hqspi_struct->MemInfo.DeviceName, "Unknown Flash");
-            hqspi_struct->MemInfo.FlashSize = 16 * 1024 * 1024; /* 16MB default */
             break;
     }
 
@@ -705,8 +692,7 @@ static QSPI_StatusTypeDef QSPI_AutoDetectMemory(QSPI_HandleStructTypeDef *hqspi_
  */
 bool QSPI_IsAddressValid(uint32_t address, uint32_t size)
 {
-    /* Check for basic validation - adjust based on actual Flash size */
-    return (address + size) <= (16 * 1024 * 1024);  /* 16MB max */
+    return (address + size) <= QSPI_FLASH_SIZE_BYTES;
 }
 
 /**
@@ -809,20 +795,6 @@ QSPI_StatusTypeDef QSPI_WritePage(QSPI_HandleStructTypeDef *hqspi_struct, uint32
     }
 
     return QSPI_OK;
-}
-
-/**
- * @brief Quad write page to Flash memory (emulated using standard SPI)
- * @param hqspi_struct Pointer to QSPI handle structure
- * @param address Start address to write to
- * @param data Pointer to data buffer
- * @param size Number of bytes to write (max 256)
- * @retval QSPI_StatusTypeDef Status of the operation
- */
-QSPI_StatusTypeDef QSPI_QuadWritePage(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, const uint8_t *data, uint32_t size)
-{
-    /* For STM32F429 without hardware QSPI, fall back to normal page write */
-    return QSPI_WritePage(hqspi_struct, address, data, size);
 }
 
 /**
@@ -1061,34 +1033,6 @@ QSPI_StatusTypeDef QSPI_EraseChip(QSPI_HandleStructTypeDef *hqspi_struct)
     }
 
     return QSPI_OK;
-}
-
-/**
- * @brief Enable memory mapped mode (stub implementation)
- * @param hqspi_struct Pointer to QSPI handle structure
- * @retval QSPI_StatusTypeDef Status of the operation
- */
-QSPI_StatusTypeDef QSPI_EnableMemoryMappedMode(QSPI_HandleStructTypeDef *hqspi_struct)
-{
-    /* Suppress unused parameter warning */
-    (void)hqspi_struct;
-
-    /* Not supported on STM32F429 without hardware QSPI */
-    return QSPI_NOT_SUPPORTED;
-}
-
-/**
- * @brief Disable memory mapped mode (stub implementation)
- * @param hqspi_struct Pointer to QSPI handle structure
- * @retval QSPI_StatusTypeDef Status of the operation
- */
-QSPI_StatusTypeDef QSPI_DisableMemoryMappedMode(QSPI_HandleStructTypeDef *hqspi_struct)
-{
-    /* Suppress unused parameter warning */
-    (void)hqspi_struct;
-
-    /* Not supported on STM32F429 without hardware QSPI */
-    return QSPI_NOT_SUPPORTED;
 }
 
 /**

@@ -46,9 +46,6 @@ if (STEPPER_Init(&hstep, &htim3, &pins) == STEPPER_OK) {
 
     // Move to absolute position 500
     STEPPER_MoveToPosition(&hstep, 500, 120);
-
-    // Start continuous rotation
-    STEPPER_RotateContinuous(&hstep, STEPPER_DIR_CCW, 30);
 }
 ```
 
@@ -64,9 +61,7 @@ if (STEPPER_Init(&hstep, &htim3, &pins) == STEPPER_OK) {
 
 - `STEPPER_MoveSteps()` - Move by relative steps
 - `STEPPER_MoveToPosition()` - Move to absolute position
-- `STEPPER_RotateContinuous()` - Continuous rotation
 - `STEPPER_Stop()` - Stop motor
-- `STEPPER_EmergencyStop()` - Emergency stop
 
 ### Status and Information
 
@@ -74,12 +69,6 @@ if (STEPPER_Init(&hstep, &htim3, &pins) == STEPPER_OK) {
 - `STEPPER_GetPosition()` - Get current position
 - `STEPPER_SetPosition()` - Set current position
 - `STEPPER_GetStatus()` - Get motor status
-
-### Advanced Features
-
-- `STEPPER_EnableLimitSwitches()` - Enable limit switches
-- `STEPPER_Home()` - Home motor to limit switch
-- `STEPPER_SetAcceleration()` - Set acceleration parameters
 
 ### Utility Functions
 

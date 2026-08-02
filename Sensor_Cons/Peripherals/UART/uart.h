@@ -55,7 +55,6 @@ typedef struct {
     uint8_t* rxBuffer;            /*!< Receive buffer */
     uint8_t* txBuffer;            /*!< Transmit buffer */
     uint16_t rxSize;              /*!< Size of receive buffer */
-    uint16_t txSize;              /*!< Size of transmit buffer */
     bool isInitialized;           /*!< Initialization status */
 } UART_Handle_t;
 

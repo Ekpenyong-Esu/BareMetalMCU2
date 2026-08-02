@@ -11,6 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "touchscreen.h"
+#include "gpio.h"
 #include "i2c.h"
 #include "stdbool.h"
 #include <stdint.h>
@@ -25,10 +26,16 @@
 #define TS_DELAY_MS(x)                  HAL_Delay(x)
 #define TS_GESTURE_THRESHOLD            20      /* Minimum movement for gesture */
 #define TS_LONG_PRESS_TIME              1000    /* Minimum time for long press (ms) */
-#define TS_PRESSURE_THRESHOLD           2      /* Default pressure threshold */
-#define TS_DEFAULT_MIN_COORD            200     /* Default minimum coordinate */
-#define TS_DEFAULT_MAX_COORD            3900    /* Default maximum coordinate */
 #define TS_ADC_CTRL_12BIT               0x49    /* 12-bit ADC configuration (BSP value) */
+#define TS_ADC_CLOCK_3_25MHZ            0x01U   /* ADC_CTRL2: 3.25 MHz ADC clock */
+#define TS_TSC_CFG_DEFAULT              0x9AU   /* 4-sample average, 500us detect delay, 500us settling */
+#define TS_FIFO_THRESHOLD_SINGLE        0x01U   /* Interrupt after a single point */
+#define TS_FIFO_RESET                   0x01U   /* Hold FIFO in reset */
+#define TS_FIFO_OPERATIONAL             0x00U   /* Release FIFO back into operation */
+#define TS_TSC_FRACT_XYZ_DEFAULT        0x01U   /* Z pressure: 7 fractional, 1 whole */
+#define TS_TSC_DRIVE_50MA               0x01U   /* TSC pin driving capability */
+#define TS_INT_CLEAR_ALL                0xFFU   /* Write-1-to-clear every interrupt flag */
+#define TS_FILTER_MOVE_THRESHOLD        5       /* Manhattan distance below which a move is treated as jitter */
 
 /* Pressure scaling */
 #define TS_PRESSURE_MAX_VALUE           0xFFU
@@ -59,11 +66,13 @@ static TS_StatusTypeDef TS_ReadRawCoordinates(uint16_t *raw_x,
                                               uint16_t *raw_y,
                                               uint16_t *pressure);
 
-static TS_StatusTypeDef TS_ConvertCoordinates(uint16_t raw_x,
+static TS_StatusTypeDef TS_ConvertCoordinates(const TS_HandleTypeDef *hts,
+                                              uint16_t raw_x,
                                               uint16_t raw_y,
                                               uint16_t *disp_x,
                                               uint16_t *disp_y);
-static void TS_FilterCoordinates(uint16_t *x,
+static void TS_FilterCoordinates(TS_HandleTypeDef *hts,
+                                 uint16_t *x,
                                  uint16_t *y);
 static TS_GestureTypeDef TS_AnalyzeGesture(TS_HandleTypeDef *hts);
 
@@ -111,6 +120,10 @@ TS_StatusTypeDef TS_Init(TS_HandleTypeDef *hts, I2C_HandleTypeDef *hi2c)
     /* Initialize structure */
     memset(hts, 0, sizeof(TS_HandleTypeDef));
     hts->hi2c = hi2c;
+    hts->Calibration.MinX = TS_RAW_X_MIN;
+    hts->Calibration.MaxX = TS_RAW_X_MAX;
+    hts->Calibration.MinY = TS_RAW_Y_MIN;
+    hts->Calibration.MaxY = TS_RAW_Y_MAX;
     g_hts = hts;
 
     /* Initialize I2C peripheral */
@@ -273,8 +286,8 @@ TS_StatusTypeDef TS_GetSingleTouch(TS_HandleTypeDef *hts,
     else {
 
         /* Reset FIFO (mandatory after reading) */
-        TS_WriteRegister(g_hts, STMPE811_REG_FIFO_STA, 0x01);
-        TS_WriteRegister(g_hts, STMPE811_REG_FIFO_STA, 0x00);
+        TS_WriteRegister(hts, STMPE811_REG_FIFO_STA, 0x01);
+        TS_WriteRegister(hts, STMPE811_REG_FIFO_STA, 0x00);
         return TS_ERROR;
     }
 
@@ -283,11 +296,11 @@ TS_StatusTypeDef TS_GetSingleTouch(TS_HandleTypeDef *hts,
         return TS_ERROR;
     }
 
-    if(TS_ConvertCoordinates(raw_x, raw_y, &disp_x, &disp_y) != TS_OK) {
+    if(TS_ConvertCoordinates(hts, raw_x, raw_y, &disp_x, &disp_y) != TS_OK) {
         return TS_ERROR;
     }
 
-    TS_FilterCoordinates(&disp_x, &disp_y);
+    TS_FilterCoordinates(hts, &disp_x, &disp_y);
 
     *xPos = disp_x;
     *yPos = disp_y;
@@ -318,15 +331,27 @@ TS_StatusTypeDef TS_GetTouchState(TS_HandleTypeDef *hts,
         return TS_NOT_INITIALIZED;
     }
 
+    uint8_t status = 0;
+    if (TS_ReadRegister(hts, STMPE811_REG_TSC_CTRL, &status) != TS_OK) {
+        return TS_ERROR;
+    }
+
+    /* Nothing on the panel is a normal result, so report it as pressed = 0 */
+    if ((status & (uint8_t)STMPE811_TS_CTRL_STATUS) == 0) {
+        TS_WriteRegister(hts, STMPE811_REG_FIFO_STA, 0x01);
+        TS_WriteRegister(hts, STMPE811_REG_FIFO_STA, 0x00);
+        return TS_OK;
+    }
+
     if(TS_ReadRawCoordinates(&raw_x, &raw_y, NULL) != TS_OK) {
-        return TS_OK;
+        return TS_ERROR;
     }
 
-    if(TS_ConvertCoordinates(raw_x, raw_y, &disp_x, &disp_y) != TS_OK) {
-        return TS_OK;
+    if(TS_ConvertCoordinates(hts, raw_x, raw_y, &disp_x, &disp_y) != TS_OK) {
+        return TS_ERROR;
     }
 
-    TS_FilterCoordinates(&disp_x, &disp_y);
+    TS_FilterCoordinates(hts, &disp_x, &disp_y);
 
     *x = disp_x;
     *y = disp_y;
@@ -371,36 +396,9 @@ uint8_t TS_GetTouchCount(TS_HandleTypeDef *hts)
 }
 
 /**
- * @brief Calibrate touchscreen
- * @param hts Pointer to touchscreen handle structure
- * @retval TS_StatusTypeDef Status of the operation
- */
-TS_StatusTypeDef TS_Calibrate(TS_HandleTypeDef *hts)
-{
-    if (hts == NULL) {
-        return TS_INVALID_PARAM;
-    }
-
-    /* Basic calibration - in a real implementation, this would
-       involve displaying calibration points and collecting user input */
-
-    hts->Calibration.MinX = TS_DEFAULT_MIN_COORD;
-    hts->Calibration.MaxX = TS_DEFAULT_MAX_COORD;
-    hts->Calibration.MinY = TS_DEFAULT_MIN_COORD;
-    hts->Calibration.MaxY = TS_DEFAULT_MAX_COORD;
-    hts->Calibration.ScaleX = (float)TS_DISPLAY_WIDTH / (float)(hts->Calibration.MaxX - hts->Calibration.MinX);
-    hts->Calibration.ScaleY = (float)TS_DISPLAY_HEIGHT / (float)(hts->Calibration.MaxY - hts->Calibration.MinY);
-    hts->Calibration.OffsetX = (int16_t)(-hts->Calibration.MinX);
-    hts->Calibration.OffsetY = (int16_t)(-hts->Calibration.MinY);
-    hts->Calibration.IsCalibrated = true;
-
-    return TS_OK;
-}
-
-/**
  * @brief Set calibration data
  * @param hts Pointer to touchscreen handle structure
- * @param calibration Pointer to calibration data
+ * @param calibration Raw ADC bounds measured by the application
  * @retval TS_StatusTypeDef Status of the operation
  */
 TS_StatusTypeDef TS_SetCalibration(TS_HandleTypeDef *hts, TS_CalibrationTypeDef *calibration)
@@ -409,7 +407,13 @@ TS_StatusTypeDef TS_SetCalibration(TS_HandleTypeDef *hts, TS_CalibrationTypeDef 
         return TS_INVALID_PARAM;
     }
 
+    /* An empty span would make every touch collapse onto one display edge. */
+    if (calibration->MinX >= calibration->MaxX || calibration->MinY >= calibration->MaxY) {
+        return TS_INVALID_PARAM;
+    }
+
     hts->Calibration = *calibration;
+    hts->Calibration.IsCalibrated = true;
 
     return TS_OK;
 }
@@ -455,7 +459,6 @@ TS_StatusTypeDef TS_EnableInterrupt(TS_HandleTypeDef *hts, bool enable)
         TS_WriteRegister(hts, STMPE811_REG_INT_CTRL, STMPE811_INT_CTRL_DISABLE);
     }
 
-    hts->InterruptMode = enable;
 
     return TS_OK;
 }
@@ -478,7 +481,7 @@ TS_StatusTypeDef TS_ITConfig(TS_HandleTypeDef *hts)
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(TS_INT_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(TS_INT_GPIO_PORT, &GPIO_InitStruct);
 
     /* Enable EXTI interrupt */
     HAL_NVIC_SetPriority(TS_INT_EXTI_IRQn, TS_INT_NVIC_PRIORITY, 0x00);
@@ -574,12 +577,13 @@ TS_StatusTypeDef TS_RegisterCallbacks(TS_HandleTypeDef *hts,
  * @retval TS_StatusTypeDef Status of the operation
  */
 
-static TS_StatusTypeDef TS_ConvertCoordinates(uint16_t raw_x,
+static TS_StatusTypeDef TS_ConvertCoordinates(const TS_HandleTypeDef *hts,
+                                              uint16_t raw_x,
                                               uint16_t raw_y,
                                               uint16_t *disp_x,
                                               uint16_t *disp_y)
 {
-    if(disp_x == NULL || disp_y == NULL) {
+    if(hts == NULL || disp_x == NULL || disp_y == NULL) {
         return TS_INVALID_PARAM;
     }
 
@@ -587,10 +591,12 @@ static TS_StatusTypeDef TS_ConvertCoordinates(uint16_t raw_x,
        Small raw_x -> RIGHT side of display (inverted X).
        Small raw_y -> BOTTOM of display (inverted Y).
        The 'map' helper clamps inputs and performs integer-safe scaling. */
-    int32_t xr = map((int32_t)raw_x, (int32_t)TS_RAW_X_MIN, (int32_t)TS_RAW_X_MAX,
+    int32_t xr = map((int32_t)raw_x,
+                     (int32_t)hts->Calibration.MinX, (int32_t)hts->Calibration.MaxX,
                      (int32_t)(TS_DISPLAY_WIDTH - 1), 0);
 
-    int32_t yr = map((int32_t)raw_y, (int32_t)TS_RAW_Y_MIN, (int32_t)TS_RAW_Y_MAX,
+    int32_t yr = map((int32_t)raw_y,
+                     (int32_t)hts->Calibration.MinY, (int32_t)hts->Calibration.MaxY,
                      (int32_t)(TS_DISPLAY_HEIGHT - 1), 0);
 
     /* Clamp to display bounds */
@@ -712,7 +718,7 @@ TS_StatusTypeDef TS_ReadRegisterMulti(TS_HandleTypeDef *hts, uint8_t reg, uint8_
         return TS_INVALID_PARAM;
     }
 
-    if (I2C_Mem_Read_Multi(STMPE811_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, data, size, TS_TIMEOUT) != I2C_OK) {
+    if (I2C_Mem_Read(STMPE811_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, data, size, TS_TIMEOUT) != I2C_OK) {
         return TS_COMMUNICATION_ERROR;
     }
 
@@ -756,14 +762,7 @@ TS_StatusTypeDef TS_GetPressure(TS_HandleTypeDef *hts, uint16_t *pressure)
 TS_ConfigTypeDef TS_GetDefaultConfig(void)
 {
     TS_ConfigTypeDef config = {
-        .SampleTime = STMPE811_TSC_CFG_4_SAMPLE,
-        .AverageControl = STMPE811_TSC_CFG_DELAY_1MS,
-        .TouchDetectDelay = STMPE811_TSC_CFG_SETTLE_1MS,
-        .PanelDriverSettlingTime = STMPE811_TSC_CFG_SETTLE_1MS,
-        .PressureThreshold = TS_PRESSURE_THRESHOLD,
-        .InterruptEnable = true,
-        .FIFOEnable = true,
-        .FIFOThreshold = 1
+        .InterruptEnable = true
     };
 
     return config;
@@ -814,7 +813,6 @@ static TS_StatusTypeDef TS_CheckDevice(TS_HandleTypeDef *hts)
         return TS_DEVICE_NOT_FOUND;
     }
 
-    hts->DeviceID = device_id;
     log_debug("TS: Device found, ID: 0x%04X", device_id);
     return TS_OK;
 }
@@ -832,69 +830,72 @@ static TS_StatusTypeDef TS_ConfigureController(TS_HandleTypeDef *hts)
     /* Reset the device */
     TS_Reset(hts);
 
-    TS_ReadRegister(hts, STMPE811_REG_SYS_CTRL2, &tmp);
+    if (TS_ReadRegister(hts, STMPE811_REG_SYS_CTRL2, &tmp) != TS_OK) {
+        return TS_COMMUNICATION_ERROR;
+    }
 
     /* Enable GPIO/IO functionality by clearing GPIO_OFF bit */
     tmp &= ~(STMPE811_SYS_CTRL2_GPIO_OFF);
 
-    /* Write back - this enables GPIO/IO functionality */
-    TS_WriteRegister(hts, STMPE811_REG_SYS_CTRL2, tmp);
+    if (TS_WriteRegister(hts, STMPE811_REG_SYS_CTRL2, tmp) != TS_OK) {
+        return TS_COMMUNICATION_ERROR;
+    }
 
     /* Enable Alternate Function for touchscreen pins (GPIO 4-7) */
-    TS_ReadRegister(hts, STMPE811_REG_IO_AF, &tmp);
+    if (TS_ReadRegister(hts, STMPE811_REG_IO_AF, &tmp) != TS_OK) {
+        return TS_COMMUNICATION_ERROR;
+    }
     /* Enable AF for pins 4-7 (TSC pins): clear bits defined by STMPE811_TOUCH_IO_ALL */
     tmp &= ~(STMPE811_PIN_4 | STMPE811_PIN_5 | STMPE811_PIN_6 | STMPE811_PIN_7);
-    TS_WriteRegister(hts, STMPE811_REG_IO_AF, tmp);
+    if (TS_WriteRegister(hts, STMPE811_REG_IO_AF, tmp) != TS_OK) {
+        return TS_COMMUNICATION_ERROR;
+    }
+
+    /* Re-read SYS_CTRL2: tmp currently holds IO_AF, not SYS_CTRL2 */
+    if (TS_ReadRegister(hts, STMPE811_REG_SYS_CTRL2, &tmp) != TS_OK) {
+        return TS_COMMUNICATION_ERROR;
+    }
 
     /* Now enable TSC and ADC functions in SYS_CTRL2 by clearing their OFF bits */
-    //TS_ReadRegister(hts, STMPE811_REG_SYS_CTRL2, &tmp);
     tmp &= ~(STMPE811_SYS_CTRL2_TSC_OFF | STMPE811_SYS_CTRL2_ADC_OFF);
-    TS_WriteRegister(hts, STMPE811_REG_SYS_CTRL2, tmp);
+    if (TS_WriteRegister(hts, STMPE811_REG_SYS_CTRL2, tmp) != TS_OK) {
+        return TS_COMMUNICATION_ERROR;
+    }
 
      /* Configure ADC - Sample Time, bit number and Reference
          0x49 = BSP setting: 64 sample time, 12-bit, internal reference */
-    TS_WriteRegister(hts, STMPE811_REG_ADC_CTRL1, TS_ADC_CTRL_12BIT);
+    if (TS_WriteRegister(hts, STMPE811_REG_ADC_CTRL1, TS_ADC_CTRL_12BIT) != TS_OK) {
+        return TS_COMMUNICATION_ERROR;
+    }
 
     /* Wait for ADC to stabilize */
     TS_DELAY_MS(2);
 
-    /* Configure ADC clock speed: 3.25 MHz */
-    TS_WriteRegister(hts, STMPE811_REG_ADC_CTRL2, 0x01);
+    /* Remaining registers are plain constant writes, applied in order */
+    static const struct {
+        uint8_t reg;
+        uint8_t value;
+    } configSequence[] = {
+        { STMPE811_REG_ADC_CTRL2,     TS_ADC_CLOCK_3_25MHZ },
+        { STMPE811_REG_TSC_CFG,       TS_TSC_CFG_DEFAULT },
+        { STMPE811_REG_FIFO_TH,       TS_FIFO_THRESHOLD_SINGLE },
+        { STMPE811_REG_FIFO_STA,      TS_FIFO_RESET },
+        { STMPE811_REG_FIFO_STA,      TS_FIFO_OPERATIONAL },
+        { STMPE811_REG_TSC_FRACT_XYZ, TS_TSC_FRACT_XYZ_DEFAULT },
+        { STMPE811_REG_TSC_I_DRIVE,   TS_TSC_DRIVE_50MA },
+        { STMPE811_REG_TSC_CTRL,      STMPE811_TSC_CTRL_EN },
+        { STMPE811_REG_INT_STA,       TS_INT_CLEAR_ALL },
+    };
 
-    /* Configure touchscreen:
-       - 4 samples averaging (0x80)
-       - 500us touch detect delay (0x18)
-       - 500us panel driver settling time (0x02)
-       = 0x9A */
-    TS_WriteRegister(hts, STMPE811_REG_TSC_CFG, 0x9A);
-
-    /* Configure FIFO threshold: single point reading */
-    TS_WriteRegister(hts, STMPE811_REG_FIFO_TH, 0x01);
-
-    /* Clear the FIFO memory content */
-    TS_WriteRegister(hts, STMPE811_REG_FIFO_STA, 0x01U);
-
-    /* Put the FIFO back into operation mode */
-    TS_WriteRegister(hts, STMPE811_REG_FIFO_STA, 0x00U);
-
-    /* Set the fractional part and whole part for Z pressure:
-       - Fractional part: 7
-       - Whole part: 1 */
-    TS_WriteRegister(hts, STMPE811_REG_TSC_FRACT_XYZ, 0x01U);
-
-    /* Set the driving capability for TSC pins: 50mA */
-    TS_WriteRegister(hts, STMPE811_REG_TSC_I_DRIVE, 0x01U);
-
-     /* Enable touchscreen controller: use BSP default (enable TSC in XYZ mode) */
-     TS_WriteRegister(hts, STMPE811_REG_TSC_CTRL, STMPE811_TSC_CTRL_EN);
-
-    /* Clear all pending interrupts */
-    TS_WriteRegister(hts, STMPE811_REG_INT_STA, 0xFFU);
+    for (size_t i = 0; i < (sizeof(configSequence) / sizeof(configSequence[0])); i++) {
+        if (TS_WriteRegister(hts, configSequence[i].reg, configSequence[i].value) != TS_OK) {
+            log_error("TS: Failed to write STMPE811 register 0x%02X", configSequence[i].reg);
+            return TS_COMMUNICATION_ERROR;
+        }
+    }
 
     /* Wait for configuration to settle */
     TS_DELAY_MS(2);
-
-
 
     return TS_OK;
 }
@@ -951,32 +952,29 @@ static TS_StatusTypeDef TS_ReadRawCoordinates(uint16_t *raw_x,
 
 
 /**
- * @brief Filter coordinates using threshold-based update (matches working project)
+ * @brief Filter coordinates using threshold-based update
  * @param hts Pointer to touchscreen handle structure
- * @param xPos Pointer to X coordinate
- * @param yPos Pointer to Y coordinate
+ * @param x Pointer to X coordinate
+ * @param y Pointer to Y coordinate
  */
-//
-static void TS_FilterCoordinates(uint16_t *x,
+static void TS_FilterCoordinates(TS_HandleTypeDef *hts,
+                                 uint16_t *x,
                                  uint16_t *y)
 {
-    static uint16_t _x = 0;
-    static uint16_t _y = 0;
-
     int32_t x_raw = (int32_t)*x;
     int32_t y_raw = (int32_t)*y;
 
-    int32_t xDiff = x_raw > _x ? (x_raw - _x) : (_x - x_raw);
-    int32_t yDiff = y_raw > _y ? (y_raw - _y) : (_y - y_raw);
+    int32_t xDiff = x_raw > (int32_t)hts->FilterX ? (x_raw - (int32_t)hts->FilterX) : ((int32_t)hts->FilterX - x_raw);
+    int32_t yDiff = y_raw > (int32_t)hts->FilterY ? (y_raw - (int32_t)hts->FilterY) : ((int32_t)hts->FilterY - y_raw);
 
-    /* Threshold-based smoothing (matches working project) */
-    if ((xDiff + yDiff) > 5) {
-        _x = (uint16_t)x_raw;
-        _y = (uint16_t)y_raw;
+    /* Hold the previous point until the finger moves far enough to be real movement */
+    if ((xDiff + yDiff) > TS_FILTER_MOVE_THRESHOLD) {
+        hts->FilterX = (uint16_t)x_raw;
+        hts->FilterY = (uint16_t)y_raw;
     }
 
-    *x = _x;
-    *y = _y;
+    *x = hts->FilterX;
+    *y = hts->FilterY;
 
     log_debug("Filter X = %u, Filter Y = %u", *x, *y);
 }

@@ -46,14 +46,17 @@ typedef struct {
  */
 typedef struct {
     ButtonConfig_t config;      /**< Button configuration */
-    ButtonState_t state;        /**< Current button state */
-    ButtonState_t lastState;    /**< Previous button state */
-    uint32_t lastChangeTime;    /**< Time of last state change */
+    ButtonState_t state;        /**< Debounced button state */
+    ButtonState_t lastState;    /**< Last raw sample, used to time the debounce */
+    uint32_t lastChangeTime;    /**< Time of last raw state change */
+    bool pressEvent;            /**< Press edge, cleared by Button_WasPressed */
+    bool releaseEvent;          /**< Release edge, cleared by Button_WasReleased */
     bool initialized;           /**< Initialization flag */
 } ButtonHandle_t;
 
 /* Exported constants --------------------------------------------------------*/
 #define BUTTON_DEBOUNCE_DEFAULT     50      /**< Default debounce time (ms) */
+#define BUTTON_IRQ_PRIORITY         2       /**< NVIC pre-emption priority of the button EXTI line */
 
 /* Exported functions --------------------------------------------------------*/
 

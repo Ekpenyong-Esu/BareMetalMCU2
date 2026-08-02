@@ -49,24 +49,13 @@ USB_StatusTypeDef USB_Init(USB_ConfigTypeDef *config)
         return USB_STATUS_ERROR;
     }
 
-    usb_current_mode = config->mode;
-
-    switch (config->mode)
+    if (config->mode != USB_MODE_HOST)
     {
-        case USB_MODE_HOST:
-            return USB_Host_Init();
-
-        case USB_MODE_DEVICE:
-            /* Device mode initialization would go here */
-            return USB_STATUS_NOT_SUPPORTED;
-
-        case USB_MODE_OTG:
-            /* OTG mode initialization would go here */
-            return USB_STATUS_NOT_SUPPORTED;
-
-        default:
-            return USB_STATUS_ERROR;
+        return USB_STATUS_NOT_SUPPORTED;
     }
+
+    usb_current_mode = config->mode;
+    return USB_Host_Init();
 }
 
 /**
@@ -75,20 +64,12 @@ USB_StatusTypeDef USB_Init(USB_ConfigTypeDef *config)
  */
 USB_StatusTypeDef USB_DeInit(void)
 {
-    switch (usb_current_mode)
+    if (usb_current_mode != USB_MODE_HOST)
     {
-        case USB_MODE_HOST:
-            return USB_Host_DeInit();
-
-        case USB_MODE_DEVICE:
-            return USB_Device_DeInit();
-
-        case USB_MODE_OTG:
-            return USB_STATUS_NOT_SUPPORTED;
-
-        default:
-            return USB_STATUS_ERROR;
+        return USB_STATUS_NOT_SUPPORTED;
     }
+
+    return USB_Host_DeInit();
 }
 
 /**
@@ -97,23 +78,14 @@ USB_StatusTypeDef USB_DeInit(void)
  */
 USB_StatusTypeDef USB_Start(void)
 {
-    switch (usb_current_mode)
+    if (usb_current_mode != USB_MODE_HOST)
     {
-        case USB_MODE_HOST:
-            if (USBH_Start(&hUsbHostHS) == USBH_OK)
-            {
-                return USB_STATUS_OK;
-            }
-            break;
+        return USB_STATUS_NOT_SUPPORTED;
+    }
 
-        case USB_MODE_DEVICE:
-            return USB_Device_Start();
-
-        case USB_MODE_OTG:
-            return USB_STATUS_NOT_SUPPORTED;
-
-        default:
-            break;
+    if (USBH_Start(&hUsbHostHS) == USBH_OK)
+    {
+        return USB_STATUS_OK;
     }
 
     return USB_STATUS_ERROR;
@@ -125,23 +97,14 @@ USB_StatusTypeDef USB_Start(void)
  */
 USB_StatusTypeDef USB_Stop(void)
 {
-    switch (usb_current_mode)
+    if (usb_current_mode != USB_MODE_HOST)
     {
-        case USB_MODE_HOST:
-            if (USBH_Stop(&hUsbHostHS) == USBH_OK)
-            {
-                return USB_STATUS_OK;
-            }
-            break;
+        return USB_STATUS_NOT_SUPPORTED;
+    }
 
-        case USB_MODE_DEVICE:
-            return USB_Device_Stop();
-
-        case USB_MODE_OTG:
-            return USB_STATUS_NOT_SUPPORTED;
-
-        default:
-            break;
+    if (USBH_Stop(&hUsbHostHS) == USBH_OK)
+    {
+        return USB_STATUS_OK;
     }
 
     return USB_STATUS_ERROR;
@@ -324,48 +287,6 @@ uint16_t USB_Host_CDC_GetLastReceivedDataSize(void)
 }
 
 /**
- * @brief Initialize USB Device (placeholder)
- * @param device_class: Device class to initialize
- * @retval USB_StatusTypeDef: Operation status
- */
-USB_StatusTypeDef USB_Device_Init(USB_DeviceClassTypeDef device_class)
-{
-    UNUSED(device_class);
-    /* This would contain USB Device initialization code */
-    return USB_STATUS_NOT_SUPPORTED;
-}
-
-/**
- * @brief Deinitialize USB Device (placeholder)
- * @retval USB_StatusTypeDef: Operation status
- */
-USB_StatusTypeDef USB_Device_DeInit(void)
-{
-    /* This would contain USB Device deinitialization code */
-    return USB_STATUS_NOT_SUPPORTED;
-}
-
-/**
- * @brief Start USB Device (placeholder)
- * @retval USB_StatusTypeDef: Operation status
- */
-USB_StatusTypeDef USB_Device_Start(void)
-{
-    /* This would contain USB Device start code */
-    return USB_STATUS_NOT_SUPPORTED;
-}
-
-/**
- * @brief Stop USB Device (placeholder)
- * @retval USB_StatusTypeDef: Operation status
- */
-USB_StatusTypeDef USB_Device_Stop(void)
-{
-    /* This would contain USB Device stop code */
-    return USB_STATUS_NOT_SUPPORTED;
-}
-
-/**
  * @brief Set USB operation mode
  * @param mode: Operation mode to set
  * @retval USB_StatusTypeDef: Operation status
@@ -420,15 +341,6 @@ uint32_t USB_GetConnectedDevicePID(void)
     }
 
     return 0;
-}
-
-/**
- * @brief USB interrupt handler
- * @retval None
- */
-void USB_IRQHandler(void)
-{
-    HAL_HCD_IRQHandler(hUsbHostHS.pData);
 }
 
 /**

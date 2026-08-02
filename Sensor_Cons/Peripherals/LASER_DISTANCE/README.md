@@ -44,7 +44,6 @@ LASER_DISTANCE_StatusTypeDef status = LASER_DISTANCE_Init(&hlaser, &hi2c1, LASER
 
 ```c
 LASER_DISTANCE_Config_t config = LASER_DISTANCE_GetDefaultConfig(LASER_DISTANCE_VL53L0X);
-config.longRangeMode = true;  // Enable long range mode
 config.averagingSamples = 10; // More averaging for stability
 
 LASER_DISTANCE_Config(&hlaser, &config);
@@ -115,8 +114,6 @@ const char* statusStr = LASER_DISTANCE_GetStatusString(status);
 | averagingSamples | 5 | Number of samples for averaging |
 | measurementTimeout | 500ms | Maximum measurement time |
 | i2cAddress | 0x52 | I2C slave address |
-| longRangeMode | false | Enable long range mode |
-| highAccuracyMode | false | Enable high accuracy mode |
 
 ## VL53L0X Specific Features
 
@@ -152,7 +149,6 @@ void LaserDistance_Example(void)
     if (LASER_DISTANCE_Init(&hlaser, &hi2c1, LASER_DISTANCE_VL53L0X) == LASER_DISTANCE_OK) {
         // Configure for long range
         LASER_DISTANCE_Config_t config = LASER_DISTANCE_GetDefaultConfig(LASER_DISTANCE_VL53L0X);
-        config.longRangeMode = true;
         LASER_DISTANCE_Config(&hlaser, &config);
 
         // Perform calibration

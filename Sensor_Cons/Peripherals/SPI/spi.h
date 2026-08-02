@@ -62,15 +62,9 @@ typedef struct {
 /**
  * @brief SPI timeout values
  */
-#define SPI_TIMEOUT_DEFAULT     1000U   /**< Default timeout in milliseconds */
+#define SPI_TIMEOUT_DEFAULT     1000U   /**< Default timeout for normal transfers */
 #define SPI_TIMEOUT_SHORT       100U    /**< Short timeout for quick operations */
 #define SPI_TIMEOUT_LONG        5000U   /**< Long timeout for memory operations */
-
-/**
- * @brief Common SPI result values
- */
-#define SPI_SUCCESS             0       /**< Operation successful */
-#define SPI_FAILURE             1       /**< Operation failed */
 
 /** @} */ /* End of SPI_Constants */
 

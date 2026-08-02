@@ -16,6 +16,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "adc.h"
+#include "gpio.h"
 #include <string.h>
 #include "log.h"
 
@@ -132,7 +133,6 @@ HAL_StatusTypeDef ADC_Init(ADC_HandleStruct* hadc, const ADC_ConfigTypeDef* conf
     /* Store configuration */
     hadc->config = *config;
     hadc->initialized = true;
-    hadc->calibrated = false;
 
     log_debug("ADC: ADC initialized successfully");
 
@@ -170,7 +170,6 @@ HAL_StatusTypeDef ADC_DeInit(ADC_HandleStruct* hadc)
 
     /* Reset status flags */
     hadc->initialized = false;
-    hadc->calibrated = false;
 
     return HAL_OK;
 }
@@ -204,41 +203,6 @@ HAL_StatusTypeDef ADC_ConfigChannel(ADC_HandleStruct* hadc, uint32_t channel,
 
     HAL_StatusTypeDef hal_status = HAL_ADC_ConfigChannel(&hadc->hal_handle, &sConfig);
     return hal_status;
-}
-
-/**
- * @brief Calibrate ADC
- * @param hadc: Pointer to ADC handle structure
- * @retval HAL_StatusTypeDef: Status of the operation
- */
-HAL_StatusTypeDef ADC_Calibrate(ADC_HandleStruct* hadc)
-{
-    if (hadc == NULL) {
-    return HAL_ERROR;
-    }
-
-    if (!hadc->initialized) {
-    return HAL_ERROR;
-    }
-
-    /* Start calibration - Note: STM32F4 doesn't have automatic calibration like STM32L4 */
-    /* For STM32F4, we just mark as calibrated since hardware calibration is not available */
-    hadc->calibrated = true;
-
-    return HAL_OK;
-}
-
-/**
- * @brief Check if ADC is calibrated
- * @param hadc: Pointer to ADC handle structure
- * @retval bool: true if calibrated, false otherwise
- */
-bool ADC_IsCalibrated(const ADC_HandleStruct* hadc)
-{
-    if (hadc == NULL) {
-        return false;
-    }
-    return hadc->calibrated;
 }
 
 /**
@@ -645,9 +609,16 @@ HAL_StatusTypeDef ADC_ConfigMultiChannel(ADC_HandleStruct* hadc,
         return HAL_ERROR;
     }
 
-    /* Configure each channel */
+    /* Configure each channel with incrementing rank */
     for (uint32_t i = 0; i < num_channels; i++) {
-        HAL_StatusTypeDef status = ADC_ConfigChannel(hadc, channels[i], sampling_times[i]);
+        ADC_ConfigureGPIO(channels[i]);
+
+        ADC_ChannelConfTypeDef sConfig = {0};
+        sConfig.Channel = ADC_ChannelToHAL(channels[i]);
+        sConfig.Rank = i + 1;
+        sConfig.SamplingTime = ADC_SamplingTimeToHAL(sampling_times[i]);
+
+        HAL_StatusTypeDef status = HAL_ADC_ConfigChannel(&hadc->hal_handle, &sConfig);
         if (status != HAL_OK) {
             return status;
         }
@@ -822,7 +793,7 @@ bool ADC_IsReady(const ADC_HandleStruct* hadc)
     if (hadc == NULL) {
         return false;
     }
-    return hadc->initialized && hadc->calibrated;
+    return hadc->initialized;
 }
 
 /**
@@ -847,12 +818,7 @@ bool ADC_IsConversionComplete(const ADC_HandleStruct* hadc)
 void ADC_ErrorHandler(ADC_HandleStruct* hadc)
 {
     if (hadc != NULL) {
-        /* Reset initialization flags */
         hadc->initialized = false;
-        hadc->calibrated = false;
-
-        /* You can add custom error handling here */
-        /* For example: toggle an LED, send error message, etc. */
     }
 }
 
@@ -870,11 +836,12 @@ static HAL_StatusTypeDef ADC_ConfigureGPIO(uint32_t channel)
         if (adc_channel_map[i].channel == channel) {
             if (adc_channel_map[i].port != NULL) {
                 /* Configure GPIO pin for analog input */
+                /* GPIO driver enables the port clock */
                 GPIO_InitTypeDef GPIO_InitStruct = {0};
                 GPIO_InitStruct.Pin = adc_channel_map[i].pin;
                 GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
                 GPIO_InitStruct.Pull = GPIO_NOPULL;
-                HAL_GPIO_Init(adc_channel_map[i].port, &GPIO_InitStruct);
+                GPIO_Driver_Pin_Init(adc_channel_map[i].port, &GPIO_InitStruct);
 
                 return HAL_OK;
             }
@@ -895,10 +862,7 @@ static HAL_StatusTypeDef ADC_ConfigureClocks(void)
     /* Enable ADC1 clock */
     __HAL_RCC_ADC1_CLK_ENABLE();
 
-    /* Enable GPIO clocks */
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
+    /* GPIO port clocks are enabled by the GPIO driver when pins are configured */
 
     return HAL_OK;
 }

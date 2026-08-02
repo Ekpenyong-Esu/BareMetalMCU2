@@ -700,7 +700,7 @@ static void HAL_FMC_MspInit(void){
 
 void HAL_SDRAM_MspInit(SDRAM_HandleTypeDef* hsdram){
   /* USER CODE BEGIN SDRAM_MspInit 0 */
-
+  UNUSED(hsdram);
   /* USER CODE END SDRAM_MspInit 0 */
   HAL_FMC_MspInit();
   /* USER CODE BEGIN SDRAM_MspInit 1 */
@@ -786,7 +786,7 @@ static void HAL_FMC_MspDeInit(void){
 
 void HAL_SDRAM_MspDeInit(SDRAM_HandleTypeDef* hsdram){
   /* USER CODE BEGIN SDRAM_MspDeInit 0 */
-
+  UNUSED(hsdram);
   /* USER CODE END SDRAM_MspDeInit 0 */
   HAL_FMC_MspDeInit();
   /* USER CODE BEGIN SDRAM_MspDeInit 1 */
@@ -804,6 +804,7 @@ void HAL_SDRAM_MspDeInit(SDRAM_HandleTypeDef* hsdram){
   */
 void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
 {
+  UNUSED(hdcmi);
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* DCMI clock enable */
@@ -873,6 +874,7 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
   */
 void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef* hdcmi)
 {
+  UNUSED(hdcmi);
   /* DCMI clock disable */
   __HAL_RCC_DCMI_CLK_DISABLE();
 

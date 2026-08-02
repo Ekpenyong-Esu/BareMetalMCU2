@@ -480,16 +480,7 @@ HAL_StatusTypeDef LTDC_SetFramebuffer(LTDC_Driver_t *driver, uint8_t layer, uint
     return status;
 }
 
-/**
- * @brief Swap framebuffer safely at next VSYNC
- * @param driver: Pointer to LTDC driver
- * @param layer: Layer index
- * @param address: New framebuffer address
- * @return HAL_StatusTypeDef
- */
-HAL_StatusTypeDef LTDC_SwapFramebufferAtVSync(LTDC_Driver_t *driver, uint8_t layer, uint32_t address) {
-    return LTDC_SetFramebuffer(driver, layer, address);
-}
+/* (LTDC_SwapFramebufferAtVSync removed — use LTDC_SetFramebuffer directly) */
 
 /**
  * @brief Clear framebuffer with specified color
@@ -553,16 +544,7 @@ HAL_StatusTypeDef LTDC_ClearFramebuffer(LTDC_Driver_t *driver, uint8_t layer, ui
     return status;
 }
 
-/**
- * @brief Fill framebuffer with specified color
- * @param driver: Pointer to LTDC driver structure
- * @param layer: Layer number (0 or 1)
- * @param color: Fill color
- * @return HAL_StatusTypeDef: HAL status
- */
-HAL_StatusTypeDef LTDC_FillFramebuffer(LTDC_Driver_t *driver, uint8_t layer, uint32_t color) {
-    return LTDC_ClearFramebuffer(driver, layer, color);
-}
+/* (LTDC_FillFramebuffer removed — use LTDC_ClearFramebuffer directly) */
 
 /**
  * @brief Copy framebuffer from source to destination layer
@@ -699,28 +681,6 @@ HAL_StatusTypeDef LTDC_DisplayOff(LTDC_Driver_t *driver) {
 
     /* Disable LTDC */
     __HAL_LTDC_DISABLE(driver->hltdc);
-
-    return HAL_OK;
-}
-
-/**
- * @brief Set display brightness (platform dependent; default stub)
- * @param driver: Pointer to LTDC driver structure
- * @param brightness: Brightness percent (0-100)
- * @return HAL_StatusTypeDef: HAL status
- */
-HAL_StatusTypeDef LTDC_SetDisplayBrightness(LTDC_Driver_t *driver, uint8_t brightness) {
-    if (LTDC_ValidateDriver(driver) != HAL_OK) {
-        return HAL_ERROR;
-    }
-
-    if (brightness > 100) {
-        return HAL_ERROR;
-    }
-
-    /* Platform-specific: hook up to PWM/backlight if available. For now, store nothing and return OK. */
-    (void)driver;
-    (void)brightness;
 
     return HAL_OK;
 }
@@ -934,17 +894,15 @@ HAL_StatusTypeDef LTDC_HW_Init(void) {
     hltdc.Init.PCPolarity = LTDC_PCPOLARITY_IPC;  // Pixel clock not inverted (input pixel clock)
 
 
-    /* Timing parameters for STM32F429I-DISC1 LCD (RGB interface)
-     * Matches ST BSP values: HSYNC=10, HBP=20, HFP=10, VSYNC=2, VBP=2, VFP=4, active=240x320.
-     */
-    hltdc.Init.HorizontalSync = 9;   // HSYNC width - 1 (10)
-    hltdc.Init.VerticalSync = 1;     // VSYNC height - 1 (2)
-    hltdc.Init.AccumulatedHBP = 29;  // HSYNC + HBP - 1 (10+20-1)
-    hltdc.Init.AccumulatedVBP = 3;   // VSYNC + VBP - 1 (2+2-1)
-    hltdc.Init.AccumulatedActiveW = 269;  // HSYNC + HBP + Width - 1 (10+20+240-1)
-    hltdc.Init.AccumulatedActiveH = 323;  // VSYNC + VBP + Height - 1 (2+2+320-1)
-    hltdc.Init.TotalWidth = 279;     // Total horizontal - 1 (add HFP=10)
-    hltdc.Init.TotalHeigh = 327;     // Total vertical - 1 (add VFP=4)
+    /* Timing parameters for STM32F429I-DISC1 LCD (RGB interface), ST BSP values */
+    hltdc.Init.HorizontalSync = LTDC_HSYNC_WIDTH - 1;
+    hltdc.Init.VerticalSync = LTDC_VSYNC_HEIGHT - 1;
+    hltdc.Init.AccumulatedHBP = LTDC_HSYNC_WIDTH + LTDC_HBP_WIDTH - 1;
+    hltdc.Init.AccumulatedVBP = LTDC_VSYNC_HEIGHT + LTDC_VBP_HEIGHT - 1;
+    hltdc.Init.AccumulatedActiveW = LTDC_HSYNC_WIDTH + LTDC_HBP_WIDTH + LTDC_DISPLAY_WIDTH - 1;
+    hltdc.Init.AccumulatedActiveH = LTDC_VSYNC_HEIGHT + LTDC_VBP_HEIGHT + LTDC_DISPLAY_HEIGHT - 1;
+    hltdc.Init.TotalWidth = LTDC_HSYNC_WIDTH + LTDC_HBP_WIDTH + LTDC_DISPLAY_WIDTH + LTDC_HFP_WIDTH - 1;
+    hltdc.Init.TotalHeigh = LTDC_VSYNC_HEIGHT + LTDC_VBP_HEIGHT + LTDC_DISPLAY_HEIGHT + LTDC_VFP_HEIGHT - 1;
 
     /* Background color (black) */
     hltdc.Init.Backcolor.Blue = 0;
@@ -957,7 +915,7 @@ HAL_StatusTypeDef LTDC_HW_Init(void) {
         return HAL_ERROR;
     }
 
-    memset((void *)fb_ptr, (unsigned char)0x1234, LTDC_FB_SIZE_RGB565);
+    memset((void *)fb_ptr, 0, LTDC_FB_SIZE_RGB565);
 
     /* Configure Layer 1 */
     LTDC_LayerCfgTypeDef layerCfg = {0};

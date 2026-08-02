@@ -59,7 +59,6 @@ extern "C" {
 #define MIC_PCM_SAMPLES                 128
 #define MIC_PDM_BUFFER_SIZE             512
 #define MIC_DECIMATION_FACTOR           64
-#define MIC_FILTER_ORDER                4
 #define MIC_GAIN_DEFAULT                (1.0f)
 #define MIC_FFT_SIZE                    64      /* FFT analysis size */
 
@@ -108,16 +107,6 @@ typedef enum {
 } MIC_SampleRateTypeDef;
 
 /**
- * @brief Microphone audio format enumeration
- */
-typedef enum {
-    MIC_FORMAT_PCM16 = 0,           /**< 16-bit PCM format */
-    MIC_FORMAT_PCM24,               /**< 24-bit PCM format */
-    MIC_FORMAT_PCM32,               /**< 32-bit PCM format */
-    MIC_FORMAT_FLOAT32              /**< 32-bit float format */
-} MIC_AudioFormatTypeDef;
-
-/**
  * @brief Microphone gain control
  */
 typedef enum {
@@ -129,26 +118,14 @@ typedef enum {
 } MIC_GainTypeDef;
 
 /**
- * @brief Microphone filter type
- */
-typedef enum {
-    MIC_FILTER_LOWPASS = 0,         /**< Low-pass filter */
-    MIC_FILTER_HIGHPASS,            /**< High-pass filter */
-    MIC_FILTER_BANDPASS,            /**< Band-pass filter */
-    MIC_FILTER_NOTCH                /**< Notch filter */
-} MIC_FilterTypeTypeDef;
-
-/**
  * @brief Microphone configuration structure
  */
 typedef struct {
     MIC_SampleRateTypeDef SampleRate;       /**< Audio sample rate */
-    MIC_AudioFormatTypeDef AudioFormat;     /**< Audio data format */
     MIC_GainTypeDef Gain;                   /**< Microphone gain */
     uint8_t Volume;                         /**< Volume level (0-100) */
     bool NoiseGateEnable;                   /**< Noise gate enable */
     float NoiseGateThreshold;               /**< Noise gate threshold */
-    bool AutoGainControl;                   /**< Automatic gain control */
     bool HighPassFilter;                    /**< High-pass filter enable */
     uint16_t BufferSize;                    /**< Audio buffer size */
 } MIC_ConfigTypeDef;
@@ -192,6 +169,8 @@ typedef struct {
     uint32_t PDMBuffer[MIC_PDM_BUFFER_SIZE];/**< PDM data buffer */
     int16_t PCMBuffer[MIC_PCM_SAMPLES];     /**< PCM output buffer */
     volatile bool BufferReady;              /**< Buffer ready flag */
+    int16_t HpPrevInput;                    /**< High-pass filter state: previous input sample */
+    int16_t HpPrevOutput;                   /**< High-pass filter state: previous output sample */
     void (*RecordCallback)(void);           /**< Record complete callback */
     void (*ErrorCallback)(void);            /**< Error callback */
 } MIC_HandleTypeDef;
@@ -339,14 +318,6 @@ MIC_StatusTypeDef MIC_ResetStatistics(MIC_HandleTypeDef *hmic);
  */
 MIC_StatusTypeDef MIC_PerformAudioAnalysis(MIC_HandleTypeDef *hmic, MIC_AudioAnalysisTypeDef *analysis);
 
-/**
- * @brief Apply audio filter
- * @param hmic Pointer to microphone handle structure
- * @param filter_type Type of filter to apply
- * @param frequency Filter frequency in Hz
- * @retval MIC_StatusTypeDef Status of the operation
- */
-MIC_StatusTypeDef MIC_ApplyFilter(MIC_HandleTypeDef *hmic, MIC_FilterTypeTypeDef filter_type, uint32_t frequency);
 
 /**
  * @brief Enable/disable noise gate

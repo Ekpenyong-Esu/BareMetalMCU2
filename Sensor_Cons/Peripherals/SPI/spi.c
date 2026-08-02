@@ -53,7 +53,8 @@ static SPI_StatusTypeDef SPI_ConvertHALStatus(HAL_StatusTypeDef halStatus)
 
 /**
  * @brief   SPI error recovery function
- * @details Deinitializes and reinitializes SPI peripheral on error
+ * @details Deinitializes and reinitializes the SPI peripheral on error, keeping
+ *          whatever configuration is currently active.
  * @param   None
  * @retval  None
  */
@@ -62,8 +63,13 @@ static void SPIx_Error(void)
     /* De-initialize the SPI communication BUS */
     SPI_DeInit();
 
-    /* Re-Initialize the SPI communication BUS */
-    SPI_Init();
+    /* Re-init from hspi5.Init, which HAL_SPI_DeInit leaves untouched. Calling
+       SPI_Init() here instead would force the bus back to the default ILI9341
+       settings and silently discard an SPI_Init_Custom() configuration. */
+    if (HAL_SPI_Init(&hspi5) != HAL_OK)
+    {
+        log_error("SPI: error recovery failed to re-initialize SPI5");
+    }
 }
 
 /**
@@ -108,8 +114,12 @@ void SPI_Init(void)
   hspi5.Init.CRCPolynomial = SPI_CRC_POLYNOMIAL_DEFAULT;                        /* CRC polynomial (not used) */
 
   /* Initialize the SPI peripheral with the specified parameters */
-   HAL_SPI_Init(&hspi5);
-   log_debug("SPI: SPI5 initialized successfully");
+  if (HAL_SPI_Init(&hspi5) != HAL_OK)
+  {
+    log_error("SPI: SPI5 initialization failed");
+    return;
+  }
+  log_debug("SPI: SPI5 initialized successfully");
 }
 
 /**
@@ -140,8 +150,7 @@ SPI_StatusTypeDef SPI_Init_Custom(const SPI_ConfigTypeDef* config)
   hspi5.Init.CRCPolynomial = config->CRCPolynomial;
 
   /* Initialize the SPI peripheral with the specified parameters */
-   HAL_SPI_Init(&hspi5);
-   return SPI_OK;
+  return SPI_ConvertHALStatus(HAL_SPI_Init(&hspi5));
 }
 
 

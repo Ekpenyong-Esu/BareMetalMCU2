@@ -12,6 +12,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "nokia5110.h"
 #include "spi.h"
+#include "gpio.h"
 #include "stm32f4xx_hal.h"
 #include <stdlib.h>
 #include <string.h>
@@ -149,8 +150,6 @@ static const uint8_t ASCII[][5] = {
 static void NOKIA5110_MspInit(void);
 static void NOKIA5110_MspDeInit(void);
 static NOKIA5110_StatusTypeDef NOKIA5110_WriteCommand(uint8_t cmd);
-static NOKIA5110_StatusTypeDef NOKIA5110_WriteData(uint8_t data);
-static NOKIA5110_StatusTypeDef NOKIA5110_WriteDataMulti(const uint8_t *data, uint16_t size);
 
 /* Exported functions -------------------------------------------------------*/
 
@@ -178,12 +177,12 @@ NOKIA5110_StatusTypeDef NOKIA5110_Init(NOKIA5110_Handle_t *hnok)
     HAL_GPIO_WritePin(NOKIA5110_RST_PORT, NOKIA5110_RST_PIN, GPIO_PIN_SET);
 
     /* Send initialization commands */
-    NOKIA5110_WriteCommand(0x21);  /* Extended instruction set */
-    NOKIA5110_WriteCommand(0xB0);  /* Set Vop (contrast) */
-    NOKIA5110_WriteCommand(0x04);  /* Set temperature coefficient */
-    NOKIA5110_WriteCommand(0x14);  /* Set bias system */
-    NOKIA5110_WriteCommand(0x20);  /* Standard instruction set */
-    NOKIA5110_WriteCommand(0x0C);  /* Normal display mode */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_FUNCTION_SET | NOKIA5110_FUNCTION_H);  /* Extended instruction set */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_VOP | 0x30);  /* Set Vop (contrast) */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_TEMP_CONTROL | NOKIA5110_TEMP_COEFF_0);  /* Set temperature coefficient */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_BIAS_SYSTEM | 0x04);  /* Set bias system */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_FUNCTION_SET);  /* Standard instruction set */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_NORMAL);  /* Normal display mode */
 
     /* Clear the display */
     NOKIA5110_Clear(hnok);
@@ -240,29 +239,29 @@ NOKIA5110_StatusTypeDef NOKIA5110_Config(NOKIA5110_Handle_t *hnok, NOKIA5110_Con
     hnok->Config = *config;
 
     /* Apply contrast */
-    NOKIA5110_WriteCommand(0x21);  /* Extended instruction set */
-    NOKIA5110_WriteCommand(0x80 | (config->Contrast & 0x7F));  /* Set Vop */
-    NOKIA5110_WriteCommand(0x04 | (config->TemperatureCoeff & 0x03));  /* Temperature coeff */
-    NOKIA5110_WriteCommand(0x10 | (config->BiasSystem & 0x07));  /* Bias system */
-    NOKIA5110_WriteCommand(0x20);  /* Standard instruction set */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_FUNCTION_SET | NOKIA5110_FUNCTION_H);  /* Extended instruction set */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_VOP | (config->Contrast & 0x7F));  /* Set Vop */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_TEMP_CONTROL | (config->TemperatureCoeff & 0x03));  /* Temperature coeff */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_BIAS_SYSTEM | (config->BiasSystem & 0x07));  /* Bias system */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_FUNCTION_SET);  /* Standard instruction set */
 
     /* Apply display mode */
     uint8_t mode_cmd;
     switch (config->Mode) {
         case NOKIA5110_MODE_BLANK:
-            mode_cmd = 0x08;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_BLANK;
             break;
         case NOKIA5110_MODE_NORMAL:
-            mode_cmd = 0x0C;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_NORMAL;
             break;
         case NOKIA5110_MODE_ALL_ON:
-            mode_cmd = 0x09;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_ALL_ON;
             break;
         case NOKIA5110_MODE_INVERSE:
-            mode_cmd = 0x0D;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_INVERSE;
             break;
         default:
-            mode_cmd = 0x0C;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_NORMAL;
             break;
     }
     NOKIA5110_WriteCommand(mode_cmd);
@@ -302,8 +301,8 @@ NOKIA5110_StatusTypeDef NOKIA5110_Update(NOKIA5110_Handle_t *hnok)
     }
 
     /* Set X and Y addresses */
-    NOKIA5110_WriteCommand(0x40);  /* Y address = 0 */
-    NOKIA5110_WriteCommand(0x80);  /* X address = 0 */
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_SET_Y_ADDR);
+    NOKIA5110_WriteCommand(NOKIA5110_CMD_SET_X_ADDR);
 
     /* Send buffer data */
     HAL_GPIO_WritePin(NOKIA5110_DC_PORT, NOKIA5110_DC_PIN, GPIO_PIN_SET);  /* Data mode */
@@ -361,19 +360,19 @@ NOKIA5110_StatusTypeDef NOKIA5110_SetMode(NOKIA5110_Handle_t *hnok, NOKIA5110_Di
     uint8_t mode_cmd;
     switch (mode) {
         case NOKIA5110_MODE_BLANK:
-            mode_cmd = 0x08;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_BLANK;
             break;
         case NOKIA5110_MODE_NORMAL:
-            mode_cmd = 0x0C;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_NORMAL;
             break;
         case NOKIA5110_MODE_ALL_ON:
-            mode_cmd = 0x09;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_ALL_ON;
             break;
         case NOKIA5110_MODE_INVERSE:
-            mode_cmd = 0x0D;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_INVERSE;
             break;
         default:
-            mode_cmd = 0x0C;
+            mode_cmd = NOKIA5110_CMD_DISPLAY_CONTROL | NOKIA5110_DISPLAY_NORMAL;
             break;
     }
     NOKIA5110_WriteCommand(mode_cmd);
@@ -634,29 +633,26 @@ static void NOKIA5110_MspInit(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* Enable GPIO clocks */
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-
-    /* Configure RST pin (PB1) */
+    /* Configure RST pin (PB1) - GPIO driver enables the port clock */
     GPIO_InitStruct.Pin = NOKIA5110_RST_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(NOKIA5110_RST_PORT, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(NOKIA5110_RST_PORT, &GPIO_InitStruct);
 
     /* Configure CE pin (PB0) */
     GPIO_InitStruct.Pin = NOKIA5110_CE_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(NOKIA5110_CE_PORT, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(NOKIA5110_CE_PORT, &GPIO_InitStruct);
 
     /* Configure DC pin (PB2) */
     GPIO_InitStruct.Pin = NOKIA5110_DC_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(NOKIA5110_DC_PORT, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(NOKIA5110_DC_PORT, &GPIO_InitStruct);
 
     /* Set default pin states */
     HAL_GPIO_WritePin(NOKIA5110_RST_PORT, NOKIA5110_RST_PIN, GPIO_PIN_SET);
@@ -690,43 +686,6 @@ static NOKIA5110_StatusTypeDef NOKIA5110_WriteCommand(uint8_t cmd)
     HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_RESET);  /* Chip enable */
 
     SPI_StatusTypeDef spi_status = SPI_Transmit(&cmd, 1, NOKIA5110_SPI_TIMEOUT);
-
-    HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_SET);  /* Chip disable */
-
-    return (spi_status == SPI_OK) ? NOKIA5110_OK : NOKIA5110_ERROR;
-}
-
-/**
- * @brief   Write data to LCD
- * @details Sends a data byte to the LCD
- * @param   data Data byte
- * @retval  NOKIA5110_StatusTypeDef Operation status
- */
-static NOKIA5110_StatusTypeDef NOKIA5110_WriteData(uint8_t data)
-{
-    HAL_GPIO_WritePin(NOKIA5110_DC_PORT, NOKIA5110_DC_PIN, GPIO_PIN_SET);  /* Data mode */
-    HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_RESET);  /* Chip enable */
-
-    SPI_StatusTypeDef spi_status = SPI_Transmit(&data, 1, NOKIA5110_SPI_TIMEOUT);
-
-    HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_SET);  /* Chip disable */
-
-    return (spi_status == SPI_OK) ? NOKIA5110_OK : NOKIA5110_ERROR;
-}
-
-/**
- * @brief   Write multiple data bytes to LCD
- * @details Sends multiple data bytes to the LCD
- * @param   data Pointer to data buffer
- * @param   size Number of bytes to send
- * @retval  NOKIA5110_StatusTypeDef Operation status
- */
-static NOKIA5110_StatusTypeDef NOKIA5110_WriteDataMulti(const uint8_t *data, uint16_t size)
-{
-    HAL_GPIO_WritePin(NOKIA5110_DC_PORT, NOKIA5110_DC_PIN, GPIO_PIN_SET);  /* Data mode */
-    HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_RESET);  /* Chip enable */
-
-    SPI_StatusTypeDef spi_status = SPI_Transmit((uint8_t*)data, size, NOKIA5110_SPI_TIMEOUT);
 
     HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_SET);  /* Chip disable */
 

@@ -52,15 +52,20 @@ HAL_StatusTypeDef ETH_Init(ETH_Handle_t *handle, ETH_Config_t *config) {
         return HAL_ERROR;
     }
 
-    /* Configure MAC */
+    /* Configure MAC (read-modify-write so the untouched fields keep HAL's defaults) */
     ETH_MACConfigTypeDef macConfig = {0};
+    if (HAL_ETH_GetMACConfig(&handle->heth, &macConfig) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
     macConfig.SourceAddrControl = ETH_SOURCEADDRESS_DISABLE;
     macConfig.ChecksumOffload = DISABLE;
     macConfig.Speed = config->speed;
     macConfig.DuplexMode = config->duplexMode;
 
-    /* Note: HAL_ETH_ConfigMAC may not be available in this HAL version */
-    /* MAC configuration is handled during HAL_ETH_Init */
+    if (HAL_ETH_SetMACConfig(&handle->heth, &macConfig) != HAL_OK) {
+        return HAL_ERROR;
+    }
 
     handle->initialized = true;
 
@@ -187,9 +192,9 @@ HAL_StatusTypeDef ETH_ReceiveFrame(ETH_Handle_t *handle, ETH_Frame_t *frame) {
 }
 
 /**
- * @brief Check if Ethernet link is up
+ * @brief Check if the Ethernet peripheral is ready
  */
-bool ETH_IsLinkUp(ETH_Handle_t *handle) {
+bool ETH_IsReady(ETH_Handle_t *handle) {
     if (handle == NULL || !handle->initialized) {
         return false;
     }
@@ -198,28 +203,24 @@ bool ETH_IsLinkUp(ETH_Handle_t *handle) {
 }
 
 /**
- * @brief Get Ethernet link speed
+ * @brief Get the configured Ethernet speed
  */
-uint32_t ETH_GetLinkSpeed(ETH_Handle_t *handle) {
+uint32_t ETH_GetConfiguredSpeed(ETH_Handle_t *handle) {
     if (handle == NULL || !handle->initialized) {
         return 0;
     }
 
-    /* This would typically require PHY register reads */
-    /* For now, return configured speed */
     return handle->config.speed;
 }
 
 /**
- * @brief Get Ethernet link duplex mode
+ * @brief Get the configured Ethernet duplex mode
  */
-uint32_t ETH_GetLinkDuplex(ETH_Handle_t *handle) {
+uint32_t ETH_GetConfiguredDuplex(ETH_Handle_t *handle) {
     if (handle == NULL || !handle->initialized) {
         return 0;
     }
 
-    /* This would typically require PHY register reads */
-    /* For now, return configured duplex mode */
     return handle->config.duplexMode;
 }
 
@@ -231,9 +232,17 @@ HAL_StatusTypeDef ETH_SetMACAddress(ETH_Handle_t *handle, uint8_t *macAddr) {
         return HAL_ERROR;
     }
 
-    memcpy(handle->config.macAddr, macAddr, 6);
-    /* Note: MAC address is set during initialization */
-    /* To change MAC address, re-initialize the ETH peripheral */
+    memcpy(handle->config.macAddr, macAddr, ETH_ADDR_LEN);
+
+    /* Program MAC address register 0 as well. Updating only the shadow copy
+       above made this function report success while the controller kept
+       filtering on its previous address. */
+    handle->heth.Instance->MACA0HR = ((uint32_t)macAddr[5] << 8) |
+                                      (uint32_t)macAddr[4];
+    handle->heth.Instance->MACA0LR = ((uint32_t)macAddr[3] << 24) |
+                                     ((uint32_t)macAddr[2] << 16) |
+                                     ((uint32_t)macAddr[1] << 8) |
+                                      (uint32_t)macAddr[0];
     return HAL_OK;
 }
 
@@ -242,7 +251,7 @@ HAL_StatusTypeDef ETH_SetMACAddress(ETH_Handle_t *handle, uint8_t *macAddr) {
  */
 void ETH_GetMACAddress(ETH_Handle_t *handle, uint8_t *macAddr) {
     if (handle != NULL && macAddr != NULL) {
-        memcpy(macAddr, handle->config.macAddr, 6);
+        memcpy(macAddr, handle->config.macAddr, ETH_ADDR_LEN);
     }
 }
 

@@ -101,17 +101,12 @@ void ETH_Example_Init(void) {
         .macAddr = {0x00, MAC_BYTE_1, MAC_BYTE_2, MAC_BYTE_3, MAC_BYTE_4, MAC_BYTE_5}, /* MAC address */
         .speed = ETH_SPEED_100M,                           /* 100 Mbps */
         .duplexMode = ETH_FULLDUPLEX_MODE,                 /* Full duplex */
-        .checksumMode = ETH_CHECKSUM_BY_SOFTWARE,          /* Software checksum */
-        .mediaInterface = ETH_MEDIA_INTERFACE_RMII,        /* RMII interface */
-        .vlanTagIdentifier = 0,                            /* No VLAN */
-        .vlanTagProtocol = 0                               /* No VLAN */
+        .mediaInterface = ETH_MEDIA_INTERFACE_RMII         /* RMII interface */
     };
 
     /* Assign buffers */
     ethHandle.rxBuffer = rxBuffer;
-    ethHandle.rxBufferSize = sizeof(rxBuffer);
     ethHandle.txBuffer = txBuffer;
-    ethHandle.txBufferSize = sizeof(txBuffer);
 
     /* Initialize Ethernet */
     if (ETH_Init(&ethHandle, &ethConfig) != HAL_OK) {

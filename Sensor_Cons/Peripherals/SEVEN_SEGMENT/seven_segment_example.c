@@ -25,9 +25,7 @@ void SevenSeg_Example_GPIO_CommonCathode(void)
 {
     SegDisplayConfig_t config = {0};
 
-    /* Enable GPIO clocks (adjust based on your pins) */
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
+    /* GPIO clock enable is handled by the GPIO driver during Seg_Init */
 
     /* Set driver type */
     config.driverType = SEG_DRIVER_GPIO;
@@ -94,8 +92,7 @@ void SevenSeg_Example_GPIO_CommonAnode(void)
 {
     SegDisplayConfig_t config = {0};
 
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
+    /* GPIO clock enable is handled by the GPIO driver during Seg_Init */
 
     config.driverType = SEG_DRIVER_GPIO;
 
@@ -156,7 +153,7 @@ void SevenSeg_Example_HT1621(void)
 {
     SegDisplayConfig_t config = {0};
 
-    __HAL_RCC_GPIOC_CLK_ENABLE();
+    /* GPIO clock enable is handled by the GPIO driver during Seg_Init */
 
     config.driverType = SEG_DRIVER_HT1621;
 
@@ -171,7 +168,6 @@ void SevenSeg_Example_HT1621(void)
     config.config.ht1621.digitCount = 6;  /* 6-digit LCD */
     config.config.ht1621.bias = 3;        /* 1/3 bias */
     config.config.ht1621.commons = 4;     /* 4 commons */
-    config.config.ht1621.segmentMap = NULL;  /* Use default mapping */
 
     config.leadingZeros = false;
 
@@ -303,7 +299,7 @@ void SevenSeg_Example_SingleDigit(void)
 {
     SegDisplayConfig_t config = {0};
 
-    __HAL_RCC_GPIOA_CLK_ENABLE();
+    /* GPIO clock enable is handled by the GPIO driver during Seg_Init */
 
     config.driverType = SEG_DRIVER_GPIO;
 

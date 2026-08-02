@@ -61,7 +61,6 @@ if (voltage >= 0.0f) {
 - `ADC_Init()` - Initialize ADC with configuration
 - `ADC_DeInit()` - Deinitialize ADC
 - `ADC_ConfigChannel()` - Configure specific ADC channel
-- `ADC_Calibrate()` - Calibrate ADC (STM32F4 note: limited calibration)
 
 ### Basic Operations
 

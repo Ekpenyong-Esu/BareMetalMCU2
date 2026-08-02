@@ -28,9 +28,13 @@
 /* Private variables ---------------------------------------------------------*/
 static RTC_HandleTypeDef hrtc;
 
+/* Days in each month (non-leap year) */
+static const uint32_t rtc_daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
 /* Private function prototypes -----------------------------------------------*/
 static void RTC_MspInit(void);
 static void RTC_MspDeInit(void);
+static bool RTC_IsLeapYear(uint32_t year);
 static uint32_t RTC_DateTimeToTimestamp(RTC_Date_t* sDate, RTC_Time_t* sTime);
 static void RTC_TimestampToDateTime(uint32_t timestamp, RTC_Date_t* sDate, RTC_Time_t* sTime);
 
@@ -424,6 +428,14 @@ static void RTC_MspDeInit(void)
 }
 
 /**
+ * @brief  Check if a year is a leap year
+ */
+static bool RTC_IsLeapYear(uint32_t year)
+{
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
+
+/**
  * @brief  Convert date and time to Unix timestamp
  * @param  sDate: Pointer to Date structure
  * @param  sTime: Pointer to Time structure
@@ -440,25 +452,14 @@ static uint32_t RTC_DateTimeToTimestamp(RTC_Date_t* sDate, RTC_Time_t* sTime)
     /* Count days from 1970 to current year */
     for (uint32_t y = 1970; y < year; y++)
     {
-        if ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0))
-        {
-            days += 366; /* Leap year */
-        }
-        else
-        {
-            days += 365; /* Normal year */
-        }
+        days += RTC_IsLeapYear(y) ? 366 : 365;
     }
-
-    /* Days in months for normal year */
-    const uint32_t daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
     /* Add days for completed months in current year */
     for (uint32_t m = 1; m < sDate->Month; m++)
     {
-        days += daysInMonth[m - 1];
-        /* Add extra day for February in leap year */
-        if (m == 2 && ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)))
+        days += rtc_daysInMonth[m - 1];
+        if (m == 2 && RTC_IsLeapYear(year))
         {
             days += 1;
         }
@@ -498,7 +499,7 @@ static void RTC_TimestampToDateTime(uint32_t timestamp, RTC_Date_t* sDate, RTC_T
     uint32_t year = 1970;
     while (days >= 365)
     {
-        if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))
+        if (RTC_IsLeapYear(year))
         {
             if (days >= 366)
             {
@@ -517,16 +518,12 @@ static void RTC_TimestampToDateTime(uint32_t timestamp, RTC_Date_t* sDate, RTC_T
         }
     }
 
-    /* Days in months for normal year */
-    const uint32_t daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-
     /* Calculate month and day */
     uint32_t month = 1;
     while (month <= 12)
     {
-        uint32_t daysThisMonth = daysInMonth[month - 1];
-        /* Add extra day for February in leap year */
-        if (month == 2 && ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)))
+        uint32_t daysThisMonth = rtc_daysInMonth[month - 1];
+        if (month == 2 && RTC_IsLeapYear(year))
         {
             daysThisMonth = 29;
         }
@@ -556,10 +553,13 @@ static void RTC_TimestampToDateTime(uint32_t timestamp, RTC_Date_t* sDate, RTC_T
 }
 
 /**
- * @brief  RTC Alarm interrupt handler
+ * @brief  RTC Alarm interrupt dispatcher
+ * @note   Invoked from RTC_Alarm_IRQHandler() in Core/Src/stm32f4xx_it.c.
+ *         The vector-table entry point lives in the interrupt layer so the
+ *         driver only owns the RTC logic, not the ISR wiring.
  * @retval None
  */
-void RTC_Alarm_IRQHandler(void)
+void RTC_ISR_Dispatch(void)
 {
     HAL_RTC_AlarmIRQHandler(&hrtc);
 }

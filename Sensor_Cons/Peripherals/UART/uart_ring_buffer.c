@@ -4,7 +4,9 @@
  */
 
 #include "uart_ring_buffer.h"
+#include "log.h"
 #include <string.h>
+
 
 
 RingBuffer_t rxRingBuffer;  // Remove static to make it accessible externally
@@ -68,6 +70,12 @@ UART_Status_t UART_RingBuffer_Receive(UART_Handle_t* handle, uint8_t* data, uint
 {
     if (handle == NULL || data == NULL || size == 0) {
         log_debug("UART handle, data is NULL or size is 0");
+        return UART_ERROR;
+    }
+
+    /* Check first: draining byte by byte would discard a partial packet that a
+       later call could have completed. */
+    if (RingBuffer_Available(&rxRingBuffer) < size) {
         return UART_ERROR;
     }
 

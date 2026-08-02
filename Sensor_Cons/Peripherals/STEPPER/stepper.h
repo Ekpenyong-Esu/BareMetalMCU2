@@ -60,10 +60,7 @@ typedef enum {
 typedef enum {
     STEPPER_MODE_FULL_STEP = 0,  /*!< Full step mode */
     STEPPER_MODE_HALF_STEP,      /*!< Half step mode */
-    STEPPER_MODE_WAVE_DRIVE,     /*!< Wave drive mode */
-    STEPPER_MODE_MICROSTEP_4,    /*!< 1/4 microstepping */
-    STEPPER_MODE_MICROSTEP_8,    /*!< 1/8 microstepping */
-    STEPPER_MODE_MICROSTEP_16    /*!< 1/16 microstepping */
+    STEPPER_MODE_WAVE_DRIVE      /*!< Wave drive mode */
 } STEPPER_StepMode_t;
 
 /**
@@ -72,10 +69,7 @@ typedef enum {
 typedef struct {
     uint16_t stepsPerRevolution;  /*!< Steps per revolution */
     uint16_t maxSpeedRPM;        /*!< Maximum speed in RPM */
-    uint16_t acceleration;       /*!< Acceleration in steps/sec² */
-    uint16_t deceleration;       /*!< Deceleration in steps/sec² */
     STEPPER_StepMode_t stepMode; /*!< Step mode */
-    bool enableLimitSwitches;    /*!< Enable limit switch checking */
 } STEPPER_Config_t;
 
 /**
@@ -101,11 +95,10 @@ typedef struct {
     STEPPER_Config_t config;     /*!< Motor configuration */
     STEPPER_Direction_t direction; /*!< Current direction */
     uint32_t currentPosition;    /*!< Current position in steps */
-    uint32_t targetPosition;     /*!< Target position in steps */
-    uint16_t currentSpeed;       /*!< Current speed in RPM */
     bool isRunning;              /*!< Motor running status */
     bool isInitialized;          /*!< Initialization status */
     uint32_t stepDelay;          /*!< Delay between steps in microseconds */
+    uint8_t  currentStep;        /*!< Current step in the sequence (per-instance) */
 } STEPPER_Handle_t;
 
 /* Exported functions -------------------------------------------------------*/
@@ -176,18 +169,6 @@ STEPPER_StatusTypeDef STEPPER_MoveToPosition(STEPPER_Handle_t *hstep,
                                             uint16_t speed);
 
 /**
- * @brief   Rotate stepper motor continuously
- * @details Starts continuous rotation at specified speed
- * @param   hstep Pointer to stepper motor handle
- * @param   direction Direction of rotation
- * @param   speed Speed in RPM
- * @retval  STEPPER_StatusTypeDef Operation status
- */
-STEPPER_StatusTypeDef STEPPER_RotateContinuous(STEPPER_Handle_t *hstep,
-                                              STEPPER_Direction_t direction,
-                                              uint16_t speed);
-
-/**
  * @brief   Stop stepper motor
  * @details Stops motor movement immediately
  * @param   hstep Pointer to stepper motor handle
@@ -201,8 +182,6 @@ STEPPER_StatusTypeDef STEPPER_Stop(STEPPER_Handle_t *hstep);
  * @param   hstep Pointer to stepper motor handle
  * @retval  STEPPER_StatusTypeDef Operation status
  */
-STEPPER_StatusTypeDef STEPPER_EmergencyStop(STEPPER_Handle_t *hstep);
-
 /** @} */
 
 /** @defgroup STEPPER_Status Status and Information
@@ -241,45 +220,6 @@ STEPPER_StatusTypeDef STEPPER_SetPosition(STEPPER_Handle_t *hstep, uint32_t posi
  * @retval  STEPPER_StatusTypeDef Motor status
  */
 STEPPER_StatusTypeDef STEPPER_GetStatus(STEPPER_Handle_t *hstep);
-
-/** @} */
-
-/** @defgroup STEPPER_Advanced Advanced Features
- * @{
- */
-
-/**
- * @brief   Enable/disable limit switches
- * @details Configures limit switch functionality
- * @param   hstep Pointer to stepper motor handle
- * @param   enable Enable/disable limit switches
- * @retval  STEPPER_StatusTypeDef Operation status
- */
-STEPPER_StatusTypeDef STEPPER_EnableLimitSwitches(STEPPER_Handle_t *hstep, bool enable);
-
-/**
- * @brief   Home stepper motor
- * @details Moves motor to home position using limit switches
- * @param   hstep Pointer to stepper motor handle
- * @param   direction Direction to move for homing
- * @param   speed Homing speed in RPM
- * @retval  STEPPER_StatusTypeDef Operation status
- */
-STEPPER_StatusTypeDef STEPPER_Home(STEPPER_Handle_t *hstep,
-                                  STEPPER_Direction_t direction,
-                                  uint16_t speed);
-
-/**
- * @brief   Set acceleration/deceleration
- * @details Configures acceleration and deceleration parameters
- * @param   hstep Pointer to stepper motor handle
- * @param   acceleration Acceleration in steps/sec²
- * @param   deceleration Deceleration in steps/sec²
- * @retval  STEPPER_StatusTypeDef Operation status
- */
-STEPPER_StatusTypeDef STEPPER_SetAcceleration(STEPPER_Handle_t *hstep,
-                                             uint16_t acceleration,
-                                             uint16_t deceleration);
 
 /** @} */
 

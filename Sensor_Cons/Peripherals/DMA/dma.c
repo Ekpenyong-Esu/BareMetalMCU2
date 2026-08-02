@@ -8,25 +8,10 @@
  */
 
 #include "dma.h"
-#include "../LOG/log.h"
+#include "log.h"
 
-/* Static function prototypes */
-static void DMA_TransferCompleteCallback_Wrapper(DMA_HandleTypeDef *hdma);
-static void DMA_TransferErrorCallback_Wrapper(DMA_HandleTypeDef *hdma);
-
-/**
- * @brief DMA Transfer Complete Callback Wrapper
- */
-static void DMA_TransferCompleteCallback_Wrapper(DMA_HandleTypeDef *hdma) {
-    DMA_TransferCompleteCallback(hdma);
-}
-
-/**
- * @brief DMA Transfer Error Callback Wrapper
- */
-static void DMA_TransferErrorCallback_Wrapper(DMA_HandleTypeDef *hdma) {
-    DMA_TransferErrorCallback(hdma);
-}
+/** @brief NVIC preemption priority used for every DMA stream interrupt */
+#define DMA_IRQ_PRIORITY    5U
 
 /**
  * @brief Get DMA stream IRQ number from stream instance
@@ -84,7 +69,7 @@ HAL_StatusTypeDef DMA_EnableClockAndIRQ(DMA_Handle_t *handle) {
     }
 
     /* Configure NVIC */
-    HAL_NVIC_SetPriority(handle->irqn, 5, 0);
+    HAL_NVIC_SetPriority(handle->irqn, DMA_IRQ_PRIORITY, 0);
     HAL_NVIC_EnableIRQ(handle->irqn);
 
     return HAL_OK;
@@ -155,8 +140,11 @@ HAL_StatusTypeDef DMA_Init(DMA_Handle_t *handle, DMA_Config_t *config) {
     }
 
     /* Register callbacks */
-    HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_CPLT_CB_ID, DMA_TransferCompleteCallback_Wrapper);
-    HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_ERROR_CB_ID, DMA_TransferErrorCallback_Wrapper);
+    if (HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_CPLT_CB_ID, DMA_TransferCompleteCallback) != HAL_OK ||
+        HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_ERROR_CB_ID, DMA_TransferErrorCallback) != HAL_OK) {
+        log_error("DMA: failed to register transfer callbacks");
+        return HAL_ERROR;
+    }
 
     handle->initialized = true;
 
@@ -212,30 +200,18 @@ HAL_StatusTypeDef DMA_StartTransfer(DMA_Handle_t *handle, uint32_t srcAddr, uint
  * @brief Start DMA transfer (Peripheral to Memory)
  */
 HAL_StatusTypeDef DMA_StartPeriphToMem(DMA_Handle_t *handle, uint32_t periphAddr, uint32_t memAddr, uint32_t dataLength) {
-    if (handle == NULL || !handle->initialized) {
-        return HAL_ERROR;
-    }
-
-    if (periphAddr == 0 || memAddr == 0 || dataLength == 0) {
-        return HAL_ERROR;
-    }
-
-    return HAL_DMA_Start_IT(&handle->hdma, periphAddr, memAddr, dataLength);
+    /* The transfer direction is fixed by DMA_Init(); this name only documents
+       the intended argument order at the call site. */
+    return DMA_StartTransfer(handle, periphAddr, memAddr, dataLength);
 }
 
 /**
  * @brief Start DMA transfer (Memory to Peripheral)
  */
 HAL_StatusTypeDef DMA_StartMemToPeriph(DMA_Handle_t *handle, uint32_t memAddr, uint32_t periphAddr, uint32_t dataLength) {
-    if (handle == NULL || !handle->initialized) {
-        return HAL_ERROR;
-    }
-
-    if (memAddr == 0 || periphAddr == 0 || dataLength == 0) {
-        return HAL_ERROR;
-    }
-
-    return HAL_DMA_Start_IT(&handle->hdma, memAddr, periphAddr, dataLength);
+    /* The transfer direction is fixed by DMA_Init(); this name only documents
+       the intended argument order at the call site. */
+    return DMA_StartTransfer(handle, memAddr, periphAddr, dataLength);
 }
 
 /**

@@ -13,9 +13,7 @@
 #include "ili9488.h"
 #include "spi.h"
 #include "gpio.h"
-#include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 /* Private defines -----------------------------------------------------------*/
 
@@ -118,8 +116,11 @@
 #define ILI9488_CMD_SPI_TIMING1          0xFC
 #define ILI9488_CMD_SPI_TIMING2          0xFD
 
+/** Pixels staged per SPI burst when clearing, so the fill buffer stays off the stack limit. */
+#define ILI9488_CLEAR_CHUNK_PIXELS       64U
+
 /* Font data (6x8 font) */
-static const uint8_t font6x8[96][6] = {
+static const uint8_t font6x8[ILI9488_FONT_CHAR_COUNT][ILI9488_FONT_WIDTH] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Space
     {0x00, 0x00, 0x5F, 0x00, 0x00, 0x00}, // !
     {0x00, 0x07, 0x00, 0x07, 0x00, 0x00}, // "
@@ -220,12 +221,45 @@ static const uint8_t font6x8[96][6] = {
 
 /* Private variables ---------------------------------------------------------*/
 
+/* Panel bring-up parameters, applied in order by ILI9488_Init */
+static const uint8_t ILI9488_ParamsPowerControl1[] = {0x17, 0x15};
+static const uint8_t ILI9488_ParamsPowerControl2[] = {0x41};
+static const uint8_t ILI9488_ParamsVcomControl1[]  = {0x00, 0x12, 0x80};
+static const uint8_t ILI9488_ParamsMemoryAccess[]  = {0x48};  /* Portrait */
+static const uint8_t ILI9488_ParamsPixelFormat[]   = {0x55};  /* 16-bit RGB565 */
+static const uint8_t ILI9488_ParamsFrameRate[]     = {0xA0};  /* 60 Hz */
+static const uint8_t ILI9488_ParamsPositiveGamma[] = {0x0F, 0x1F, 0x1C, 0x0C, 0x0F, 0x08, 0x48, 0x98,
+                                                      0x37, 0x0A, 0x13, 0x04, 0x11, 0x0D, 0x00};
+static const uint8_t ILI9488_ParamsNegativeGamma[] = {0x0F, 0x32, 0x2E, 0x0B, 0x0D, 0x05, 0x47, 0x75,
+                                                      0x37, 0x06, 0x10, 0x03, 0x24, 0x20, 0x00};
+
+typedef struct {
+    uint8_t        command;
+    const uint8_t *params;
+    uint8_t        paramCount;
+    uint16_t       delayMs;   /**< Settling time the panel needs after the command. */
+} ILI9488_InitStep_t;
+
+static const ILI9488_InitStep_t ILI9488_InitSequence[] = {
+    {ILI9488_CMD_SOFTWARE_RESET,     NULL,                        0,                                   150},
+    {ILI9488_CMD_SLEEP_OUT,          NULL,                        0,                                   150},
+    {ILI9488_CMD_POWER_CONTROL1,     ILI9488_ParamsPowerControl1, sizeof(ILI9488_ParamsPowerControl1),   0},
+    {ILI9488_CMD_POWER_CONTROL2,     ILI9488_ParamsPowerControl2, sizeof(ILI9488_ParamsPowerControl2),   0},
+    {ILI9488_CMD_VCOM_CONTROL1,      ILI9488_ParamsVcomControl1,  sizeof(ILI9488_ParamsVcomControl1),    0},
+    {ILI9488_CMD_MEMORY_ACCESS_CTL,  ILI9488_ParamsMemoryAccess,  sizeof(ILI9488_ParamsMemoryAccess),    0},
+    {ILI9488_CMD_PIXEL_FORMAT_SET,   ILI9488_ParamsPixelFormat,   sizeof(ILI9488_ParamsPixelFormat),     0},
+    {ILI9488_CMD_FRAME_RATE_NORMAL,  ILI9488_ParamsFrameRate,     sizeof(ILI9488_ParamsFrameRate),       0},
+    {ILI9488_CMD_POSITIVE_GAMMA,     ILI9488_ParamsPositiveGamma, sizeof(ILI9488_ParamsPositiveGamma),   0},
+    {ILI9488_CMD_NEGATIVE_GAMMA,     ILI9488_ParamsNegativeGamma, sizeof(ILI9488_ParamsNegativeGamma),   0},
+    {ILI9488_CMD_DISP_INVERSION_OFF, NULL,                        0,                                     0},
+    {ILI9488_CMD_DISPLAY_ON,         NULL,                        0,                                   100},
+};
+
 /* Private function prototypes -----------------------------------------------*/
 static ILI9488_StatusTypeDef ILI9488_WriteCommand(ILI9488_Handle_t *hili, uint8_t command);
-static ILI9488_StatusTypeDef ILI9488_WriteData(ILI9488_Handle_t *hili, uint8_t *data, uint16_t size);
-static ILI9488_StatusTypeDef ILI9488_WriteData16(ILI9488_Handle_t *hili, uint16_t *data, uint32_t size);
+static ILI9488_StatusTypeDef ILI9488_WriteData(ILI9488_Handle_t *hili, const uint8_t *data, uint16_t size);
+static ILI9488_StatusTypeDef ILI9488_WriteData16(ILI9488_Handle_t *hili, const uint16_t *data, uint32_t size);
 static ILI9488_StatusTypeDef ILI9488_SetAddressWindow(ILI9488_Handle_t *hili, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
-static void ILI9488_Delay(uint32_t delay);
 
 /* Exported functions -------------------------------------------------------*/
 
@@ -273,68 +307,38 @@ ILI9488_StatusTypeDef ILI9488_Init(ILI9488_Handle_t *hili,
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(cs_port, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(cs_port, &GPIO_InitStruct);
     HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET); // Deselect
 
     /* Data/Command pin */
     GPIO_InitStruct.Pin = dc_pin;
-    HAL_GPIO_Init(dc_port, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(dc_port, &GPIO_InitStruct);
     HAL_GPIO_WritePin(dc_port, dc_pin, GPIO_PIN_RESET); // Command mode
 
     /* Reset pin */
     GPIO_InitStruct.Pin = rst_pin;
-    HAL_GPIO_Init(rst_port, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(rst_port, &GPIO_InitStruct);
 
     /* Hardware reset */
     HAL_GPIO_WritePin(rst_port, rst_pin, GPIO_PIN_RESET);
-    ILI9488_Delay(100);
+    HAL_Delay(100);
     HAL_GPIO_WritePin(rst_port, rst_pin, GPIO_PIN_SET);
-    ILI9488_Delay(100);
+    HAL_Delay(100);
 
-    /* Software reset */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_SOFTWARE_RESET);
-    ILI9488_Delay(150);
+    for (uint32_t i = 0; i < (sizeof(ILI9488_InitSequence) / sizeof(ILI9488_InitSequence[0])); i++) {
+        const ILI9488_InitStep_t *step = &ILI9488_InitSequence[i];
 
-    /* Exit sleep mode */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_SLEEP_OUT);
-    ILI9488_Delay(150);
-
-    /* Power control settings */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_POWER_CONTROL1);
-    ILI9488_WriteData(hili, (uint8_t[]){0x17, 0x15}, 2);
-
-    ILI9488_WriteCommand(hili, ILI9488_CMD_POWER_CONTROL2);
-    ILI9488_WriteData(hili, (uint8_t[]){0x41}, 1);
-
-    /* VCOM control */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_VCOM_CONTROL1);
-    ILI9488_WriteData(hili, (uint8_t[]){0x00, 0x12, 0x80}, 3);
-
-    /* Memory access control */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_MEMORY_ACCESS_CTL);
-    ILI9488_WriteData(hili, (uint8_t[]){0x48}, 1); // Portrait mode
-
-    /* Pixel format */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_PIXEL_FORMAT_SET);
-    ILI9488_WriteData(hili, (uint8_t[]){0x55}, 1); // 16-bit RGB565
-
-    /* Frame rate */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_FRAME_RATE_NORMAL);
-    ILI9488_WriteData(hili, (uint8_t[]){0xA0}, 1); // 60Hz
-
-    /* Gamma settings */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_POSITIVE_GAMMA);
-    ILI9488_WriteData(hili, (uint8_t[]){0x0F, 0x1F, 0x1C, 0x0C, 0x0F, 0x08, 0x48, 0x98, 0x37, 0x0A, 0x13, 0x04, 0x11, 0x0D, 0x00}, 15);
-
-    ILI9488_WriteCommand(hili, ILI9488_CMD_NEGATIVE_GAMMA);
-    ILI9488_WriteData(hili, (uint8_t[]){0x0F, 0x32, 0x2E, 0x0B, 0x0D, 0x05, 0x47, 0x75, 0x37, 0x06, 0x10, 0x03, 0x24, 0x20, 0x00}, 15);
-
-    /* Display inversion off */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_DISP_INVERSION_OFF);
-
-    /* Turn display on */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_DISPLAY_ON);
-    ILI9488_Delay(100);
+        if (ILI9488_WriteCommand(hili, step->command) != ILI9488_OK) {
+            return ILI9488_ERROR;
+        }
+        if ((step->paramCount > 0) &&
+            (ILI9488_WriteData(hili, step->params, step->paramCount) != ILI9488_OK)) {
+            return ILI9488_ERROR;
+        }
+        if (step->delayMs > 0) {
+            HAL_Delay(step->delayMs);
+        }
+    }
 
     hili->initialized = true;
 
@@ -376,10 +380,14 @@ ILI9488_StatusTypeDef ILI9488_SetOrientation(ILI9488_Handle_t *hili, ILI9488_Ori
             hili->width = ILI9488_HEIGHT;
             hili->height = ILI9488_WIDTH;
             break;
+        default:
+            return ILI9488_INVALID_PARAM;
     }
 
-    ILI9488_WriteCommand(hili, ILI9488_CMD_MEMORY_ACCESS_CTL);
-    ILI9488_WriteData(hili, &madctl, 1);
+    if (ILI9488_WriteCommand(hili, ILI9488_CMD_MEMORY_ACCESS_CTL) != ILI9488_OK ||
+        ILI9488_WriteData(hili, &madctl, 1) != ILI9488_OK) {
+        return ILI9488_ERROR;
+    }
 
     hili->config.orientation = orientation;
 
@@ -398,23 +406,28 @@ ILI9488_StatusTypeDef ILI9488_Clear(ILI9488_Handle_t *hili, uint16_t color)
         return ILI9488_NOT_INITIALIZED;
     }
 
-    ILI9488_SetAddressWindow(hili, 0, 0, hili->width - 1, hili->height - 1);
+    if (ILI9488_SetAddressWindow(hili, 0, 0, hili->width - 1, hili->height - 1) != ILI9488_OK ||
+        ILI9488_WriteCommand(hili, ILI9488_CMD_MEMORY_WRITE) != ILI9488_OK) {
+        return ILI9488_ERROR;
+    }
 
-    ILI9488_WriteCommand(hili, ILI9488_CMD_MEMORY_WRITE);
-
-    /* Fill with color */
-    uint16_t buffer[ILI9488_WIDTH];
-    for (uint16_t i = 0; i < ILI9488_WIDTH; i++) {
+    uint16_t buffer[ILI9488_CLEAR_CHUNK_PIXELS];
+    for (uint16_t i = 0; i < ILI9488_CLEAR_CHUNK_PIXELS; i++) {
         buffer[i] = color;
     }
 
-    HAL_GPIO_WritePin(hili->config.cs_port, hili->config.cs_pin, GPIO_PIN_RESET);
+    /* Count from hili->width, not ILI9488_WIDTH: in landscape the window is
+       480 px wide and the constant would leave a third of every row unwritten. */
+    uint32_t remaining = (uint32_t)hili->width * (uint32_t)hili->height;
 
-    for (uint16_t y = 0; y < hili->height; y++) {
-        ILI9488_WriteData16(hili, buffer, ILI9488_WIDTH);
+    while (remaining > 0) {
+        uint32_t chunk = (remaining > ILI9488_CLEAR_CHUNK_PIXELS) ? ILI9488_CLEAR_CHUNK_PIXELS : remaining;
+
+        if (ILI9488_WriteData16(hili, buffer, chunk) != ILI9488_OK) {
+            return ILI9488_ERROR;
+        }
+        remaining -= chunk;
     }
-
-    HAL_GPIO_WritePin(hili->config.cs_port, hili->config.cs_pin, GPIO_PIN_SET);
 
     return ILI9488_OK;
 }
@@ -443,6 +456,29 @@ ILI9488_StatusTypeDef ILI9488_DrawPixel(ILI9488_Handle_t *hili,
 }
 
 /**
+ * @brief   Set cursor position for subsequent text output
+ * @param   hili Pointer to ILI9488 handle
+ * @param   x X coordinate
+ * @param   y Y coordinate
+ * @retval  ILI9488_StatusTypeDef Operation status
+ */
+ILI9488_StatusTypeDef ILI9488_SetCursor(ILI9488_Handle_t *hili, uint16_t x, uint16_t y)
+{
+    if (hili == NULL || !hili->initialized) {
+        return ILI9488_NOT_INITIALIZED;
+    }
+
+    if (x >= hili->width || y >= hili->height) {
+        return ILI9488_INVALID_PARAM;
+    }
+
+    hili->currentX = x;
+    hili->currentY = y;
+
+    return ILI9488_OK;
+}
+
+/**
  * @brief   Write character
  * @param   hili Pointer to ILI9488 handle
  * @param   ch Character to write
@@ -456,21 +492,23 @@ ILI9488_StatusTypeDef ILI9488_WriteChar(ILI9488_Handle_t *hili, char ch, uint16_
         return ILI9488_NOT_INITIALIZED;
     }
 
-    if (hili->currentX + 6 > hili->width) {
+    if (hili->currentX + ILI9488_FONT_WIDTH > hili->width) {
         hili->currentX = 0;
-        hili->currentY += 8;
+        hili->currentY += ILI9488_FONT_HEIGHT;
     }
 
-    if (hili->currentY + 8 > hili->height) {
+    if (hili->currentY + ILI9488_FONT_HEIGHT > hili->height) {
         return ILI9488_INVALID_PARAM;
     }
 
-    uint8_t charIndex = ch - 32;
-    if (charIndex >= 96) charIndex = 0;
+    uint8_t charIndex = (uint8_t)(ch - ILI9488_FONT_FIRST_CHAR);
+    if (charIndex >= ILI9488_FONT_CHAR_COUNT) {
+        charIndex = 0;  /* Render anything outside the table as a space */
+    }
 
-    for (uint8_t i = 0; i < 6; i++) {
+    for (uint8_t i = 0; i < ILI9488_FONT_WIDTH; i++) {
         uint8_t line = font6x8[charIndex][i];
-        for (uint8_t j = 0; j < 8; j++) {
+        for (uint8_t j = 0; j < ILI9488_FONT_HEIGHT; j++) {
             if (line & (1 << j)) {
                 ILI9488_DrawPixel(hili, hili->currentX + i, hili->currentY + j, color);
             } else if (bgcolor != color) {
@@ -479,7 +517,7 @@ ILI9488_StatusTypeDef ILI9488_WriteChar(ILI9488_Handle_t *hili, char ch, uint16_
         }
     }
 
-    hili->currentX += 6;
+    hili->currentX += ILI9488_FONT_WIDTH;
 
     return ILI9488_OK;
 }
@@ -513,12 +551,12 @@ static ILI9488_StatusTypeDef ILI9488_WriteCommand(ILI9488_Handle_t *hili, uint8_
  * @param   size Data size
  * @retval  ILI9488_StatusTypeDef Operation status
  */
-static ILI9488_StatusTypeDef ILI9488_WriteData(ILI9488_Handle_t *hili, uint8_t *data, uint16_t size)
+static ILI9488_StatusTypeDef ILI9488_WriteData(ILI9488_Handle_t *hili, const uint8_t *data, uint16_t size)
 {
     HAL_GPIO_WritePin(hili->config.dc_port, hili->config.dc_pin, GPIO_PIN_SET); // Data mode
     HAL_GPIO_WritePin(hili->config.cs_port, hili->config.cs_pin, GPIO_PIN_RESET);
 
-    if (SPI_Transmit(data, size, SPI_TIMEOUT_LONG) != SPI_OK) {
+    if (SPI_Transmit((uint8_t *)data, size, SPI_TIMEOUT_LONG) != SPI_OK) {
         HAL_GPIO_WritePin(hili->config.cs_port, hili->config.cs_pin, GPIO_PIN_SET);
         return ILI9488_ERROR;
     }
@@ -534,7 +572,7 @@ static ILI9488_StatusTypeDef ILI9488_WriteData(ILI9488_Handle_t *hili, uint8_t *
  * @param   size Data size in 16-bit words
  * @retval  ILI9488_StatusTypeDef Operation status
  */
-static ILI9488_StatusTypeDef ILI9488_WriteData16(ILI9488_Handle_t *hili, uint16_t *data, uint32_t size)
+static ILI9488_StatusTypeDef ILI9488_WriteData16(ILI9488_Handle_t *hili, const uint16_t *data, uint32_t size)
 {
     HAL_GPIO_WritePin(hili->config.dc_port, hili->config.dc_pin, GPIO_PIN_SET); // Data mode
     HAL_GPIO_WritePin(hili->config.cs_port, hili->config.cs_pin, GPIO_PIN_RESET);
@@ -564,23 +602,18 @@ static ILI9488_StatusTypeDef ILI9488_WriteData16(ILI9488_Handle_t *hili, uint16_
 static ILI9488_StatusTypeDef ILI9488_SetAddressWindow(ILI9488_Handle_t *hili, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 {
     /* Column address set */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_COLUMN_ADDR_SET);
+    if (ILI9488_WriteCommand(hili, ILI9488_CMD_COLUMN_ADDR_SET) != ILI9488_OK) {
+        return ILI9488_ERROR;
+    }
     uint8_t colData[] = {(uint8_t)(x0 >> 8), (uint8_t)(x0 & 0xFF), (uint8_t)(x1 >> 8), (uint8_t)(x1 & 0xFF)};
-    ILI9488_WriteData(hili, colData, 4);
+    if (ILI9488_WriteData(hili, colData, 4) != ILI9488_OK) {
+        return ILI9488_ERROR;
+    }
 
     /* Row address set */
-    ILI9488_WriteCommand(hili, ILI9488_CMD_PAGE_ADDR_SET);
+    if (ILI9488_WriteCommand(hili, ILI9488_CMD_PAGE_ADDR_SET) != ILI9488_OK) {
+        return ILI9488_ERROR;
+    }
     uint8_t rowData[] = {(uint8_t)(y0 >> 8), (uint8_t)(y0 & 0xFF), (uint8_t)(y1 >> 8), (uint8_t)(y1 & 0xFF)};
-    ILI9488_WriteData(hili, rowData, 4);
-
-    return ILI9488_OK;
-}
-
-/**
- * @brief   Delay function
- * @param   delay Delay in milliseconds
- */
-static void ILI9488_Delay(uint32_t delay)
-{
-    HAL_Delay(delay);
+    return ILI9488_WriteData(hili, rowData, 4);
 }

@@ -11,11 +11,21 @@
 
 #include "fmc.h"
 #include <string.h>
-#include "../LOG/log.h"
+#include "log.h"
 
 /* Private defines -----------------------------------------------------------*/
 
+/* NOR Flash erase command sequence (AMD/Spansion CFI standard) */
+#define NOR_CMD_UNLOCK_ADDR1    0x0AAA
+#define NOR_CMD_UNLOCK_ADDR2    0x0554
+#define NOR_CMD_UNLOCK1         0xAA
+#define NOR_CMD_UNLOCK2         0x55
+#define NOR_CMD_ERASE          0x80
+#define NOR_CMD_ERASE_SECTOR   0x30
 
+/* A NOR cell reads back all-ones once the sector erase has finished */
+#define NOR_ERASED_VALUE       0xFFFFU
+#define NOR_SECTOR_BASE_MASK   0xFFFF0000U
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -128,7 +138,7 @@ HAL_StatusTypeDef FMC_Driver_SDRAM_Init(FMC_Driver_Handle_t *handle, FMC_Driver_
     /* Step 5: Set refresh rate (64ms / 4096 rows = 15.625µs per row)
      * Refresh rate = (15.625µs × SDRAM_CLK) - 20
      * For 84MHz SDRAM_CLK: (15.625µs × 84MHz) - 20 = 1292 */
-    if (HAL_SDRAM_ProgramRefreshRate(&handle->hsdram, 1292) != HAL_OK) {
+    if (HAL_SDRAM_ProgramRefreshRate(&handle->hsdram, SDRAM_REFRESH_COUNT) != HAL_OK) {
         handle->errorCode = FMC_DRIVER_ERROR_CONFIG;
         return HAL_ERROR;
     }
@@ -151,14 +161,11 @@ HAL_StatusTypeDef FMC_Driver_SDRAM_Write(FMC_Driver_Handle_t *handle, uint32_t a
         return HAL_ERROR;
     }
 
-    /* Use DMA for large transfers, direct write for small */
-    if (size >= 32) {
-        return HAL_SDRAM_Write_DMA(&handle->hsdram, (uint32_t *)address, (uint32_t *)data, size / 4);
-    } else {
-        /* Direct memory write */
-        memcpy((void *)address, data, size);
-        return HAL_OK;
-    }
+    /* SDRAM is memory-mapped, so the copy is the transfer. The former DMA path
+       dereferenced hsdram.hdma, which nothing ever links, and passed size / 4,
+       silently dropping any trailing bytes. */
+    memcpy((void *)address, data, size);
+    return HAL_OK;
 }
 
 /**
@@ -169,14 +176,8 @@ HAL_StatusTypeDef FMC_Driver_SDRAM_Read(FMC_Driver_Handle_t *handle, uint32_t ad
         return HAL_ERROR;
     }
 
-    /* Use DMA for large transfers, direct read for small */
-    if (size >= 32) {
-        return HAL_SDRAM_Read_DMA(&handle->hsdram, (uint32_t *)address, (uint32_t *)data, size / 4);
-    } else {
-        /* Direct memory read */
-        memcpy(data, (void *)address, size);
-        return HAL_OK;
-    }
+    memcpy(data, (const void *)address, size);
+    return HAL_OK;
 }
 
 /**
@@ -191,25 +192,26 @@ bool FMC_Driver_SDRAM_Test(FMC_Driver_Handle_t *handle, uint32_t startAddr, uint
     uint16_t *pMem = (uint16_t *)startAddr;
     uint32_t numWords = size / 2;
 
-    /* Write test pattern */
+    /* Derive the pattern from the index. A single constant would still pass
+       with a stuck or shorted address line, because every cell holds the
+       same value. */
     for (uint32_t i = 0; i < numWords; i++) {
-        pMem[i] = 0x55AA;
+        pMem[i] = (uint16_t)(i ^ (i >> 16));
     }
 
-    /* Read and verify */
     for (uint32_t i = 0; i < numWords; i++) {
-        if (pMem[i] != 0x55AA) {
+        if (pMem[i] != (uint16_t)(i ^ (i >> 16))) {
             return false;
         }
     }
 
     /* Inverse pattern test */
     for (uint32_t i = 0; i < numWords; i++) {
-        pMem[i] = 0xAA55;
+        pMem[i] = (uint16_t)~(i ^ (i >> 16));
     }
 
     for (uint32_t i = 0; i < numWords; i++) {
-        if (pMem[i] != 0xAA55) {
+        if (pMem[i] != (uint16_t)~(i ^ (i >> 16))) {
             return false;
         }
     }
@@ -229,6 +231,8 @@ HAL_StatusTypeDef FMC_Driver_NOR_Init(FMC_Driver_Handle_t *handle, FMC_Driver_NO
         return HAL_ERROR;
     }
 
+    /* Clear the handle to avoid using uninitialized fields */
+    memset(handle, 0, sizeof(FMC_Driver_Handle_t));
 
     /* Configure NOR Flash device */
     handle->hsram.Instance = FMC_NORSRAM_DEVICE;
@@ -267,7 +271,6 @@ HAL_StatusTypeDef FMC_Driver_NOR_Init(FMC_Driver_Handle_t *handle, FMC_Driver_NO
 
     /* Update handle state */
     handle->memoryType = FMC_DRIVER_MEMORY_NOR;
-    handle->norConfig = *config;
     handle->initialized = true;
     handle->errorCode = FMC_DRIVER_ERROR_NONE;
 
@@ -282,6 +285,11 @@ HAL_StatusTypeDef FMC_Driver_NOR_Write(FMC_Driver_Handle_t *handle, uint32_t add
         return HAL_ERROR;
     }
 
+    /* The device is 16 bits wide, so an odd count would silently lose its last byte */
+    if ((size % 2U) != 0U) {
+        return HAL_ERROR;
+    }
+
     /* Write data using HAL SRAM functions */
     return HAL_SRAM_Write_16b(&handle->hsram, (uint32_t *)address, (uint16_t *)data, size / 2);
 }
@@ -291,6 +299,10 @@ HAL_StatusTypeDef FMC_Driver_NOR_Write(FMC_Driver_Handle_t *handle, uint32_t add
  */
 HAL_StatusTypeDef FMC_Driver_NOR_Read(FMC_Driver_Handle_t *handle, uint32_t address, uint8_t *data, uint32_t size) {
     if (handle == NULL || data == NULL || !handle->initialized) {
+        return HAL_ERROR;
+    }
+
+    if ((size % 2U) != 0U) {
         return HAL_ERROR;
     }
 
@@ -309,22 +321,28 @@ HAL_StatusTypeDef FMC_Driver_NOR_EraseSector(FMC_Driver_Handle_t *handle, uint32
     /* NOR Flash erase requires specific command sequence */
     /* This is device-specific and should be customized based on NOR chip */
     volatile uint16_t *pAddr = (uint16_t *)address;
+    uint32_t sectorBase = address & NOR_SECTOR_BASE_MASK;
 
     /* Standard AMD/Spansion erase sequence */
-    *(volatile uint16_t *)((address & 0xFFFF0000) | 0x0AAA) = 0xAA;
-    *(volatile uint16_t *)((address & 0xFFFF0000) | 0x0554) = 0x55;
-    *(volatile uint16_t *)((address & 0xFFFF0000) | 0x0AAA) = 0x80;
-    *(volatile uint16_t *)((address & 0xFFFF0000) | 0x0AAA) = 0xAA;
-    *(volatile uint16_t *)((address & 0xFFFF0000) | 0x0554) = 0x55;
-    *pAddr = 0x30;
+    *(volatile uint16_t *)(sectorBase | NOR_CMD_UNLOCK_ADDR1) = NOR_CMD_UNLOCK1;
+    *(volatile uint16_t *)(sectorBase | NOR_CMD_UNLOCK_ADDR2) = NOR_CMD_UNLOCK2;
+    *(volatile uint16_t *)(sectorBase | NOR_CMD_UNLOCK_ADDR1) = NOR_CMD_ERASE;
+    *(volatile uint16_t *)(sectorBase | NOR_CMD_UNLOCK_ADDR1) = NOR_CMD_UNLOCK1;
+    *(volatile uint16_t *)(sectorBase | NOR_CMD_UNLOCK_ADDR2) = NOR_CMD_UNLOCK2;
+    *pAddr = NOR_CMD_ERASE_SECTOR;
 
-    /* Wait for erase completion */
-    uint32_t timeout = FMC_NOR_TIMEOUT;
-    while ((*pAddr != 0xFFFF) && (timeout-- > 0)) {
-        HAL_Delay(1);
+    /* Wait for erase completion. The previous `while (... && timeout-- > 0)`
+       wrapped timeout to UINT32_MAX on the final test, so the closing
+       `timeout > 0` check reported HAL_OK for every timeout. */
+    uint32_t startTick = HAL_GetTick();
+    while (*pAddr != NOR_ERASED_VALUE) {
+        if ((HAL_GetTick() - startTick) > FMC_NOR_TIMEOUT) {
+            handle->errorCode = FMC_DRIVER_ERROR_OPERATION;
+            return HAL_TIMEOUT;
+        }
     }
 
-    return (timeout > 0) ? HAL_OK : HAL_TIMEOUT;
+    return HAL_OK;
 }
 
 /*=============================================================================
@@ -339,8 +357,8 @@ HAL_StatusTypeDef FMC_Driver_NAND_Init(FMC_Driver_Handle_t *handle, FMC_Driver_N
         return HAL_ERROR;
     }
 
-    /* Enable FMC clock */
-    __HAL_RCC_FMC_CLK_ENABLE();
+    /* Clear the handle to avoid using uninitialized fields */
+    memset(handle, 0, sizeof(FMC_Driver_Handle_t));
 
     /* Configure NAND Flash device */
     handle->hnand.Instance = FMC_NAND_DEVICE;
@@ -367,7 +385,6 @@ HAL_StatusTypeDef FMC_Driver_NAND_Init(FMC_Driver_Handle_t *handle, FMC_Driver_N
 
     /* Update handle state */
     handle->memoryType = FMC_DRIVER_MEMORY_NAND;
-    handle->nandConfig = *config;
     handle->initialized = true;
     handle->errorCode = FMC_DRIVER_ERROR_NONE;
 

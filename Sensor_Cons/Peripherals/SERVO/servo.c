@@ -12,6 +12,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "servo.h"
 #include "tim.h"
+#include "gpio.h"
 #include "stm32f4xx_hal.h"
 #include <stdlib.h>
 #include <string.h>
@@ -25,20 +26,6 @@
 /* PWM timer configuration for 50Hz (20ms period) */
 #define SERVO_PWM_PRESCALER     85      /* 86MHz / 86 = 1MHz timer clock */
 #define SERVO_PWM_PERIOD        19999   /* 1MHz / 20000 = 50Hz (20ms period) */
-
-/* Pulse width calculation: pulse = (pulseWidth_us * timer_clock) / 1000000 */
-#define SERVO_PULSE_CALC(pulseWidth)  ((pulseWidth * 100) / 100)  /* For 1MHz timer */
-
-/** @} */
-
-/* Private variables ---------------------------------------------------------*/
-
-/** @defgroup SERVO_Private_Variables Private Variables
- * @{
- */
-
-/* Global servo handle for interrupt handling */
-static SERVO_Handle_t *g_hservo = NULL;
 
 /** @} */
 
@@ -76,7 +63,6 @@ SERVO_StatusTypeDef SERVO_Init(SERVO_Handle_t *hservo,
     hservo->channel = channel;
     hservo->gpioPort = gpioPort;
     hservo->gpioPin = gpioPin;
-    g_hservo = hservo;
 
     /* Initialize MSP (GPIO and PWM) */
     SERVO_MspInit(hservo);
@@ -118,7 +104,6 @@ SERVO_StatusTypeDef SERVO_DeInit(SERVO_Handle_t *hservo)
     SERVO_MspDeInit(hservo);
 
     hservo->isInitialized = false;
-    g_hservo = NULL;
 
     return SERVO_OK;
 }
@@ -430,7 +415,8 @@ SERVO_Config_t SERVO_GetDefaultConfig(void)
 bool SERVO_IsValidAngle(uint16_t angle, SERVO_Config_t *config)
 {
     if (config == NULL) {
-        return (angle >= SERVO_MIN_ANGLE && angle <= SERVO_MAX_ANGLE);
+        /* angle is unsigned, so the SERVO_MIN_ANGLE (0) bound is implicit. */
+        return (angle <= SERVO_MAX_ANGLE);
     }
 
     return (angle >= config->minAngle && angle <= config->maxAngle);
@@ -464,16 +450,7 @@ static void SERVO_MspInit(SERVO_Handle_t *hservo)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* Enable GPIO clock */
-    if (hservo->gpioPort == GPIOA) {
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-    } else if (hservo->gpioPort == GPIOB) {
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-    } else if (hservo->gpioPort == GPIOC) {
-        __HAL_RCC_GPIOC_CLK_ENABLE();
-    } else if (hservo->gpioPort == GPIOD) {
-        __HAL_RCC_GPIOD_CLK_ENABLE();
-    }
+    /* GPIO driver enables the port clock */
 
     /* Configure GPIO pin for PWM output */
     GPIO_InitStruct.Pin = hservo->gpioPin;
@@ -494,7 +471,7 @@ static void SERVO_MspInit(SERVO_Handle_t *hservo)
         GPIO_InitStruct.Alternate = GPIO_AF2_TIM5;
     }
 
-    HAL_GPIO_Init(hservo->gpioPort, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(hservo->gpioPort, &GPIO_InitStruct);
 }
 
 /**

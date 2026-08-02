@@ -39,11 +39,11 @@ This folder provides a modular implementation of all major timer (TIM) features 
   - *What*: Generates Pulse Width Modulation signals on timer output channels.
   - *When to use*: For motor control, LED dimming, or any application needing variable duty cycle outputs.
 
-- **Input Capture** (`tim_input_capture.h`/`.c`):
+- **Input Capture** (`tim_ic.h`/`.c`):
   - *What*: Captures the timer value on an external event (e.g., rising/falling edge).
   - *When to use*: For measuring frequency, pulse width, or timing of external signals.
 
-- **Output Compare** (`tim_output_compare.h`/`.c`):
+- **Output Compare** (`tim_oc.h`/`.c`):
   - *What*: Toggles or sets an output pin when the timer reaches a specific value.
   - *When to use*: For generating precise output pulses, square waves, or event scheduling.
 
@@ -51,7 +51,7 @@ This folder provides a modular implementation of all major timer (TIM) features 
   - *What*: Interfaces with quadrature encoders for position/speed feedback.
   - *When to use*: For reading rotary encoders in robotics, motor control, or user interfaces.
 
-- **Timer with DMA** (`tim_dma.h`/`.c`):
+- **Timer with DMA** (planned, not yet implemented):
   - *What*: Uses DMA to automatically update timer registers (e.g., for dynamic PWM duty cycles) without CPU intervention.
   - *When to use*: For high-speed or real-time waveform generation, audio, or applications where the timer's compare values need to change rapidly and efficiently.
 
@@ -60,16 +60,16 @@ This folder provides a modular implementation of all major timer (TIM) features 
 
 ### 1. Base Timer (Periodic Interrupt)
 ```c
-#include "Peripherals/TIM/tim_base.h"
+#include "tim_base.h"
 TIM_HandleTypeDef htim3;
-TIM_Base_Init(&htim3, TIM3, 8399, 9999); // 10Hz at 84MHz
-TIM_Base_Start(&htim3);
+TIM_Init(&htim3, TIM3, 8399, 9999); // 10Hz at 84MHz
+TIM_Start_IT(&htim3);
 // Use HAL_TIM_PeriodElapsedCallback for interrupt handling
 ```
 
 ### 2. PWM Output
 ```c
-#include "Peripherals/TIM/tim_pwm.h"
+#include "tim_pwm.h"
 TIM_HandleTypeDef htim2;
 TIM_PWM_Init(&htim2, TIM2, 83, 999); // 1kHz PWM
 TIM_PWM_ConfigChannel(&htim2, TIM_CHANNEL_1, 500); // 50% duty
@@ -78,17 +78,17 @@ TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 
 ### 3. Input Capture (Frequency Measurement)
 ```c
-#include "Peripherals/TIM/tim_input_capture.h"
+#include "tim_ic.h"
 TIM_HandleTypeDef htim4;
 TIM_IC_Init(&htim4, TIM4, 83, 0xFFFF);
-TIM_IC_ConfigChannel(&htim4, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
-TIM_IC_Start(&htim4, TIM_CHANNEL_1);
+TIM_IC_ConfigChannel(&htim4, TIM_CHANNEL_1, TIM_ICPOLARITY_RISING);
+TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);
 // Read captured value in HAL_TIM_IC_CaptureCallback
 ```
 
 ### 4. Output Compare (Pulse Generation)
 ```c
-#include "Peripherals/TIM/tim_output_compare.h"
+#include "tim_oc.h"
 TIM_HandleTypeDef htim5;
 TIM_OC_Init(&htim5, TIM5, 83, 9999);
 TIM_OC_ConfigChannel(&htim5, TIM_CHANNEL_1, 5000); // Toggle at half period
@@ -97,16 +97,16 @@ TIM_OC_Start(&htim5, TIM_CHANNEL_1);
 
 ### 5. Encoder Interface
 ```c
-#include "Peripherals/TIM/tim_encoder.h"
+#include "tim_encoder.h"
 TIM_HandleTypeDef htim1;
-TIM_Encoder_Init(&htim1, TIM1, 0, 0xFFFF);
+TIM_Encoder_Init(&htim1, TIM1, 0xFFFF);
 TIM_Encoder_Start(&htim1);
-// Read encoder count: __HAL_TIM_GET_COUNTER(&htim1)
+// Read encoder count: TIM_Encoder_GetCount(&htim1)
 ```
 
-### 6. Timer with DMA (Dynamic PWM Duty Cycle)
+### 6. Timer with DMA (Dynamic PWM Duty Cycle) - planned
 ```c
-#include "Peripherals/TIM/tim_dma.h"
+#include "tim_dma.h" // planned, not yet implemented
 TIM_HandleTypeDef htim8;
 uint32_t pwm_buffer[3] = {100, 500, 900}; // Example duty cycles
 // Timer and PWM must be initialized first (see PWM example)
@@ -117,16 +117,19 @@ TIM_DMA_PWM_Stop(&htim8, TIM_CHANNEL_1);
 
 ## File Structure
 
-- `tim_base.*`         - Base timer (up-counter) operations
-- `tim_pwm.*`          - PWM output
-- `tim_input_capture.*`- Input capture
-- `tim_output_compare.*`- Output compare
-- `tim_encoder.*`      - Encoder interface
-- `tim_dma.*`          - Timer with DMA (dynamic register updates)
+- `tim.h`             - Public interface aggregator (includes all module headers)
+- `tim_base.*`        - Base timer (up-counter) operations
+- `tim_pwm.*`         - PWM output
+- `tim_ic.*`          - Input capture
+- `tim_oc.*`          - Output compare
+- `tim_encoder.*`     - Encoder interface
 
+`tim_dma.*` (Timer with DMA) is planned but not yet implemented.
 
 Each feature is independent and can be used separately or together as needed. Choose the feature based on your application requirements as described above.
 
 ## Notes
 - All functions use STM32 HAL types and must be called after HAL initialization.
+- Consumers may `#include "tim.h"` to get all timer features, or include only the
+  module header they need (e.g., `#include "tim_pwm.h"`) to keep dependencies minimal.
 - You can extend this structure for additional timer features (e.g., one-pulse, master/slave, etc.).

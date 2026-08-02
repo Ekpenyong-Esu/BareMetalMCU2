@@ -1,10 +1,19 @@
 #include "dht.h"
+#include "gpio.h"
+
+// A data bit longer than this is a '1' (0-bits are ~27us, 1-bits ~70us)
+#define DHT_BIT_ONE_THRESHOLD_US  40U
 
 // DWT-based microsecond delay helpers
+static inline uint32_t dht_us_to_ticks(uint32_t us)
+{
+    return (SystemCoreClock / 1000000U) * us;
+}
+
 static inline void dht_delay_us(uint32_t us)
 {
     uint32_t start = DWT->CYCCNT;
-    uint32_t ticks = (SystemCoreClock / 1000000U) * us;
+    uint32_t ticks = dht_us_to_ticks(us);
     while ((DWT->CYCCNT - start) < ticks) {
         __NOP();
     }
@@ -17,7 +26,7 @@ static inline void dht_line_output(GPIO_TypeDef *port, uint16_t pin)
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(port, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(port, &GPIO_InitStruct);
 }
 
 static inline void dht_line_input(GPIO_TypeDef *port, uint16_t pin)
@@ -26,13 +35,13 @@ static inline void dht_line_input(GPIO_TypeDef *port, uint16_t pin)
     GPIO_InitStruct.Pin = pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(port, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(port, &GPIO_InitStruct);
 }
 
 static inline bool dht_wait_level(GPIO_TypeDef *port, uint16_t pin, GPIO_PinState level, uint32_t timeout_us)
 {
     uint32_t start = DWT->CYCCNT;
-    uint32_t ticks = (SystemCoreClock / 1000000U) * timeout_us;
+    uint32_t ticks = dht_us_to_ticks(timeout_us);
     while ((DWT->CYCCNT - start) < ticks) {
         if (HAL_GPIO_ReadPin(port, pin) == level) {
             return true;
@@ -81,6 +90,9 @@ HAL_StatusTypeDef DHT_Read(DHT_Handle_t *hdht)
         return HAL_BUSY;
     }
 
+    // Any early return below leaves no fresh sample
+    hdht->valid = false;
+
     uint8_t data[5] = {0};
 
     // Start signal: pull low
@@ -98,21 +110,20 @@ HAL_StatusTypeDef DHT_Read(DHT_Handle_t *hdht)
     dht_line_input(hdht->port, hdht->pin);
 
     // Wait for sensor response: 80us low, 80us high
-    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) return HAL_TIMEOUT;
-    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_SET, 100)) return HAL_TIMEOUT;
-    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) return HAL_TIMEOUT;
+    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) { return HAL_TIMEOUT; }
+    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_SET, 100)) { return HAL_TIMEOUT; }
+    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) { return HAL_TIMEOUT; }
 
     // Read 40 bits
     for (uint8_t i = 0; i < 40; i++) {
         // Wait for line to go high (start of bit)
-        if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_SET, 70)) return HAL_TIMEOUT;
+        if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_SET, 70)) { return HAL_TIMEOUT; }
         uint32_t start = DWT->CYCCNT;
         // Wait for line to go low (end of bit)
-        if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) return HAL_TIMEOUT;
+        if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) { return HAL_TIMEOUT; }
         uint32_t widthTicks = DWT->CYCCNT - start;
         uint32_t widthUs = widthTicks / (SystemCoreClock / 1000000U);
-        // >40us means '1', else '0'
-        if (widthUs > 40U) {
+        if (widthUs > DHT_BIT_ONE_THRESHOLD_US) {
             data[i / 8] |= (1U << (7 - (i % 8)));
         }
     }
@@ -122,8 +133,7 @@ HAL_StatusTypeDef DHT_Read(DHT_Handle_t *hdht)
     HAL_GPIO_WritePin(hdht->port, hdht->pin, GPIO_PIN_SET);
 
     uint8_t checksum = data[0] + data[1] + data[2] + data[3];
-    if ((checksum & 0xFFU) != data[4]) {
-        hdht->valid = false;
+    if (checksum != data[4]) {
         return HAL_ERROR;
     }
 
@@ -131,15 +141,14 @@ HAL_StatusTypeDef DHT_Read(DHT_Handle_t *hdht)
         hdht->humidity = (float)data[0];
         hdht->temperatureC = (float)data[2];
     } else {
-        int16_t rawHum = (int16_t)((data[0] << 8) | data[1]);
-        int16_t rawTemp = (int16_t)((data[2] << 8) | data[3]);
+        uint16_t rawHum = (uint16_t)((data[0] << 8) | data[1]);
+        uint16_t rawTemp = (uint16_t)((data[2] << 8) | data[3]);
+
         hdht->humidity = rawHum / 10.0f;
-        if (rawTemp & 0x8000) {
-            rawTemp = rawTemp & 0x7FFF;
-            hdht->temperatureC = -((float)rawTemp / 10.0f);
-        } else {
-            hdht->temperatureC = rawTemp / 10.0f;
-        }
+
+        // DHT22 temperature is sign-magnitude, not two's complement
+        float tempC = (float)(rawTemp & 0x7FFFU) / 10.0f;
+        hdht->temperatureC = (rawTemp & 0x8000U) ? -tempC : tempC;
     }
 
     hdht->lastReadMs = now;

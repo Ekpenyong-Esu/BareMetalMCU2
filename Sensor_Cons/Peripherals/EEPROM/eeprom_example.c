@@ -79,7 +79,6 @@ void EEPROM_Example_CustomConfig(void)
     customConfig.totalSize = 4096;          /* 4KB */
     customConfig.pageSize = 32;             /* 32-byte pages */
     customConfig.addressSize = 2;           /* 2-byte addressing */
-    customConfig.writeTime = 10;            /* 10ms write cycle */
 
     status = EEPROM_InitCustom(&eepromHandle, &customConfig);
     if (status != EEPROM_OK) {
@@ -197,18 +196,12 @@ void EEPROM_Example_DataTypes(void)
 void EEPROM_Example_Test(void)
 {
     EEPROM_StatusTypeDef status;
-    uint32_t size;
-    uint16_t pageSize;
 
     /* Initialize EEPROM */
     status = EEPROM_Init(&eepromHandle);
     if (status != EEPROM_OK) {
         return;
     }
-
-    /* Get EEPROM information */
-    size = EEPROM_GetSize(&eepromHandle);
-    pageSize = EEPROM_GetPageSize(&eepromHandle);
 
     /* Run self-test (uses address 0x1000, will preserve original data) */
     status = EEPROM_Test(&eepromHandle, 0x1000);

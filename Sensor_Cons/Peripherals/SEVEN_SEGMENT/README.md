@@ -169,7 +169,6 @@ void init_ht1621_display(void)
 | `Seg_Enable()` | Enable display output |
 | `Seg_Disable()` | Disable display output |
 | `Seg_Clear()` | Clear all digits |
-| `Seg_SetBrightness()` | Set brightness (HT1621 only) |
 
 ### Display Functions
 

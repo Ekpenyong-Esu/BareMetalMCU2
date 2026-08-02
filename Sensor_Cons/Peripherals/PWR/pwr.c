@@ -773,18 +773,22 @@ PWR_StatusTypeDef PWR_GetLowPowerStatus(PWR_LowPowerModeTypeDef* mode, PWR_Wakeu
 
 /**
  * @brief   Configure advanced low power settings
- * @param   flashPowerDown Enable flash power down in sleep
+ * @param   flashPowerDown Power the flash down while in Stop mode
  * @param   disableBackupWrites Disable backup register writes
- * @param   enableUltraLowPower Enable ultra low power features
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_ConfigureAdvancedLowPower(bool flashPowerDown, bool disableBackupWrites, bool enableUltraLowPower)
+PWR_StatusTypeDef PWR_ConfigureAdvancedLowPower(bool flashPowerDown, bool disableBackupWrites)
 {
     log_debug("PWR: Configuring advanced low power settings");
 
-    /* Silence unused-parameter warnings for optional features not yet implemented */
-    (void)flashPowerDown;
-    (void)enableUltraLowPower;
+    if (flashPowerDown)
+    {
+        HAL_PWREx_EnableFlashPowerDown();
+    }
+    else
+    {
+        HAL_PWREx_DisableFlashPowerDown();
+    }
 
     if (disableBackupWrites)
     {

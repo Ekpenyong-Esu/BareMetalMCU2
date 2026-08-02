@@ -63,7 +63,6 @@ typedef struct {
     uint32_t totalSize;         /**< Total EEPROM size in bytes */
     uint16_t pageSize;          /**< Page size for write operations */
     uint8_t addressSize;        /**< Memory address size (1 or 2 bytes) */
-    uint32_t writeTime;         /**< Write cycle time in milliseconds */
 } EEPROM_ConfigTypeDef;
 
 /**

@@ -35,13 +35,10 @@
 
 /* Ethernet Configuration Structure */
 typedef struct {
-    uint8_t macAddr[6];              /* MAC address */
+    uint8_t macAddr[ETH_ADDR_LEN];   /* MAC address */
     uint32_t speed;                  /* ETH_SPEED_10M or ETH_SPEED_100M */
     uint32_t duplexMode;             /* ETH_MODE_FULLDUPLEX or ETH_MODE_HALFDUPLEX */
-    uint32_t checksumMode;           /* ETH_CHECKSUM_BY_HARDWARE or ETH_CHECKSUM_BY_SOFTWARE */
     uint32_t mediaInterface;         /* ETH_MEDIA_INTERFACE_RMII or ETH_MEDIA_INTERFACE_MII */
-    uint32_t vlanTagIdentifier;      /* VLAN tag identifier */
-    uint32_t vlanTagProtocol;        /* VLAN tag protocol */
 } ETH_Config_t;
 
 /* Ethernet Handle Structure */
@@ -50,9 +47,7 @@ typedef struct {
     ETH_Config_t config;             /* Configuration */
     bool initialized;                /* Initialization status */
     uint8_t *rxBuffer;               /* RX buffer pointer */
-    uint32_t rxBufferSize;           /* RX buffer size */
     uint8_t *txBuffer;               /* TX buffer pointer */
-    uint32_t txBufferSize;           /* TX buffer size */
 } ETH_Handle_t;
 
 /* Ethernet Frame Structure */
@@ -112,25 +107,27 @@ HAL_StatusTypeDef ETH_TransmitFrame(ETH_Handle_t *handle, ETH_Frame_t *frame);
 HAL_StatusTypeDef ETH_ReceiveFrame(ETH_Handle_t *handle, ETH_Frame_t *frame);
 
 /**
- * @brief Check if Ethernet link is up
+ * @brief Check if the Ethernet peripheral is ready
  * @param handle: Pointer to ETH handle
- * @return bool: True if link is up, false otherwise
+ * @return bool: True if the peripheral is initialised and idle
+ * @note  This reports driver state only. Detecting cable link-up requires PHY
+ *        register access, which this driver does not provide.
  */
-bool ETH_IsLinkUp(ETH_Handle_t *handle);
+bool ETH_IsReady(ETH_Handle_t *handle);
 
 /**
- * @brief Get Ethernet link speed
+ * @brief Get the speed the peripheral was configured with
  * @param handle: Pointer to ETH handle
- * @return uint32_t: Link speed (ETH_SPEED_10M or ETH_SPEED_100M)
+ * @return uint32_t: Speed (ETH_SPEED_10M or ETH_SPEED_100M)
  */
-uint32_t ETH_GetLinkSpeed(ETH_Handle_t *handle);
+uint32_t ETH_GetConfiguredSpeed(ETH_Handle_t *handle);
 
 /**
- * @brief Get Ethernet link duplex mode
+ * @brief Get the duplex mode the peripheral was configured with
  * @param handle: Pointer to ETH handle
  * @return uint32_t: Duplex mode (ETH_MODE_FULLDUPLEX or ETH_MODE_HALFDUPLEX)
  */
-uint32_t ETH_GetLinkDuplex(ETH_Handle_t *handle);
+uint32_t ETH_GetConfiguredDuplex(ETH_Handle_t *handle);
 
 /**
  * @brief Set MAC address

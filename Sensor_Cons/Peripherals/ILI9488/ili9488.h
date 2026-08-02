@@ -30,6 +30,12 @@ extern "C" {
 #define ILI9488_HEIGHT                   480
 #define ILI9488_PIXEL_COUNT              (ILI9488_WIDTH * ILI9488_HEIGHT)
 
+/* Geometry of the built-in font table */
+#define ILI9488_FONT_WIDTH               6U
+#define ILI9488_FONT_HEIGHT              8U
+#define ILI9488_FONT_FIRST_CHAR          32U
+#define ILI9488_FONT_CHAR_COUNT          96U
+
 /* Color definitions */
 #define ILI9488_COLOR_BLACK              0x0000
 #define ILI9488_COLOR_WHITE              0xFFFF
@@ -115,23 +121,6 @@ ILI9488_StatusTypeDef ILI9488_Init(ILI9488_Handle_t *hili,
                                   GPIO_TypeDef *rst_port, uint16_t rst_pin);
 
 /**
- * @brief   Deinitialize ILI9488 TFT display
- * @details Turns off display and releases resources
- * @param   hili Pointer to ILI9488 handle
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_DeInit(ILI9488_Handle_t *hili);
-
-/**
- * @brief   Configure ILI9488 display parameters
- * @details Sets display configuration options
- * @param   hili Pointer to ILI9488 handle
- * @param   config Pointer to configuration structure
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_Config(ILI9488_Handle_t *hili, ILI9488_Config_t *config);
-
-/**
  * @brief   Set display orientation
  * @param   hili Pointer to ILI9488 handle
  * @param   orientation Display orientation
@@ -146,35 +135,12 @@ ILI9488_StatusTypeDef ILI9488_SetOrientation(ILI9488_Handle_t *hili, ILI9488_Ori
  */
 
 /**
- * @brief   Turn display on
- * @param   hili Pointer to ILI9488 handle
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_DisplayOn(ILI9488_Handle_t *hili);
-
-/**
- * @brief   Turn display off
- * @param   hili Pointer to ILI9488 handle
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_DisplayOff(ILI9488_Handle_t *hili);
-
-/**
  * @brief   Clear display
  * @param   hili Pointer to ILI9488 handle
  * @param   color Fill color
  * @retval  ILI9488_StatusTypeDef Operation status
  */
 ILI9488_StatusTypeDef ILI9488_Clear(ILI9488_Handle_t *hili, uint16_t color);
-
-/**
- * @brief   Update display with buffer content
- * @param   hili Pointer to ILI9488 handle
- * @param   buffer Color buffer (RGB565 format)
- * @param   size Buffer size in bytes
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_UpdateScreen(ILI9488_Handle_t *hili, uint16_t *buffer, uint32_t size);
 
 /** @} */
 
@@ -193,79 +159,6 @@ ILI9488_StatusTypeDef ILI9488_UpdateScreen(ILI9488_Handle_t *hili, uint16_t *buf
 ILI9488_StatusTypeDef ILI9488_DrawPixel(ILI9488_Handle_t *hili,
                                        uint16_t x, uint16_t y,
                                        uint16_t color);
-
-/**
- * @brief   Draw line between two points
- * @param   hili Pointer to ILI9488 handle
- * @param   x1 Start X coordinate
- * @param   y1 Start Y coordinate
- * @param   x2 End X coordinate
- * @param   y2 End Y coordinate
- * @param   color Line color
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_DrawLine(ILI9488_Handle_t *hili,
-                                     uint16_t x1, uint16_t y1,
-                                     uint16_t x2, uint16_t y2,
-                                     uint16_t color);
-
-/**
- * @brief   Draw rectangle
- * @param   hili Pointer to ILI9488 handle
- * @param   x X coordinate
- * @param   y Y coordinate
- * @param   width Rectangle width
- * @param   height Rectangle height
- * @param   color Rectangle color
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_DrawRectangle(ILI9488_Handle_t *hili,
-                                           uint16_t x, uint16_t y,
-                                           uint16_t width, uint16_t height,
-                                           uint16_t color);
-
-/**
- * @brief   Draw filled rectangle
- * @param   hili Pointer to ILI9488 handle
- * @param   x X coordinate
- * @param   y Y coordinate
- * @param   width Rectangle width
- * @param   height Rectangle height
- * @param   color Fill color
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_DrawFilledRectangle(ILI9488_Handle_t *hili,
-                                                 uint16_t x, uint16_t y,
-                                                 uint16_t width, uint16_t height,
-                                                 uint16_t color);
-
-/**
- * @brief   Draw circle
- * @param   hili Pointer to ILI9488 handle
- * @param   x Center X coordinate
- * @param   y Center Y coordinate
- * @param   radius Circle radius
- * @param   color Circle color
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_DrawCircle(ILI9488_Handle_t *hili,
-                                        uint16_t x, uint16_t y,
-                                        uint16_t radius,
-                                        uint16_t color);
-
-/**
- * @brief   Draw filled circle
- * @param   hili Pointer to ILI9488 handle
- * @param   x Center X coordinate
- * @param   y Center Y coordinate
- * @param   radius Circle radius
- * @param   color Fill color
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_DrawFilledCircle(ILI9488_Handle_t *hili,
-                                              uint16_t x, uint16_t y,
-                                              uint16_t radius,
-                                              uint16_t color);
 
 /** @} */
 
@@ -291,16 +184,6 @@ ILI9488_StatusTypeDef ILI9488_SetCursor(ILI9488_Handle_t *hili, uint16_t x, uint
  * @retval  ILI9488_StatusTypeDef Operation status
  */
 ILI9488_StatusTypeDef ILI9488_WriteChar(ILI9488_Handle_t *hili, char ch, uint16_t color, uint16_t bgcolor);
-
-/**
- * @brief   Write string
- * @param   hili Pointer to ILI9488 handle
- * @param   str String to write
- * @param   color String color
- * @param   bgcolor Background color
- * @retval  ILI9488_StatusTypeDef Operation status
- */
-ILI9488_StatusTypeDef ILI9488_WriteString(ILI9488_Handle_t *hili, const char *str, uint16_t color, uint16_t bgcolor);
 
 /** @} */
 

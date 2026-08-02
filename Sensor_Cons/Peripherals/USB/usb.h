@@ -30,9 +30,7 @@ extern "C" {
  * @brief USB Mode enumeration
  */
 typedef enum {
-    USB_MODE_HOST = 0,
-    USB_MODE_DEVICE,
-    USB_MODE_OTG
+    USB_MODE_HOST = 0
 } USB_OperationModeTypeDef;
 
 /**
@@ -47,26 +45,10 @@ typedef enum {
 } USB_StatusTypeDef;
 
 /**
- * @brief USB Device Class enumeration
- */
-typedef enum {
-    USB_DEVICE_CLASS_CDC = 0,
-    USB_DEVICE_CLASS_MSC,
-    USB_DEVICE_CLASS_HID,
-    USB_DEVICE_CLASS_AUDIO
-} USB_DeviceClassTypeDef;
-
-/**
  * @brief USB Configuration structure
  */
 typedef struct {
     USB_OperationModeTypeDef mode;
-    uint32_t speed;                    /* USB_OTG_SPEED_HIGH or USB_OTG_SPEED_FULL */
-    uint32_t phy_itface;              /* USB_OTG_ULPI_PHY or USB_OTG_EMBEDDED_PHY */
-    uint32_t dma_enable;              /* Enable or disable DMA */
-    uint32_t low_power_enable;        /* Enable or disable low power mode */
-    uint32_t lpm_enable;              /* Enable or disable Link Power Management */
-    uint32_t battery_charging_enable; /* Enable or disable Battery charging */
 } USB_ConfigTypeDef;
 
 /**
@@ -76,13 +58,7 @@ typedef enum {
     USB_HOST_IDLE = 0,
     USB_HOST_WAIT_FOR_ATTACHMENT,
     USB_HOST_DEVICE_ATTACHED,
-    USB_HOST_ENUMERATION_DONE,
-    USB_HOST_USER_INPUT,
-    USB_HOST_CLASS_REQUEST,
-    USB_HOST_INPUT_PROCESS,
     USB_HOST_CLASS_ACTIVE,
-    USB_HOST_CTRL_XFER,
-    USB_HOST_SUSPENDED,
     USB_HOST_ERROR_STATE
 } USB_HostStateTypeDef;
 
@@ -134,12 +110,6 @@ USB_StatusTypeDef USB_Host_CDC_SetLineCoding(CDC_LineCodingTypeDef *linecoding);
 USB_StatusTypeDef USB_Host_CDC_GetLineCoding(CDC_LineCodingTypeDef *linecoding);
 uint16_t USB_Host_CDC_GetLastReceivedDataSize(void);
 
-/* USB Device Functions (placeholder for future implementation) */
-USB_StatusTypeDef USB_Device_Init(USB_DeviceClassTypeDef device_class);
-USB_StatusTypeDef USB_Device_DeInit(void);
-USB_StatusTypeDef USB_Device_Start(void);
-USB_StatusTypeDef USB_Device_Stop(void);
-
 /* USB Utility Functions */
 USB_StatusTypeDef USB_SetOperationMode(USB_OperationModeTypeDef mode);
 USB_OperationModeTypeDef USB_GetOperationMode(void);
@@ -148,7 +118,6 @@ uint32_t USB_GetConnectedDeviceVID(void);
 uint32_t USB_GetConnectedDevicePID(void);
 
 /* USB Interrupt and Callback Functions */
-void USB_IRQHandler(void);
 void USB_ConnectCallback(void);
 void USB_DisconnectCallback(void);
 void USB_DataReceivedCallback(const uint8_t *data, uint16_t length);

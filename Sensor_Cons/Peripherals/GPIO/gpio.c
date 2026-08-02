@@ -1,11 +1,10 @@
 /**
   ******************************************************************************
   * @file    gpio.c
-  * @brief   GPIO module implementation for STM32F429
-  * @details This file provides comprehensive code for the configuration
-  *          and control of GPIO pins on the STM32F429 microcontroller.
-  * @version 2.0
-  * @date    2024-12-19
+  * @brief   Reusable GPIO driver for STM32F4
+  * @details STM32F4 implementation of the gpio.h interface. Everything that is
+  *          MCU-family specific (the RCC clock macros and the EXTI-to-IRQn
+  *          mapping) is contained in this file.
   ******************************************************************************
   */
 
@@ -13,280 +12,12 @@
 #include "gpio.h"
 
 /* Private function prototypes -----------------------------------------------*/
-static HAL_StatusTypeDef GPIO_EnableClock(GPIO_TypeDef *GPIOx);
-static uint8_t GPIO_GetPinNumber(uint16_t GPIO_Pin);
-static IRQn_Type GPIO_GetIRQn(uint16_t GPIO_Pin);
+static HAL_StatusTypeDef GPIO_GetPinNumber(uint16_t GPIO_Pin, uint8_t *PinNumber);
+static HAL_StatusTypeDef GPIO_GetIRQn(uint16_t GPIO_Pin, IRQn_Type *IRQn);
 
-/* Exported functions ------------------------------------------------------- */
+/* Exported functions --------------------------------------------------------*/
 
-/**
- * @brief Initialize GPIO driver handle
- * @param handle: Pointer to GPIO driver handle
- * @retval HAL_StatusTypeDef: Operation status
- */
-HAL_StatusTypeDef GPIO_Driver_Init(GPIO_Driver_Handle_t *handle)
-{
-    if (handle == NULL) {
-        return HAL_ERROR;
-    }
-
-    /* Enable GPIO clock */
-    if (GPIO_EnableClock(handle->Port) != HAL_OK) {
-        handle->errorCode = GPIO_DRIVER_ERROR_INIT;
-        return HAL_ERROR;
-    }
-
-    /* Initialize GPIO pin */
-    HAL_GPIO_Init(handle->Port, &handle->Init);
-
-    handle->initialized = 1;
-    handle->errorCode = GPIO_DRIVER_ERROR_NONE;
-
-    return HAL_OK;
-}
-
-/**
- * @brief Deinitialize GPIO driver handle
- * @param handle: Pointer to GPIO driver handle
- * @retval HAL_StatusTypeDef: Operation status
- */
-HAL_StatusTypeDef GPIO_Driver_DeInit(GPIO_Driver_Handle_t *handle)
-{
-    if (handle == NULL || !handle->initialized) {
-        return HAL_ERROR;
-    }
-
-    /* Deinitialize GPIO pin */
-    HAL_GPIO_DeInit(handle->Port, handle->Init.Pin);
-
-    handle->initialized = 0;
-    handle->errorCode = GPIO_DRIVER_ERROR_NONE;
-
-    return HAL_OK;
-}
-
-/**
- * @brief Initialize GPIO pin with specified configuration
- * @param GPIOx: GPIO port
- * @param GPIO_Init: GPIO initialization structure
- * @retval HAL_StatusTypeDef: Operation status
- */
-HAL_StatusTypeDef GPIO_Driver_Pin_Init(GPIO_TypeDef *GPIOx, GPIO_InitTypeDef *GPIO_Init)
-{
-    if (GPIOx == NULL || GPIO_Init == NULL) {
-        return HAL_ERROR;
-    }
-
-    /* Enable GPIO clock */
-    if (GPIO_EnableClock(GPIOx) != HAL_OK) {
-        return HAL_ERROR;
-    }
-
-    /* Initialize GPIO pin */
-    HAL_GPIO_Init(GPIOx, GPIO_Init);
-
-    return HAL_OK;
-}
-
-/**
- * @brief Read GPIO pin state
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @retval GPIO_PinState: Pin state (GPIO_PIN_SET or GPIO_PIN_RESET)
- */
-GPIO_PinState GPIO_Driver_ReadPin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
-{
-    return HAL_GPIO_ReadPin(GPIOx, GPIO_Pin);
-}
-
-/**
- * @brief Write GPIO pin state
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @param PinState: Pin state (GPIO_PIN_SET or GPIO_PIN_RESET)
- * @retval None
- */
-void GPIO_Driver_WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState)
-{
-    HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
-}
-
-/**
- * @brief Toggle GPIO pin state
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @retval None
- */
-void GPIO_Driver_TogglePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
-{
-    HAL_GPIO_TogglePin(GPIOx, GPIO_Pin);
-}
-
-/**
- * @brief Read GPIO port value
- * @param GPIOx: GPIO port
- * @retval uint16_t: Port value
- */
-uint16_t GPIO_Driver_ReadPort(GPIO_TypeDef *GPIOx)
-{
-    if (GPIOx == NULL) {
-        return 0;
-    }
-    return (uint16_t)(GPIOx->IDR);
-}
-
-/**
- * @brief Write GPIO port value
- * @param GPIOx: GPIO port
- * @param PortValue: Port value
- * @retval None
- */
-void GPIO_Driver_WritePort(GPIO_TypeDef *GPIOx, uint16_t PortValue)
-{
-    if (GPIOx != NULL) {
-        GPIOx->ODR = PortValue;
-    }
-}
-
-/**
- * @brief Enable GPIO interrupt
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @param edge: Interrupt edge (EXTI_TRIGGER_RISING/FALLING/RISING_FALLING)
- * @retval HAL_StatusTypeDef: Operation status
- */
-HAL_StatusTypeDef GPIO_Driver_EnableIT(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, uint32_t edge)
-{
-    if (GPIOx == NULL) {
-        return HAL_ERROR;
-    }
-
-    uint8_t pin_num = GPIO_GetPinNumber(GPIO_Pin);
-    if (pin_num > 15) {
-        return HAL_ERROR;
-    }
-
-    /* SYSCFG clock must be running before EXTICR can be written */
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
-
-    /* Configure SYSCFG for EXTI */
-    uint32_t port_num = ((uint32_t)GPIOx - GPIOA_BASE) / 0x400;
-    uint32_t exti_cr_reg = pin_num / 4;
-    uint32_t exti_cr_shift = (pin_num % 4) * 4;
-
-    SYSCFG->EXTICR[exti_cr_reg] &= ~(0xF << exti_cr_shift);
-    SYSCFG->EXTICR[exti_cr_reg] |= (port_num << exti_cr_shift);
-
-    /* Configure EXTI */
-    EXTI->IMR |= GPIO_Pin;  // Unmask interrupt
-
-    switch (edge) {
-        case EXTI_TRIGGER_RISING:
-            EXTI->RTSR |= GPIO_Pin;
-            EXTI->FTSR &= ~GPIO_Pin;
-            break;
-        case EXTI_TRIGGER_FALLING:
-            EXTI->FTSR |= GPIO_Pin;
-            EXTI->RTSR &= ~GPIO_Pin;
-            break;
-        case EXTI_TRIGGER_RISING_FALLING:
-            EXTI->RTSR |= GPIO_Pin;
-            EXTI->FTSR |= GPIO_Pin;
-            break;
-        default:
-            return HAL_ERROR;
-    }
-
-    /* Enable NVIC interrupt */
-    IRQn_Type irqn = GPIO_GetIRQn(GPIO_Pin);
-    HAL_NVIC_SetPriority(irqn, 0, 0);
-    HAL_NVIC_EnableIRQ(irqn);
-
-    return HAL_OK;
-}
-
-/**
- * @brief Disable GPIO interrupt
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @retval HAL_StatusTypeDef: Operation status
- */
-HAL_StatusTypeDef GPIO_Driver_DisableIT(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
-{
-    if (GPIOx == NULL) {
-        return HAL_ERROR;
-    }
-
-    /* Mask interrupt */
-    EXTI->IMR &= ~GPIO_Pin;
-
-    /* Disable NVIC interrupt */
-    IRQn_Type irqn = GPIO_GetIRQn(GPIO_Pin);
-    HAL_NVIC_DisableIRQ(irqn);
-
-    return HAL_OK;
-}
-
-/**
- * @brief Clear GPIO interrupt pending bit
- * @param GPIO_Pin: GPIO pin
- * @retval None
- */
-void GPIO_Driver_ClearITPendingBit(uint16_t GPIO_Pin)
-{
-    EXTI->PR = GPIO_Pin;
-}
-
-/**
- * @brief Lock GPIO pin configuration
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @retval HAL_StatusTypeDef: Operation status
- */
-HAL_StatusTypeDef GPIO_Driver_LockPin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
-{
-    if (GPIOx == NULL) {
-        return HAL_ERROR;
-    }
-
-    /* Set lock sequence */
-    GPIOx->LCKR = GPIO_LCKR_LCKK | GPIO_Pin;
-    GPIOx->LCKR = GPIO_Pin;
-    GPIOx->LCKR = GPIO_LCKR_LCKK | GPIO_Pin;
-    GPIOx->LCKR = GPIO_Pin;
-    GPIOx->LCKR = GPIO_LCKR_LCKK | GPIO_Pin;
-
-    /* Read lock status */
-    uint32_t lock_status = GPIOx->LCKR;
-
-    if (lock_status & GPIO_LCKR_LCKK) {
-        return HAL_OK;  // Successfully locked
-    } else {
-        return HAL_ERROR;  // Lock failed
-    }
-}
-
-/**
- * @brief Get GPIO driver error code
- * @param handle: Pointer to GPIO driver handle
- * @retval uint32_t: Error code
- */
-uint32_t GPIO_Driver_GetError(GPIO_Driver_Handle_t *handle)
-{
-    if (handle == NULL) {
-        return GPIO_DRIVER_ERROR_INIT;
-    }
-    return handle->errorCode;
-}
-
-/* Private functions ------------------------------------------------------- */
-
-/**
- * @brief Enable GPIO port clock
- * @param GPIOx: GPIO port
- * @retval HAL_StatusTypeDef: Operation status
- */
-static HAL_StatusTypeDef GPIO_EnableClock(GPIO_TypeDef *GPIOx)
+HAL_StatusTypeDef GPIO_Driver_ClockEnable(GPIO_TypeDef *GPIOx)
 {
     if (GPIOx == GPIOA) {
         __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -313,36 +44,134 @@ static HAL_StatusTypeDef GPIO_EnableClock(GPIO_TypeDef *GPIOx)
     return HAL_OK;
 }
 
-/**
- * @brief Get pin number from pin mask
- * @param GPIO_Pin: GPIO pin mask
- * @retval uint8_t: Pin number (0-15) or 0xFF if invalid
- */
-static uint8_t GPIO_GetPinNumber(uint16_t GPIO_Pin)
+HAL_StatusTypeDef GPIO_Driver_Pin_Init(GPIO_TypeDef *GPIOx, GPIO_InitTypeDef *GPIO_Init)
 {
-    uint8_t pin_num = 0;
-    while ((GPIO_Pin & (1 << pin_num)) == 0 && pin_num < 16) {
-        pin_num++;
+    if (GPIOx == NULL || GPIO_Init == NULL) {
+        return HAL_ERROR;
     }
-    return (pin_num < 16) ? pin_num : 0xFF;
+
+    if (GPIO_Driver_ClockEnable(GPIOx) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    HAL_GPIO_Init(GPIOx, GPIO_Init);
+
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef GPIO_Driver_Pin_DeInit(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
+{
+    if (GPIOx == NULL || GPIO_Pin == 0U) {
+        return HAL_ERROR;
+    }
+
+    HAL_GPIO_DeInit(GPIOx, GPIO_Pin);
+
+    return HAL_OK;
+}
+
+GPIO_PinState GPIO_Driver_ReadPin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
+{
+    return HAL_GPIO_ReadPin(GPIOx, GPIO_Pin);
+}
+
+void GPIO_Driver_WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState)
+{
+    HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
+}
+
+void GPIO_Driver_TogglePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
+{
+    HAL_GPIO_TogglePin(GPIOx, GPIO_Pin);
+}
+
+uint16_t GPIO_Driver_ReadPort(GPIO_TypeDef *GPIOx)
+{
+    return (uint16_t)GPIOx->IDR;
+}
+
+void GPIO_Driver_WritePort(GPIO_TypeDef *GPIOx, uint16_t PortValue)
+{
+    GPIOx->ODR = PortValue;
+}
+
+HAL_StatusTypeDef GPIO_Driver_EnableIRQ(uint16_t GPIO_Pin, uint32_t PreemptPriority, uint32_t SubPriority)
+{
+    IRQn_Type irqn;
+
+    if (GPIO_GetIRQn(GPIO_Pin, &irqn) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    HAL_NVIC_SetPriority(irqn, PreemptPriority, SubPriority);
+    HAL_NVIC_EnableIRQ(irqn);
+
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef GPIO_Driver_DisableIRQ(uint16_t GPIO_Pin)
+{
+    IRQn_Type irqn;
+
+    if (GPIO_GetIRQn(GPIO_Pin, &irqn) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    HAL_NVIC_DisableIRQ(irqn);
+
+    return HAL_OK;
+}
+
+/* Private functions ---------------------------------------------------------*/
+
+/**
+ * @brief  Convert a one-hot pin mask to its pin number
+ * @param  GPIO_Pin: pin mask, exactly one bit of 0..15 must be set
+ * @param  PinNumber: receives 0..15
+ * @retval HAL_OK or HAL_ERROR
+ */
+static HAL_StatusTypeDef GPIO_GetPinNumber(uint16_t GPIO_Pin, uint8_t *PinNumber)
+{
+    /* Reject 0 and multi-pin masks: a single EXTI line must be identified. */
+    if (GPIO_Pin == 0U || (GPIO_Pin & (GPIO_Pin - 1U)) != 0U) {
+        return HAL_ERROR;
+    }
+
+    *PinNumber = (uint8_t)__builtin_ctz(GPIO_Pin);
+
+    return HAL_OK;
 }
 
 /**
- * @brief Get IRQ number for GPIO pin
- * @param GPIO_Pin: GPIO pin mask
- * @retval IRQn_Type: IRQ number
+ * @brief  Find the NVIC channel serving a pin's EXTI line
+ * @param  GPIO_Pin: pin mask, exactly one bit set
+ * @param  IRQn: receives the interrupt number
+ * @retval HAL_OK or HAL_ERROR
  */
-static IRQn_Type GPIO_GetIRQn(uint16_t GPIO_Pin)
+static HAL_StatusTypeDef GPIO_GetIRQn(uint16_t GPIO_Pin, IRQn_Type *IRQn)
 {
-    uint8_t pin_num = GPIO_GetPinNumber(GPIO_Pin);
+    uint8_t pinNumber = 0;
 
-    if (pin_num < 5) {
-        return (IRQn_Type)(EXTI0_IRQn + pin_num);
-    } else if (pin_num < 10) {
-        return EXTI9_5_IRQn;
-    } else {
-        return EXTI15_10_IRQn;
+    if (GPIO_GetPinNumber(GPIO_Pin, &pinNumber) != HAL_OK) {
+        return HAL_ERROR;
     }
+
+    /* Lines 0..4 have their own vector, 5..9 and 10..15 are grouped. */
+    switch (pinNumber) {
+        case 0:  *IRQn = EXTI0_IRQn;     break;
+        case 1:  *IRQn = EXTI1_IRQn;     break;
+        case 2:  *IRQn = EXTI2_IRQn;     break;
+        case 3:  *IRQn = EXTI3_IRQn;     break;
+        case 4:  *IRQn = EXTI4_IRQn;     break;
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 9:  *IRQn = EXTI9_5_IRQn;   break;
+        default: *IRQn = EXTI15_10_IRQn; break;
+    }
+
+    return HAL_OK;
 }
 
 /* EXTI interrupt handlers live in Core/Src/stm32f4xx_it.c, not in this driver. */

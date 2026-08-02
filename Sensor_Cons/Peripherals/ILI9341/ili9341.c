@@ -6,6 +6,7 @@
 
 #include "ili9341.h"
 #include "spi.h"
+#include "gpio.h"
 #include "log.h"
 
 /* Helper: select/deselect and set data/command mode */
@@ -30,9 +31,7 @@ static inline void ILI9341_SetDataMode(void)
    Boards can override these by providing their own ILI9341_MspInit/DeInit. */
 __weak void ILI9341_MspInit(void)
 {
-    /* Enable required GPIO clocks */
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOD_CLK_ENABLE();
+    /* GPIO driver enables the port clocks */
 
     GPIO_InitTypeDef gpio = {0};
 
@@ -41,11 +40,11 @@ __weak void ILI9341_MspInit(void)
     gpio.Mode = GPIO_MODE_OUTPUT_PP;
     gpio.Pull = GPIO_NOPULL;
     gpio.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(ILI9341_WRX_PORT, &gpio);
+    GPIO_Driver_Pin_Init(ILI9341_WRX_PORT, &gpio);
 
     /* CS pin (PC2) - Output Push-Pull */
     gpio.Pin = ILI9341_CS_PIN;
-    HAL_GPIO_Init(ILI9341_CS_PORT, &gpio);
+    GPIO_Driver_Pin_Init(ILI9341_CS_PORT, &gpio);
 
     /* ST BSP pattern: toggle CS low then high */
     HAL_GPIO_WritePin(ILI9341_CS_PORT, ILI9341_CS_PIN, GPIO_PIN_RESET);

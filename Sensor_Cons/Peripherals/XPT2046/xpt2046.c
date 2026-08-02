@@ -28,41 +28,20 @@
 #define XPT2046_CMD_READ_Y            0xD0    /**< Read Y coordinate */
 #define XPT2046_CMD_READ_Z1           0xB0    /**< Read Z1 (pressure) */
 #define XPT2046_CMD_READ_Z2           0xC0    /**< Read Z2 (pressure) */
-#define XPT2046_CMD_START_BIT         0x80    /**< Start bit for commands */
-
-/* XPT2046 Configuration */
-#define XPT2046_POWER_MODE            0x00    /**< Power mode */
-#define XPT2046_REF_MODE              0x04    /**< Reference voltage mode */
-#define XPT2046_ADC_MODE              0x08    /**< ADC resolution mode */
 
 /* Timing constants */
-#define XPT2046_TOUCH_DELAY           1       /**< Delay between touch checks (ms) */
 #define XPT2046_READ_DELAY            10      /**< Delay for ADC conversion (us) */
-#define XPT2046_DEBOUNCE_COUNT        3       /**< Debounce sample count */
 
-/* Calibration constants */
-#define XPT2046_CAL_POINTS            5       /**< Number of calibration points */
+/* Ratio scale used by the simplified pressure estimate */
+#define XPT2046_PRESSURE_SCALE        1000U
 
 /** @} */
-
-/* Private types ------------------------------------------------------------*/
-
-/**
- * @brief Calibration point structure
- */
-typedef struct {
-    uint16_t x_display;
-    uint16_t y_display;
-    uint16_t x_touch;
-    uint16_t y_touch;
-} XPT2046_CalPoint_t;
-
-/* Private variables ---------------------------------------------------------*/
 
 /* Private function prototypes -----------------------------------------------*/
 static XPT2046_StatusTypeDef XPT2046_ReadADC(XPT2046_Handle_t *hxpt, uint8_t command, uint16_t *value);
 static XPT2046_StatusTypeDef XPT2046_ReadCoordinates(XPT2046_Handle_t *hxpt, uint16_t *x, uint16_t *y, uint16_t *pressure);
 static void XPT2046_MapCoordinates(XPT2046_Handle_t *hxpt, uint16_t *x, uint16_t *y);
+static uint16_t XPT2046_ScaleAxis(uint16_t raw, uint16_t raw_min, uint16_t raw_max, uint16_t span);
 static uint16_t XPT2046_CalculatePressure(uint16_t z1, uint16_t z2);
 static void XPT2046_DelayUs(uint32_t delay);
 
@@ -85,7 +64,8 @@ XPT2046_StatusTypeDef XPT2046_Init(XPT2046_Handle_t *hxpt,
                                   GPIO_TypeDef *irq_port, uint16_t irq_pin,
                                   uint16_t width, uint16_t height)
 {
-    if (hxpt == NULL) {
+    if (hxpt == NULL || cs_port == NULL || irq_port == NULL ||
+        width == 0 || height == 0) {
         return XPT2046_INVALID_PARAM;
     }
 
@@ -98,17 +78,12 @@ XPT2046_StatusTypeDef XPT2046_Init(XPT2046_Handle_t *hxpt,
     hxpt->config.irq_pin = irq_pin;
     hxpt->config.width = width;
     hxpt->config.height = height;
+    hxpt->config.raw_x_min = XPT2046_RAW_X_MIN_DEFAULT;
+    hxpt->config.raw_x_max = XPT2046_RAW_X_MAX_DEFAULT;
+    hxpt->config.raw_y_min = XPT2046_RAW_Y_MIN_DEFAULT;
+    hxpt->config.raw_y_max = XPT2046_RAW_Y_MAX_DEFAULT;
     hxpt->config.flip_x = false;
     hxpt->config.flip_y = false;
-
-    /* Default calibration matrix (identity) */
-    hxpt->config.calibration[0] = 1;   // x_scale
-    hxpt->config.calibration[1] = 0;   // x_offset
-    hxpt->config.calibration[2] = 0;   // y_x_coeff
-    hxpt->config.calibration[3] = 0;   // y_scale
-    hxpt->config.calibration[4] = 1;   // y_offset
-    hxpt->config.calibration[5] = 0;   // x_y_coeff
-    hxpt->config.calibration[6] = 1;   // divisor
 
     /* Configure GPIO pins */
     GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -118,16 +93,46 @@ XPT2046_StatusTypeDef XPT2046_Init(XPT2046_Handle_t *hxpt,
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(cs_port, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(cs_port, &GPIO_InitStruct);
     HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET); // Deselect
 
     /* Interrupt pin */
     GPIO_InitStruct.Pin = irq_pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
-    HAL_GPIO_Init(irq_port, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(irq_port, &GPIO_InitStruct);
 
     hxpt->initialized = true;
+
+    return XPT2046_OK;
+}
+
+/**
+ * @brief   Replace the default raw span with values measured on the panel
+ * @param   hxpt Pointer to XPT2046 handle
+ * @param   raw_x_min Raw X read at the left edge
+ * @param   raw_x_max Raw X read at the right edge
+ * @param   raw_y_min Raw Y read at the top edge
+ * @param   raw_y_max Raw Y read at the bottom edge
+ * @retval  XPT2046_StatusTypeDef Operation status
+ */
+XPT2046_StatusTypeDef XPT2046_SetCalibration(XPT2046_Handle_t *hxpt,
+                                            uint16_t raw_x_min, uint16_t raw_x_max,
+                                            uint16_t raw_y_min, uint16_t raw_y_max)
+{
+    if (hxpt == NULL) {
+        return XPT2046_INVALID_PARAM;
+    }
+
+    /* An empty span would collapse every touch onto one display edge. */
+    if (raw_x_min >= raw_x_max || raw_y_min >= raw_y_max) {
+        return XPT2046_INVALID_PARAM;
+    }
+
+    hxpt->config.raw_x_min = raw_x_min;
+    hxpt->config.raw_x_max = raw_x_max;
+    hxpt->config.raw_y_min = raw_y_min;
+    hxpt->config.raw_y_max = raw_y_max;
 
     return XPT2046_OK;
 }
@@ -221,7 +226,6 @@ XPT2046_StatusTypeDef XPT2046_Update(XPT2046_Handle_t *hxpt)
             hxpt->touch.pressure = new_touch.pressure;
             hxpt->touch.state = XPT2046_STATE_HELD;
         }
-        hxpt->last_touch_time = HAL_GetTick();
     } else if (status == XPT2046_NO_TOUCH) {
         /* No touch */
         if (hxpt->touch.state != XPT2046_STATE_RELEASED) {
@@ -232,23 +236,6 @@ XPT2046_StatusTypeDef XPT2046_Update(XPT2046_Handle_t *hxpt)
     } else {
         return status;
     }
-
-    return XPT2046_OK;
-}
-
-/**
- * @brief   Set calibration matrix
- * @param   hxpt Pointer to XPT2046 handle
- * @param   calibration Calibration matrix (7 values)
- * @retval  XPT2046_StatusTypeDef Operation status
- */
-XPT2046_StatusTypeDef XPT2046_SetCalibration(XPT2046_Handle_t *hxpt, uint16_t *calibration)
-{
-    if (hxpt == NULL || calibration == NULL) {
-        return XPT2046_INVALID_PARAM;
-    }
-
-    memcpy(hxpt->config.calibration, calibration, sizeof(hxpt->config.calibration));
 
     return XPT2046_OK;
 }
@@ -321,24 +308,35 @@ static XPT2046_StatusTypeDef XPT2046_ReadCoordinates(XPT2046_Handle_t *hxpt, uin
 }
 
 /**
- * @brief   Map coordinates using calibration matrix
+ * @brief   Map raw ADC readings onto display coordinates
  * @param   hxpt Pointer to XPT2046 handle
  * @param   x Pointer to X coordinate
  * @param   y Pointer to Y coordinate
  */
 static void XPT2046_MapCoordinates(XPT2046_Handle_t *hxpt, uint16_t *x, uint16_t *y)
 {
-    /* Simple linear mapping for now - can be enhanced with full calibration matrix */
-    uint16_t raw_x = *x;
-    uint16_t raw_y = *y;
+    *x = XPT2046_ScaleAxis(*x, hxpt->config.raw_x_min, hxpt->config.raw_x_max, hxpt->config.width);
+    *y = XPT2046_ScaleAxis(*y, hxpt->config.raw_y_min, hxpt->config.raw_y_max, hxpt->config.height);
+}
 
-    /* Map to display coordinates */
-    *x = (raw_x * hxpt->config.width) / XPT2046_MAX_X;
-    *y = (raw_y * hxpt->config.height) / XPT2046_MAX_Y;
+/**
+ * @brief   Scale one raw axis reading onto 0..span-1
+ * @param   raw Raw ADC reading
+ * @param   raw_min Raw value at the start of the axis
+ * @param   raw_max Raw value at the end of the axis
+ * @param   span Display size along the axis
+ * @retval  uint16_t Display coordinate
+ */
+static uint16_t XPT2046_ScaleAxis(uint16_t raw, uint16_t raw_min, uint16_t raw_max, uint16_t span)
+{
+    if (raw <= raw_min) {
+        return 0;
+    }
+    if (raw >= raw_max) {
+        return (uint16_t)(span - 1);
+    }
 
-    /* Clamp to display bounds */
-    if (*x >= hxpt->config.width) *x = hxpt->config.width - 1;
-    if (*y >= hxpt->config.height) *y = hxpt->config.height - 1;
+    return (uint16_t)(((uint32_t)(raw - raw_min) * span) / (uint32_t)(raw_max - raw_min));
 }
 
 /**
@@ -351,13 +349,13 @@ static uint16_t XPT2046_CalculatePressure(uint16_t z1, uint16_t z2)
 {
     if (z2 == 0) return 0;
 
-    /* Pressure calculation: P = (Z1 / Z2 - 1) * scale */
-    /* Simplified pressure calculation */
-    uint16_t pressure = (z1 * 1000) / z2;
+    /* Simplified ratio estimate; clamp before narrowing, since z1/z2 can
+       exceed the 16-bit range for a light touch. */
+    uint32_t pressure = ((uint32_t)z1 * XPT2046_PRESSURE_SCALE) / z2;
 
     if (pressure > XPT2046_MAX_PRESSURE) pressure = XPT2046_MAX_PRESSURE;
 
-    return pressure;
+    return (uint16_t)pressure;
 }
 
 /**

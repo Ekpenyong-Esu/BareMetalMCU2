@@ -35,12 +35,12 @@ bool LedBlink_Start(LedBlink_t* blink, uint32_t periodMs, uint32_t nowMs)
 
 bool LedBlink_Stop(LedBlink_t* blink)
 {
-    if (blink == NULL) {
+    if (blink == NULL || blink->led == NULL) {
         return false;
     }
 
     blink->running = false;
-    return true;
+    return Led_Off(blink->led);
 }
 
 bool LedBlink_Update(LedBlink_t* blink, uint32_t nowMs)

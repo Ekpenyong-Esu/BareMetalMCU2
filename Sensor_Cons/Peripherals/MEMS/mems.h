@@ -57,6 +57,9 @@ extern "C" {
 #define L3GD20_CTRL_REG2_ADDR           0x21
 #define L3GD20_CTRL_REG3_ADDR           0x22
 #define L3GD20_CTRL_REG4_ADDR           0x23
+#define L3GD20_CTRL_REG4_SELF_TEST      0x02U   /**< CTRL_REG4 self-test enable bit */
+#define MEMS_SELF_TEST_DIFF_MIN         100     /**< Min raw shift for a passing self-test */
+#define MEMS_SELF_TEST_DIFF_MAX         1000    /**< Max raw shift for a passing self-test */
 #define L3GD20_CTRL_REG5_ADDR           0x24
 #define L3GD20_REFERENCE_ADDR           0x25
 #define L3GD20_OUT_TEMP_ADDR            0x26
@@ -213,11 +216,9 @@ typedef struct {
     GPIO_TypeDef *CS_Port;                      /**< Optional chip-select port (external device) */
     uint16_t CS_Pin;                            /**< Optional chip-select pin (external device) */
     MEMS_GyroConfigTypeDef GyroConfig;         /**< Gyroscope configuration */
-    MEMS_InterruptConfigTypeDef IntConfig;     /**< Interrupt configuration */
     bool IsInitialized;                        /**< Initialization status */
     bool IsCalibrated;                        /**< Calibration status */
     MEMS_AxesTypeDef CalibrationOffset;        /**< Calibration offset values */
-    float Temperature;                         /**< Current temperature */
 } MEMS_HandleTypeDef;
 
 /**

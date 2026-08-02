@@ -343,12 +343,11 @@ PWR_StatusTypeDef PWR_GetLowPowerStatus(PWR_LowPowerModeTypeDef* mode, PWR_Wakeu
 /**
  * @brief   Configure advanced low power settings
  * @details Fine-tune power consumption vs performance tradeoffs
- * @param   flashPowerDown Enable flash power down in sleep
+ * @param   flashPowerDown Power the flash down while in Stop mode
  * @param   disableBackupWrites Disable backup register writes to save power
- * @param   enableUltraLowPower Enable ultra low power features (if available)
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_ConfigureAdvancedLowPower(bool flashPowerDown, bool disableBackupWrites, bool enableUltraLowPower);
+PWR_StatusTypeDef PWR_ConfigureAdvancedLowPower(bool flashPowerDown, bool disableBackupWrites);
 
 /* Power estimation helpers intentionally removed to avoid dead code. */
 
@@ -410,23 +409,6 @@ PWR_StatusTypeDef PWR_EnableBackupAccess(void);
  */
 PWR_StatusTypeDef PWR_DisableBackupAccess(void);
 
-/**
- * @brief   Write to backup register
- * @details Data retained during Standby and VBAT modes
- * @param   regIndex Register index (0-19)
- * @param   data 32-bit data to store
- * @retval  PWR_StatusTypeDef Operation status
- */
-PWR_StatusTypeDef PWR_WriteBackupRegister(uint32_t regIndex, uint32_t data);
-
-/**
- * @brief   Read from backup register
- * @param   regIndex Register index (0-19)
- * @param   data Pointer to store read data
- * @retval  PWR_StatusTypeDef Operation status
- */
-PWR_StatusTypeDef PWR_ReadBackupRegister(uint32_t regIndex, uint32_t* data);
-
 /** @} */
 
 /** @defgroup PWR_Utility_Functions Utility Functions
@@ -456,15 +438,6 @@ PWR_StatusTypeDef PWR_EnableHighPerformance(void);
  * @retval  PWR_StatusTypeDef Operation status
  */
 PWR_StatusTypeDef PWR_EnableLowPowerMode(void);
-
-/**
- * @brief   Get status string for error code
- * @param   status PWR status code
- * @retval  const char* Status description
- */
-const char* PWR_GetStatusString(PWR_StatusTypeDef status);
-
-/* Current power estimation helper removed to avoid dead code. */
 
 /** @} */
 

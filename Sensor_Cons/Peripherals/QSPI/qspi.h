@@ -72,9 +72,7 @@ extern "C" {
 #define QSPI_IO3_GPIO_PORT              GPIOF
 
 /* QSPI Configuration */
-#define QSPI_CLOCK_PRESCALER            1       /* Clock prescaler */
-#define QSPI_FIFO_THRESHOLD             4       /* FIFO threshold */
-#define QSPI_CHIP_SELECT_HIGH_TIME      2       /* Chip select high time */
+#define QSPI_DEFAULT_BAUDRATE_PRESCALER SPI_BAUDRATEPRESCALER_4
 #define QSPI_FLASH_SIZE                 23      /* Flash size (2^24 = 16MB) */
 
 /* Exported types ------------------------------------------------------------*/
@@ -110,15 +108,11 @@ typedef struct {
 
 /**
  * @brief QSPI Configuration structure
+ * @note  The flash is driven over plain SPI, so the bus speed is the only
+ *        transport parameter there is.
  */
 typedef struct {
-    uint32_t ClockPrescaler;        /**< Clock prescaler value */
-    uint32_t FifoThreshold;         /**< FIFO threshold */
-    uint32_t SampleShifting;        /**< Sample shifting mode */
-    uint32_t FlashSize;             /**< Flash size (2^FlashSize bytes) */
-    uint32_t ChipSelectHighTime;    /**< Chip select high time */
-    uint32_t ClockMode;             /**< Clock mode */
-    bool DualFlash;                 /**< Dual flash mode enable */
+    uint32_t BaudRatePrescaler;     /**< SPI_BAUDRATEPRESCALER_x dividing PCLK2 */
 } QSPI_ConfigTypeDef;
 
 /**
@@ -156,11 +150,9 @@ QSPI_StatusTypeDef QSPI_WriteDisable(QSPI_HandleStructTypeDef *hqspi_struct);
 /* Read Operations */
 QSPI_StatusTypeDef QSPI_Read(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, uint8_t *data, uint32_t size);
 QSPI_StatusTypeDef QSPI_FastRead(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, uint8_t *data, uint32_t size);
-QSPI_StatusTypeDef QSPI_QuadRead(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, uint8_t *data, uint32_t size);
 
 /* Write Operations */
 QSPI_StatusTypeDef QSPI_WritePage(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, const uint8_t *data, uint32_t size);
-QSPI_StatusTypeDef QSPI_QuadWritePage(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, const uint8_t *data, uint32_t size);
 QSPI_StatusTypeDef QSPI_Write(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address, const uint8_t *data, uint32_t size);
 
 /* Erase Operations */
@@ -168,10 +160,6 @@ QSPI_StatusTypeDef QSPI_EraseSector(QSPI_HandleStructTypeDef *hqspi_struct, uint
 QSPI_StatusTypeDef QSPI_EraseBlock32K(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address);
 QSPI_StatusTypeDef QSPI_EraseBlock64K(QSPI_HandleStructTypeDef *hqspi_struct, uint32_t address);
 QSPI_StatusTypeDef QSPI_EraseChip(QSPI_HandleStructTypeDef *hqspi_struct);
-
-/* Memory Mapped Mode */
-QSPI_StatusTypeDef QSPI_EnableMemoryMappedMode(QSPI_HandleStructTypeDef *hqspi_struct);
-QSPI_StatusTypeDef QSPI_DisableMemoryMappedMode(QSPI_HandleStructTypeDef *hqspi_struct);
 
 /* Power Management */
 QSPI_StatusTypeDef QSPI_EnterDeepPowerDown(QSPI_HandleStructTypeDef *hqspi_struct);

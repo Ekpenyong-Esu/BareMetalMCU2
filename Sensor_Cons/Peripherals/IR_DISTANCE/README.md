@@ -101,8 +101,6 @@ bool valid = IR_DISTANCE_IsValidDistance(&hird, 500);
 | maxDistance | varies | Maximum measurable distance (mm) |
 | averagingSamples | 5 | Number of ADC samples to average |
 | measurementTimeout | 100ms | Maximum measurement time |
-| voltageScale | 3.3V | ADC reference voltage |
-| voltageOffset | 0.0V | ADC voltage offset |
 
 ## Calibration Curves
 

@@ -1,4 +1,5 @@
 #include "buzzer.h"
+#include "gpio.h"
 
 HAL_StatusTypeDef Buzzer_InitActive(Buzzer_t *buzzer, GPIO_TypeDef *port, uint16_t pin)
 {
@@ -17,7 +18,7 @@ HAL_StatusTypeDef Buzzer_InitActive(Buzzer_t *buzzer, GPIO_TypeDef *port, uint16
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(port, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(port, &GPIO_InitStruct);
 
     HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
     return HAL_OK;
@@ -45,6 +46,10 @@ void Buzzer_On(Buzzer_t *buzzer)
     }
     if (buzzer->mode == BUZZER_MODE_ACTIVE_GPIO) {
         HAL_GPIO_WritePin(buzzer->port, buzzer->pin, GPIO_PIN_SET);
+    } else if (buzzer->mode == BUZZER_MODE_PASSIVE_PWM) {
+        /* Drive a square wave at whatever frequency Buzzer_Tone last set. */
+        uint32_t period = __HAL_TIM_GET_AUTORELOAD(buzzer->htim);
+        __HAL_TIM_SET_COMPARE(buzzer->htim, buzzer->channel, (period + 1U) / 2U);
     }
 }
 
@@ -70,6 +75,10 @@ HAL_StatusTypeDef Buzzer_Tone(Buzzer_t *buzzer, uint32_t frequencyHz, uint8_t du
     }
 
     uint32_t timerClk = buzzer->pwmTimerClockHz;
+    if (frequencyHz > timerClk) {
+        return HAL_ERROR;   /* period would underflow to 0xFFFFFFFF */
+    }
+
     uint32_t period = (timerClk / frequencyHz) - 1U;
     uint32_t pulse = (period + 1U) * dutyPercent / 100U;
 
@@ -89,7 +98,10 @@ bool Buzzer_IsOn(const Buzzer_t *buzzer)
     }
     if (buzzer->mode == BUZZER_MODE_ACTIVE_GPIO) {
         return HAL_GPIO_ReadPin(buzzer->port, buzzer->pin) == GPIO_PIN_SET;
-    } else {
+    }
+    if (buzzer->mode == BUZZER_MODE_PASSIVE_PWM) {
         return __HAL_TIM_GET_COMPARE(buzzer->htim, buzzer->channel) > 0;
     }
+
+    return false;
 }

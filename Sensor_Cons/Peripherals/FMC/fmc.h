@@ -125,8 +125,6 @@ typedef struct {
     SRAM_HandleTypeDef hsram;                 /* SRAM handle (for NOR Flash) */
     NAND_HandleTypeDef hnand;                 /* NAND handle */
     FMC_Driver_SDRAM_Config_t sdramConfig;    /* SDRAM configuration */
-    FMC_Driver_NOR_Config_t norConfig;        /* NOR configuration */
-    FMC_Driver_NAND_Config_t nandConfig;      /* NAND configuration */
     bool initialized;                         /* Initialization status */
     uint32_t errorCode;                       /* Last error code */
 } FMC_Driver_Handle_t;
@@ -255,8 +253,5 @@ HAL_StatusTypeDef FMC_Driver_NAND_EraseBlock(FMC_Driver_Handle_t *handle, uint32
  * @return uint32_t: Error code
  */
 uint32_t FMC_Driver_GetError(FMC_Driver_Handle_t *handle);
-
-/* Legacy function for backward compatibility */
-void FMC_Init(void);
 
 #endif /* FMC_H */

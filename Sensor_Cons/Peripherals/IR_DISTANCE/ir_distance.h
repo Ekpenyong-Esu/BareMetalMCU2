@@ -57,8 +57,6 @@ typedef struct {
     uint16_t maxDistance;        /**< Maximum measurable distance in mm */
     uint16_t averagingSamples;   /**< Number of samples for averaging */
     uint32_t measurementTimeout; /**< Measurement timeout in ms */
-    float voltageScale;          /**< ADC voltage scaling factor */
-    float voltageOffset;         /**< ADC voltage offset */
 } IR_DISTANCE_Config_t;
 
 /**
@@ -96,8 +94,6 @@ typedef struct {
 /* Default configuration values */
 #define IR_DISTANCE_DEFAULT_AVERAGING_SAMPLES    5U
 #define IR_DISTANCE_DEFAULT_MEASUREMENT_TIMEOUT  100U    /* 100ms */
-#define IR_DISTANCE_DEFAULT_VOLTAGE_SCALE        3.3f    /* 3.3V reference */
-#define IR_DISTANCE_DEFAULT_VOLTAGE_OFFSET       0.0f
 
 /* Sensor specific ranges (mm) */
 #define IR_DISTANCE_GP2Y0A21YK_MIN               100U    /* 10cm */

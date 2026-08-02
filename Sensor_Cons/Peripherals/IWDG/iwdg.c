@@ -11,7 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "iwdg.h"
-#include "../LOG/log.h"
+#include "log.h"
 
 /* Private defines -----------------------------------------------------------*/
 #define IWDG_DEFAULT_PRESCALER      IWDG_PRESCALER_32
@@ -184,20 +184,6 @@ IWDG_StatusTypeDef IWDG_Refresh(void)
 {
     HAL_StatusTypeDef halStatus = HAL_IWDG_Refresh(&hiwdg);
     return IWDG_ConvertHALStatus(halStatus);
-}
-
-/**
- * @brief   Start the watchdog (cannot be stopped once started)
- * @details Once started, IWDG cannot be stopped except by reset
- * @param   None
- * @retval  IWDG_StatusTypeDef Operation status
- * @note    IWDG starts automatically after HAL_IWDG_Init()
- */
-IWDG_StatusTypeDef IWDG_Start(void)
-{
-    /* IWDG is started automatically by HAL_IWDG_Init() */
-    /* This function is provided for API consistency */
-    return IWDG_OK;
 }
 
 /**

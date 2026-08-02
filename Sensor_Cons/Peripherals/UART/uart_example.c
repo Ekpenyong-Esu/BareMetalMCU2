@@ -4,10 +4,13 @@
  */
 
 #include "uart_example.h"
+#include "log.h"
+#include <string.h>
 
 
 /* Constants for UART configuration */
 #define STATUS_MSG_SIZE          256   /* Maximum size for status message */
+#define CMD_ECHO_MAX_LEN         32    /* Chars of a rejected command echoed back */
 #define DEFAULT_BAUD_RATE       115200 /* Default UART baud rate */
 #define UART_INIT_DELAY          100   /* Delay after UART initialization in ms */
 #define UART_POLLING_DELAY       10    /* Delay between polling cycles in ms */
@@ -21,8 +24,6 @@ UART_Handle_t uartHandle;
 static uint8_t rxBuffer[RX_BUFFER_SIZE];
 static uint8_t txBuffer[TX_BUFFER_SIZE];
 static uint8_t singleBuffer[SINGLE_CHAR_BUFFER_SIZE];
-volatile uint8_t uartExampleRxComplete = 0;
-volatile uint8_t txComplete = 0;
 
 /* Buffer management for improved reception */
 static uint16_t rxIndex = 0;
@@ -58,7 +59,7 @@ static void UART_Example_InitStructures(void)
     memset(cmdBuffer, 0, RX_BUFFER_SIZE);
 
     rxIndex = 0;
-    uartExampleRxComplete = 0;
+    rxComplete = 0;
     txComplete = 0;
 }
 
@@ -84,7 +85,6 @@ UART_Status_t UART_Example_Init(UART_Mode_t mode)
     uartHandle.rxBuffer = (mode == UART_MODE_DMA || mode == UART_MODE_INTERRUPT) ? rxBuffer : singleBuffer; // Use singleBuffer for interrupt/blocking mode
     uartHandle.txBuffer = txBuffer;
     uartHandle.rxSize = (mode == UART_MODE_DMA || mode == UART_MODE_INTERRUPT) ? RX_BUFFER_SIZE : SINGLE_CHAR_BUFFER_SIZE; // Use singleBuffer for interrupt/blocking mode, RX_BUFFER_SIZE;
-    uartHandle.txSize = TX_BUFFER_SIZE;
     uartHandle.config = config;  // Store config in handle
 
     UART_Status_t status = UART_Init(&uartHandle, &config);
@@ -327,12 +327,14 @@ UART_Status_t UART_Example_ProcessCommand(const char* cmd)
         return UART_Example_SendMessage(echoMsg);
     }
 
-    if (strcmp(cleanCmd, "help") == 0) {
+    if (strcmp(cleanCmd, CMD_HELP) == 0) {
         return UART_Example_SendMessage(welcomeMsg);
     }
 
     char unknownCmdMsg[STATUS_MSG_SIZE];
-    snprintf(unknownCmdMsg, sizeof(unknownCmdMsg), ANSI_COLOR_RED "Unknown command: %s\r\n" ANSI_COLOR_RESET "> ", cleanCmd);
+    snprintf(unknownCmdMsg, sizeof(unknownCmdMsg),
+             ANSI_COLOR_RED "Unknown command: %.*s\r\n" ANSI_COLOR_RESET "> ",
+             CMD_ECHO_MAX_LEN, cleanCmd);
     return UART_Example_SendMessage(unknownCmdMsg);
 }
 

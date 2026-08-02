@@ -13,6 +13,25 @@
 #include "ir.h"
 #include "main.h"
 
+/* IR pulse timings are in microseconds, so HAL_Delay (1 ms granularity) is unusable here. */
+static inline void ir_delay_us(uint32_t us)
+{
+    uint32_t start = DWT->CYCCNT;
+    uint32_t ticks = (SystemCoreClock / 1000000U) * us;
+    while ((DWT->CYCCNT - start) < ticks) {
+        __NOP();
+    }
+}
+
+/* Emit one mark (carrier on) followed by one space (carrier off) */
+static void IR_EmitPulse(IR_Handle_t *handle, const IR_Pulse_t *pulse)
+{
+    HAL_TIM_PWM_Start(handle->htimCarrier, handle->txChannel);
+    ir_delay_us(pulse->mark);
+    HAL_TIM_PWM_Stop(handle->htimCarrier, handle->txChannel);
+    ir_delay_us(pulse->space);
+}
+
 /* Private function prototypes -----------------------------------------------*/
 static HAL_StatusTypeDef IR_ValidateHandle(IR_Handle_t *handle);
 static HAL_StatusTypeDef IR_ConfigureTimers(IR_Handle_t *handle);
@@ -32,45 +51,40 @@ static void IR_AddPulseToTxBuffer(IR_Handle_t *handle, uint16_t mark, uint16_t s
  * @param handle: Pointer to IR handle structure
  * @param htimCarrier: Pointer to carrier timer handle
  * @param htimCapture: Pointer to capture timer handle
- * @param txPort: TX GPIO port
- * @param txPin: TX GPIO pin
- * @param rxPort: RX GPIO port
- * @param rxPin: RX GPIO pin
  * @param txChannel: PWM channel for carrier
  * @param rxChannel: Input capture channel
  * @param config: Pointer to configuration structure
  * @return HAL_StatusTypeDef: HAL status
  */
 HAL_StatusTypeDef IR_Init(IR_Handle_t *handle, TIM_HandleTypeDef *htimCarrier,
-                         TIM_HandleTypeDef *htimCapture, GPIO_TypeDef *txPort,
-                         uint16_t txPin, GPIO_TypeDef *rxPort, uint16_t rxPin,
+                         TIM_HandleTypeDef *htimCapture,
                          uint32_t txChannel, uint32_t rxChannel, IR_Config_t *config) {
     if (handle == NULL || htimCarrier == NULL || htimCapture == NULL ||
-        txPort == NULL || rxPort == NULL || config == NULL) {
+        config == NULL) {
         return HAL_ERROR;
     }
 
     /* Initialize handle structure */
     handle->htimCarrier = htimCarrier;
     handle->htimCapture = htimCapture;
-    handle->txPort = txPort;
-    handle->txPin = txPin;
-    handle->rxPort = rxPort;
-    handle->rxPin = rxPin;
     handle->txChannel = txChannel;
     handle->rxChannel = rxChannel;
     handle->config = *config;
 
+    /* Enable DWT cycle counter for microsecond pulse timing */
+    if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk)) {
+        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    }
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
     /* Initialize state variables */
     handle->state = IR_STATE_IDLE;
-    handle->lastEvent = IR_EVENT_NONE;
     handle->errorCode = IR_ERROR_NONE;
     handle->initialized = false;
     handle->rxIndex = 0;
     handle->lastCaptureTime = 0;
     handle->txIndex = 0;
     handle->txCount = 0;
-    handle->txActive = false;
     handle->eventCallback = NULL;
 
     /* Initialize frame structure */
@@ -456,7 +470,6 @@ void IR_InputCaptureCallback(IR_Handle_t *handle, uint32_t captureValue) {
     } else {
         /* Buffer overflow */
         handle->errorCode = IR_ERROR_BUFFER_OVERFLOW;
-        handle->lastEvent = IR_EVENT_ERROR_OVERFLOW;
         if (handle->eventCallback != NULL) {
             handle->eventCallback(IR_EVENT_ERROR_OVERFLOW, NULL);
         }
@@ -491,46 +504,9 @@ void IR_TimerOverflowCallback(IR_Handle_t *handle) {
         IR_ProcessReceivedData(handle);
     } else {
         handle->errorCode = IR_ERROR_TIMEOUT;
-        handle->lastEvent = IR_EVENT_ERROR_TIMEOUT;
         if (handle->eventCallback != NULL) {
             handle->eventCallback(IR_EVENT_ERROR_TIMEOUT, NULL);
         }
-    }
-}
-
-/**
- * @brief PWM pulse finished callback (to be called from HAL interrupt)
- * @param handle: Pointer to IR handle structure
- * @return void
- */
-void IR_PWMPulseFinishedCallback(IR_Handle_t *handle) {
-    if (handle == NULL || !handle->txActive) {
-        return;
-    }
-
-    /* Move to next pulse */
-    handle->txIndex++;
-
-    if (handle->txIndex >= handle->txCount) {
-        /* Transmission complete */
-        handle->txActive = false;
-        handle->state = IR_STATE_IDLE;
-        handle->lastEvent = IR_EVENT_FRAME_TRANSMITTED;
-
-        if (handle->eventCallback != NULL) {
-            handle->eventCallback(IR_EVENT_FRAME_TRANSMITTED, NULL);
-        }
-    } else {
-        /* Continue with next pulse */
-        IR_Pulse_t *pulse = &handle->txBuffer[handle->txIndex];
-
-        /* Configure next pulse timing */
-        /* Implementation depends on specific timer configuration */
-        /* This is a simplified version */
-        HAL_TIM_PWM_Start(handle->htimCarrier, handle->txChannel);
-        HAL_Delay(pulse->mark / 1000); /* Convert to milliseconds */
-        HAL_TIM_PWM_Stop(handle->htimCarrier, handle->txChannel);
-        HAL_Delay(pulse->space / 1000);
     }
 }
 
@@ -601,13 +577,11 @@ static HAL_StatusTypeDef IR_ProcessReceivedData(IR_Handle_t *handle) {
 
     if (status == HAL_OK) {
         handle->rxFrame.valid = true;
-        handle->lastEvent = IR_EVENT_FRAME_RECEIVED;
         if (handle->eventCallback != NULL) {
             handle->eventCallback(IR_EVENT_FRAME_RECEIVED, &handle->rxFrame);
         }
     } else {
         handle->errorCode = IR_ERROR_PROTOCOL;
-        handle->lastEvent = IR_EVENT_ERROR_PROTOCOL;
         if (handle->eventCallback != NULL) {
             handle->eventCallback(IR_EVENT_ERROR_PROTOCOL, NULL);
         }
@@ -705,7 +679,6 @@ static HAL_StatusTypeDef IR_DecodeRC5(IR_Handle_t *handle) {
 
     /* Extract fields */
     uint8_t startBits = (data >> 12) & 0x03;
-    uint8_t toggle = (data >> 11) & 0x01;
     uint8_t address = (data >> 6) & 0x1F;
     uint8_t command = data & 0x3F;
 
@@ -875,20 +848,16 @@ static HAL_StatusTypeDef IR_StartTransmission(IR_Handle_t *handle) {
     }
 
     handle->state = IR_STATE_TRANSMITTING;
-    handle->txActive = true;
-    handle->txIndex = 0;
 
-    /* Start with first pulse */
-    IR_Pulse_t *pulse = &handle->txBuffer[0];
+    for (handle->txIndex = 0; handle->txIndex < handle->txCount; handle->txIndex++) {
+        IR_EmitPulse(handle, &handle->txBuffer[handle->txIndex]);
+    }
 
-    /* Start PWM for mark time */
-    HAL_TIM_PWM_Start(handle->htimCarrier, handle->txChannel);
+    handle->state = IR_STATE_IDLE;
 
-    /* Use a timer interrupt or delay for timing control */
-    /* This is a simplified implementation */
-    HAL_Delay(pulse->mark / 1000);
-    HAL_TIM_PWM_Stop(handle->htimCarrier, handle->txChannel);
-    HAL_Delay(pulse->space / 1000);
+    if (handle->eventCallback != NULL) {
+        handle->eventCallback(IR_EVENT_FRAME_TRANSMITTED, NULL);
+    }
 
     return HAL_OK;
 }

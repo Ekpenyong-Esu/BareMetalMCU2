@@ -67,9 +67,9 @@ typedef void (*WWDG_EWI_Callback_t)(void);
 
 /**
  * @brief WWDG timing constants
- * @note  PCLK1 = 45MHz on STM32F429 at 180MHz
+ * @note  PCLK1 = 42MHz on STM32F429 at 168MHz (HCLK/4)
  */
-#define WWDG_PCLK1_FREQ             45000000U   /**< APB1 clock frequency */
+#define WWDG_PCLK1_FREQ             42000000U   /**< APB1 clock frequency */
 
 /**
  * @brief Common timeout configurations
@@ -130,14 +130,6 @@ WWDG_StatusTypeDef WWDG_Refresh(void);
  * @retval  WWDG_StatusTypeDef Operation status
  */
 WWDG_StatusTypeDef WWDG_RefreshWithCounter(uint32_t counter);
-
-/**
- * @brief   Start the watchdog
- * @details Enables WWDG countdown
- * @param   None
- * @retval  WWDG_StatusTypeDef Operation status
- */
-WWDG_StatusTypeDef WWDG_Start(void);
 
 /** @} */
 

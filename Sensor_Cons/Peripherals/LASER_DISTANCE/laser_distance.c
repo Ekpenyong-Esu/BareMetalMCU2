@@ -11,7 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "laser_distance.h"
-#include "../LOG/log.h"
+#include "log.h"
 #include "i2c.h"
 #include "stm32f4xx_hal.h"
 #include <stdlib.h>
@@ -30,12 +30,15 @@
 #define VL53L0X_REG_FINAL_RANGE_CONFIG_VCSEL_PERIOD      0x70
 #define VL53L0X_REG_SYSRANGE_START                       0x00
 #define VL53L0X_REG_RESULT_INTERRUPT_STATUS              0x13
+/* Bits [2:0] hold the range-complete interrupt code; non-zero means data ready */
+#define VL53L0X_INTERRUPT_STATUS_MASK                    0x07U
 #define VL53L0X_REG_RESULT_RANGE_STATUS                  0x14
 #define VL53L0X_REG_I2C_SLAVE_DEVICE_ADDRESS             0x8A
 
 /* VL53L0X Constants */
 #define VL53L0X_EXPECTED_DEVICE_ID                       0xEE
-#define VL53L0X_READOUT_AVERAGING_SAMPLE_PERIOD          0x30
+#define VL53L0X_READOUT_AVERAGING_SAMPLE_PERIOD          0x30  /* register address */
+#define VL53L0X_READOUT_AVERAGING_PERIOD                 0x30  /* value written to it */
 #define VL53L0X_VCSEL_PERIOD_PRE_RANGE                   0x18
 #define VL53L0X_VCSEL_PERIOD_FINAL_RANGE                 0x08
 
@@ -71,7 +74,6 @@ static LASER_DISTANCE_StatusTypeDef LASER_DISTANCE_VL53L0X_Init(LASER_DISTANCE_H
 static LASER_DISTANCE_StatusTypeDef LASER_DISTANCE_VL53L0X_ReadRange(LASER_DISTANCE_Handle_t *hlaser);
 static LASER_DISTANCE_StatusTypeDef LASER_DISTANCE_TFmini_ReadRange(LASER_DISTANCE_Handle_t *hlaser);
 static uint16_t LASER_DISTANCE_VL53L0X_DecodeRange(uint8_t *data);
-static uint16_t LASER_DISTANCE_TFmini_DecodeRange(uint8_t *data);
 static LASER_DISTANCE_StatusTypeDef LASER_DISTANCE_I2C_WriteReg(LASER_DISTANCE_Handle_t *hlaser,
                                                                uint8_t reg,
                                                                uint8_t value);
@@ -337,7 +339,7 @@ bool LASER_DISTANCE_IsMeasurementReady(LASER_DISTANCE_Handle_t *hlaser)
         case LASER_DISTANCE_VL53L0X: {
             uint8_t status;
             if (LASER_DISTANCE_I2C_ReadReg(hlaser, VL53L0X_REG_RESULT_INTERRUPT_STATUS, &status) == LASER_DISTANCE_OK) {
-                return (status & 0x07) != 0;
+                return (status & VL53L0X_INTERRUPT_STATUS_MASK) != 0;
             }
             break;
         }
@@ -419,9 +421,7 @@ LASER_DISTANCE_Config_t LASER_DISTANCE_GetDefaultConfig(LASER_DISTANCE_SensorTyp
         .sensorType = sensorType,
         .averagingSamples = LASER_DISTANCE_DEFAULT_AVERAGING_SAMPLES,
         .measurementTimeout = LASER_DISTANCE_DEFAULT_MEASUREMENT_TIMEOUT,
-        .i2cAddress = LASER_DISTANCE_DEFAULT_I2C_ADDRESS,
-        .longRangeMode = false,
-        .highAccuracyMode = false
+        .i2cAddress = LASER_DISTANCE_DEFAULT_I2C_ADDRESS
     };
 
     /* Set range based on sensor type */
@@ -535,13 +535,23 @@ static LASER_DISTANCE_StatusTypeDef LASER_DISTANCE_VL53L0X_Init(LASER_DISTANCE_H
 
     /* Basic initialization sequence */
     /* This is a simplified version - full initialization requires more steps */
+    const struct {
+        uint8_t reg;
+        uint8_t value;
+    } initSequence[] = {
+        { VL53L0X_READOUT_AVERAGING_SAMPLE_PERIOD,        VL53L0X_READOUT_AVERAGING_PERIOD },
+        { VL53L0X_REG_PRE_RANGE_CONFIG_VCSEL_PERIOD,      VL53L0X_VCSEL_PERIOD_PRE_RANGE },
+        { VL53L0X_REG_FINAL_RANGE_CONFIG_VCSEL_PERIOD,    VL53L0X_VCSEL_PERIOD_FINAL_RANGE },
+    };
 
-    /* Set readout averaging sample period */
-    LASER_DISTANCE_I2C_WriteReg(hlaser, VL53L0X_READOUT_AVERAGING_SAMPLE_PERIOD, 0x30);
-
-    /* Set VCSEL periods */
-    LASER_DISTANCE_I2C_WriteReg(hlaser, VL53L0X_REG_PRE_RANGE_CONFIG_VCSEL_PERIOD, VL53L0X_VCSEL_PERIOD_PRE_RANGE);
-    LASER_DISTANCE_I2C_WriteReg(hlaser, VL53L0X_REG_FINAL_RANGE_CONFIG_VCSEL_PERIOD, VL53L0X_VCSEL_PERIOD_FINAL_RANGE);
+    for (size_t i = 0; i < (sizeof(initSequence) / sizeof(initSequence[0])); i++) {
+        if (LASER_DISTANCE_I2C_WriteReg(hlaser, initSequence[i].reg,
+                                        initSequence[i].value) != LASER_DISTANCE_OK) {
+            log_error("LASER_DISTANCE: Failed to write VL53L0X register 0x%02X",
+                      initSequence[i].reg);
+            return LASER_DISTANCE_I2C_ERROR;
+        }
+    }
 
     log_debug("LASER_DISTANCE: VL53L0X initialization completed");
     return LASER_DISTANCE_OK;
@@ -562,14 +572,22 @@ static LASER_DISTANCE_StatusTypeDef LASER_DISTANCE_VL53L0X_ReadRange(LASER_DISTA
     LASER_DISTANCE_I2C_WriteReg(hlaser, VL53L0X_REG_SYSRANGE_START, 0x01);
 
     /* Wait for measurement completion */
+    bool measurementReady = false;
     while ((HAL_GetTick() - startTime) < hlaser->config.measurementTimeout) {
         uint8_t status;
         if (LASER_DISTANCE_I2C_ReadReg(hlaser, VL53L0X_REG_RESULT_INTERRUPT_STATUS, &status) == LASER_DISTANCE_OK) {
-            if (status & 0x07) {
+            if (status & VL53L0X_INTERRUPT_STATUS_MASK) {
+                measurementReady = true;
                 break;
             }
         }
         HAL_Delay(1);
+    }
+
+    /* Without this the result registers still hold the previous measurement,
+       which would be returned as a fresh reading. */
+    if (!measurementReady) {
+        return LASER_DISTANCE_TIMEOUT;
     }
 
     /* Read range data */

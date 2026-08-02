@@ -88,65 +88,51 @@ uint32_t SYS_GetMicros(void)
   */
 void SystemClock_Config(void)
 {
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};  /* RCC oscillator configuration structure */
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};  /* RCC clock configuration structure */
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /* Configure the main internal regulator output voltage */
-  __HAL_RCC_PWR_CLK_ENABLE();                  /* Enable power controller clock */
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1); /* Set voltage scale for max performance */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  /* Initialize the RCC Oscillators according to the specified parameters
-     in the RCC_OscInitTypeDef structure */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE; /* Use High-Speed External oscillator */
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;                   /* Enable HSE oscillator */
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;               /* Enable PLL */
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;       /* Use HSE as PLL source */
-  RCC_OscInitStruct.PLL.PLLM = 4;                            /* HSE divider for PLL entry: 8MHz/4 = 2MHz */
-  RCC_OscInitStruct.PLL.PLLN = 168;                          /* PLL multiplication factor: 2MHz*168 = 336MHz */
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;                /* PLL division for system clock: 336MHz/2 = 168MHz */
-  RCC_OscInitStruct.PLL.PLLQ = 7;                            /* PLL division for USB OTG FS: 336MHz/7 = 48MHz */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 4;              /* 8 MHz HSE / 4 = 2 MHz PLL input */
+  RCC_OscInitStruct.PLL.PLLN = 168;            /* 2 MHz * 168 = 336 MHz VCO */
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;  /* 336 MHz / 2 = 168 MHz SYSCLK */
+  RCC_OscInitStruct.PLL.PLLQ = 7;              /* 336 MHz / 7 = 48 MHz for USB OTG FS */
 
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
-    Error_Handler();  /* Call error handler if configuration fails */
+    Error_Handler();
   }
 
-  /* Initialize the CPU, AHB and APB buses clocks */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2; /* Configure all clocks */
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK; /* Use PLL as system clock source */
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;        /* AHB clock = SYSCLK (168MHz) */
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;         /* APB1 clock = HCLK/4 (42MHz) */
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;         /* APB2 clock = HCLK/2 (84MHz) */
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;  /* HCLK  = 168 MHz */
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;   /* PCLK1 = 42 MHz (APB1 max) */
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;   /* PCLK2 = 84 MHz (APB2 max) */
 
-  /* Set the appropriate flash latency for 168MHz operation */
+  /* 5 wait states is the minimum for 168 MHz at voltage scale 1 */
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
-    Error_Handler();  /* Call error handler if configuration fails */
+    Error_Handler();
   }
 }
 
 /**
   * @brief  Error Handler Function
-  * @details This function is executed in case of error occurrence.
-  *          It implements a simple infinite loop with interrupts disabled
-  *          to prevent further execution when a critical error occurs.
-  *
-  * @note   This is a basic implementation. Consider adding:
-  *         - LED blinking for visual error indication
-  *         - Error code storage in a non-volatile memory
-  *         - Watchdog reset after a timeout
-  *         - Debug message output if debug interface is available
-  *
+  * @details Halts the CPU with interrupts disabled when a critical
+  *          initialization step fails.
   * @param  None
   * @retval None
   */
 void Error_Handler(void)
 {
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();               /* Disable all interrupts */
-  while (1)                      /* Enter infinite loop to prevent further execution */
+  __disable_irq();
+  while (1)
   {
-    /* Could add LED blinking code here for visual error indication */
   }
 }

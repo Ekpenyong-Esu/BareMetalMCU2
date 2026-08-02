@@ -11,6 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "mems.h"
+#include "gpio.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -318,7 +319,6 @@ MEMS_StatusTypeDef MEMS_ReadTemperature(MEMS_HandleTypeDef *hmems, float *temper
 
     /* Convert to temperature (simplified conversion) */
     *temperature = MEMS_TEMPERATURE_OFFSET + ((float)((int8_t)temp_raw));
-    hmems->Temperature = *temperature;
 
     return MEMS_OK;
 }
@@ -382,7 +382,6 @@ MEMS_StatusTypeDef MEMS_ConfigureInterrupt(MEMS_HandleTypeDef *hmems, MEMS_Inter
     }
 
     /* Store configuration */
-    hmems->IntConfig = *config;
 
     return MEMS_OK;
 }
@@ -411,6 +410,11 @@ MEMS_StatusTypeDef MEMS_CalibrateGyroscope(MEMS_HandleTypeDef *hmems, uint16_t s
     if (samples == 0) {
         samples = MEMS_CALIBRATION_SAMPLES_DEFAULT;
     }
+
+    /* Drop any previous calibration first: MEMS_GyroRead() subtracts the stored
+       offset, so leaving it applied would measure only the residual bias, and an
+       aborted run would keep reporting the old offset as valid. */
+    hmems->IsCalibrated = false;
 
     /* Accumulate samples */
     for (uint16_t i = 0; i < samples; i++) {
@@ -605,7 +609,7 @@ MEMS_StatusTypeDef MEMS_SelfTest(MEMS_HandleTypeDef *hmems, bool *result)
         return status;
     }
 
-    ctrl_reg4 |= 0x02; /* Enable self-test */
+    ctrl_reg4 |= L3GD20_CTRL_REG4_SELF_TEST; /* Enable self-test */
     status = MEMS_WriteRegister(hmems, L3GD20_CTRL_REG4_ADDR, ctrl_reg4);
     if (status != MEMS_OK) {
         return status;
@@ -613,17 +617,20 @@ MEMS_StatusTypeDef MEMS_SelfTest(MEMS_HandleTypeDef *hmems, bool *result)
 
     MEMS_DELAY_MS(100); /* Wait for self-test to stabilize */
 
-    /* Read self-test data */
+    /* Read self-test data. From here on the device is in self-test mode, so
+       every exit path must go through the disable below - leaving it enabled
+       would corrupt all later measurements. */
     status = MEMS_GyroReadRaw(hmems, &data_test);
+
+    /* Disable self-test */
+    ctrl_reg4 &= (uint8_t)~L3GD20_CTRL_REG4_SELF_TEST;
+    MEMS_StatusTypeDef disable_status = MEMS_WriteRegister(hmems, L3GD20_CTRL_REG4_ADDR, ctrl_reg4);
+
     if (status != MEMS_OK) {
         return status;
     }
-
-    /* Disable self-test */
-    ctrl_reg4 &= ~0x02;
-    status = MEMS_WriteRegister(hmems, L3GD20_CTRL_REG4_ADDR, ctrl_reg4);
-    if (status != MEMS_OK) {
-        return status;
+    if (disable_status != MEMS_OK) {
+        return disable_status;
     }
 
     /* Calculate differences */
@@ -631,9 +638,9 @@ MEMS_StatusTypeDef MEMS_SelfTest(MEMS_HandleTypeDef *hmems, bool *result)
     diff_y = abs(data_test.Y - data_normal.Y);
     diff_z = abs(data_test.Z - data_normal.Z);
 
-    /* Check if differences are within acceptable range */
-    if (diff_x > 100 && diff_y > 100 && diff_z > 100 &&
-        diff_x < 1000 && diff_y < 1000 && diff_z < 1000) {
+    /* A working gyro shifts by a bounded amount on every axis */
+    if (diff_x > MEMS_SELF_TEST_DIFF_MIN && diff_y > MEMS_SELF_TEST_DIFF_MIN && diff_z > MEMS_SELF_TEST_DIFF_MIN &&
+        diff_x < MEMS_SELF_TEST_DIFF_MAX && diff_y < MEMS_SELF_TEST_DIFF_MAX && diff_z < MEMS_SELF_TEST_DIFF_MAX) {
         *result = true;
     }
 
@@ -896,44 +903,32 @@ static MEMS_StatusTypeDef MEMS_InitGPIO(MEMS_HandleTypeDef *hmems)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* Enable common GPIO clocks used by default pins */
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOF_CLK_ENABLE();
+    /* GPIO driver enables the port clock for each configured port */
 
     /* Configure CS pin: prefer user-specified in handle if provided */
     if (hmems != NULL && hmems->CS_Port != NULL && hmems->CS_Pin != 0U) {
-        /* Try to enable clock for provided port (best-effort) */
-        if (hmems->CS_Port == GPIOA) { __HAL_RCC_GPIOA_CLK_ENABLE(); }
-        else if (hmems->CS_Port == GPIOB) { __HAL_RCC_GPIOB_CLK_ENABLE(); }
-        else if (hmems->CS_Port == GPIOC) { __HAL_RCC_GPIOC_CLK_ENABLE(); }
-        else if (hmems->CS_Port == GPIOD) { __HAL_RCC_GPIOD_CLK_ENABLE(); }
-        else if (hmems->CS_Port == GPIOE) { __HAL_RCC_GPIOE_CLK_ENABLE(); }
-        else if (hmems->CS_Port == GPIOF) { __HAL_RCC_GPIOF_CLK_ENABLE(); }
-        else if (hmems->CS_Port == GPIOG) { __HAL_RCC_GPIOG_CLK_ENABLE(); }
-
         GPIO_InitStruct.Pin = hmems->CS_Pin;
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(hmems->CS_Port, &GPIO_InitStruct);
+        GPIO_Driver_Pin_Init(hmems->CS_Port, &GPIO_InitStruct);
     } else {
         /* Configure default CS pin */
         GPIO_InitStruct.Pin = MEMS_CS_PIN;
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(MEMS_CS_GPIO_PORT, &GPIO_InitStruct);
+        GPIO_Driver_Pin_Init(MEMS_CS_GPIO_PORT, &GPIO_InitStruct);
     }
 
     /* Configure interrupt pins */
     GPIO_InitStruct.Pin = MEMS_INT1_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(MEMS_INT1_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(MEMS_INT1_GPIO_PORT, &GPIO_InitStruct);
 
     GPIO_InitStruct.Pin = MEMS_INT2_PIN;
-    HAL_GPIO_Init(MEMS_INT2_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(MEMS_INT2_GPIO_PORT, &GPIO_InitStruct);
 
     /* Configure SPI pins */
 
@@ -959,21 +954,14 @@ void MEMS_SetCS(MEMS_HandleTypeDef *hmems, GPIO_TypeDef *csPort, uint16_t csPin)
         return;
     }
 
-    /* Try to enable clock for provided port (best-effort) */
-    if (csPort == GPIOA) { __HAL_RCC_GPIOA_CLK_ENABLE(); }
-    else if (csPort == GPIOB) { __HAL_RCC_GPIOB_CLK_ENABLE(); }
-    else if (csPort == GPIOC) { __HAL_RCC_GPIOC_CLK_ENABLE(); }
-    else if (csPort == GPIOD) { __HAL_RCC_GPIOD_CLK_ENABLE(); }
-    else if (csPort == GPIOE) { __HAL_RCC_GPIOE_CLK_ENABLE(); }
-    else if (csPort == GPIOF) { __HAL_RCC_GPIOF_CLK_ENABLE(); }
-    else if (csPort == GPIOG) { __HAL_RCC_GPIOG_CLK_ENABLE(); }
+    /* GPIO driver enables the port clock */
 
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = csPin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(csPort, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(csPort, &GPIO_InitStruct);
 
     /* Deassert CS */
     HAL_GPIO_WritePin(csPort, csPin, GPIO_PIN_SET);
@@ -983,7 +971,7 @@ void MEMS_SetCS(MEMS_HandleTypeDef *hmems, GPIO_TypeDef *csPort, uint16_t csPin)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI5;
-    HAL_GPIO_Init(MEMS_SPI_SCK_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(MEMS_SPI_SCK_GPIO_PORT, &GPIO_InitStruct);
 
     /* MEMS_SetCS is a void helper, no return value */
     (void)0;

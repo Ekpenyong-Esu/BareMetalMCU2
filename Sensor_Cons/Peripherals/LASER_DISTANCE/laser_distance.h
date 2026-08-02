@@ -57,8 +57,6 @@ typedef struct {
     uint16_t averagingSamples;   /**< Number of samples for averaging */
     uint32_t measurementTimeout; /**< Measurement timeout in ms */
     uint8_t i2cAddress;          /**< I2C slave address */
-    bool longRangeMode;          /**< Enable long range mode (if supported) */
-    bool highAccuracyMode;       /**< Enable high accuracy mode (if supported) */
 } LASER_DISTANCE_Config_t;
 
 /**

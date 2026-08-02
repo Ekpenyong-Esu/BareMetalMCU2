@@ -13,9 +13,9 @@ extern "C" {
 #include "stm32f4xx_hal.h"
 #include "uart_ring_buffer.h"
 
-/* Global completion flags - declared in uart_example.c */
+/* Completion flags owned by uart.c, where the HAL callbacks set them */
 extern volatile uint8_t txComplete;
-extern volatile uint8_t uartExampleRxComplete;
+extern volatile uint8_t rxComplete;
 
 /* Default UART configuration */
 #define UART_DEFAULT_BAUDRATE     115200
@@ -34,10 +34,6 @@ extern volatile uint8_t uartExampleRxComplete;
 #define UART_DMA_RX_CHANNEL      DMA_CHANNEL_4
 #define UART_DMA_TX_STREAM       DMA2_Stream7
 #define UART_DMA_RX_STREAM       DMA2_Stream5
-
-/* Error recovery delay constants */
-#define UART_ERROR_RECOVERY_DELAY 1000
-#define UART_RETRY_DELAY          500
 
 /* Buffer sizes */
 #define RX_BUFFER_SIZE     512  /* Match UART_RX_BUFFER_SIZE */

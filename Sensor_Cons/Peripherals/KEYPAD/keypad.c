@@ -10,8 +10,12 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "keypad.h"
+#include "gpio.h"
 
 /* Private constants ---------------------------------------------------------*/
+
+/** @brief Busy-wait iterations allowing a driven row to settle before sampling */
+#define KEYPAD_SETTLE_LOOPS 10U
 
 /** @brief Default keymap for 4x4 matrix keypad */
 static const char DEFAULT_KEYMAP[KEYPAD_ROWS][KEYPAD_COLS] = {
@@ -24,33 +28,6 @@ static const char DEFAULT_KEYMAP[KEYPAD_ROWS][KEYPAD_COLS] = {
 /* Private functions ---------------------------------------------------------*/
 
 /**
- * @brief   Enable GPIO clock for a port
- * @param   port GPIO port
- */
-static void Keypad_EnableClock(GPIO_TypeDef* port)
-{
-    if (port == GPIOA) {
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-    } else if (port == GPIOB) {
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-    } else if (port == GPIOC) {
-        __HAL_RCC_GPIOC_CLK_ENABLE();
-    } else if (port == GPIOD) {
-        __HAL_RCC_GPIOD_CLK_ENABLE();
-    } else if (port == GPIOE) {
-        __HAL_RCC_GPIOE_CLK_ENABLE();
-    } else if (port == GPIOF) {
-        __HAL_RCC_GPIOF_CLK_ENABLE();
-    } else if (port == GPIOG) {
-        __HAL_RCC_GPIOG_CLK_ENABLE();
-    } else if (port == GPIOH) {
-        __HAL_RCC_GPIOH_CLK_ENABLE();
-    } else if (port == GPIOI) {
-        __HAL_RCC_GPIOI_CLK_ENABLE();
-    }
-}
-
-/**
  * @brief   Initialize GPIO pins for keypad
  * @param   config Pointer to keypad configuration
  */
@@ -59,14 +36,13 @@ static void Keypad_GPIO_Init(const KeypadConfig_t* config)
     GPIO_InitTypeDef gpioInit = {0};
 
     /* Initialize row pins as outputs (directly drive low for scanning) */
+    /* GPIO driver enables the port clock for each row/column port */
     for (uint8_t i = 0; i < KEYPAD_ROWS; i++) {
-        Keypad_EnableClock(config->rows[i].port);
-
         gpioInit.Pin = config->rows[i].pin;
         gpioInit.Mode = GPIO_MODE_OUTPUT_PP;
         gpioInit.Pull = GPIO_NOPULL;
         gpioInit.Speed = GPIO_SPEED_FREQ_LOW;
-        HAL_GPIO_Init(config->rows[i].port, &gpioInit);
+        GPIO_Driver_Pin_Init(config->rows[i].port, &gpioInit);
 
         /* Set all rows high initially */
         HAL_GPIO_WritePin(config->rows[i].port, config->rows[i].pin, GPIO_PIN_SET);
@@ -74,13 +50,22 @@ static void Keypad_GPIO_Init(const KeypadConfig_t* config)
 
     /* Initialize column pins as inputs with pull-up resistors */
     for (uint8_t i = 0; i < KEYPAD_COLS; i++) {
-        Keypad_EnableClock(config->cols[i].port);
-
         gpioInit.Pin = config->cols[i].pin;
         gpioInit.Mode = GPIO_MODE_INPUT;
         gpioInit.Pull = GPIO_PULLUP;
         gpioInit.Speed = GPIO_SPEED_FREQ_LOW;
-        HAL_GPIO_Init(config->cols[i].port, &gpioInit);
+        GPIO_Driver_Pin_Init(config->cols[i].port, &gpioInit);
+    }
+}
+
+/**
+ * @brief   Drive every row high (the idle state between scans)
+ * @param   config Pointer to keypad configuration
+ */
+static void Keypad_SetAllRowsHigh(const KeypadConfig_t* config)
+{
+    for (uint8_t i = 0; i < KEYPAD_ROWS; i++) {
+        HAL_GPIO_WritePin(config->rows[i].port, config->rows[i].pin, GPIO_PIN_SET);
     }
 }
 
@@ -91,12 +76,7 @@ static void Keypad_GPIO_Init(const KeypadConfig_t* config)
  */
 static void Keypad_SetRowLow(const KeypadConfig_t* config, uint8_t row)
 {
-    /* Set all rows high first */
-    for (uint8_t i = 0; i < KEYPAD_ROWS; i++) {
-        HAL_GPIO_WritePin(config->rows[i].port, config->rows[i].pin, GPIO_PIN_SET);
-    }
-
-    /* Set the specified row low */
+    Keypad_SetAllRowsHigh(config);
     HAL_GPIO_WritePin(config->rows[row].port, config->rows[row].pin, GPIO_PIN_RESET);
 }
 
@@ -113,44 +93,36 @@ static bool Keypad_ReadColumn(const KeypadConfig_t* config, uint8_t col)
 
 /**
  * @brief   Scan the keypad matrix
- * @param   handle Pointer to keypad handle
+ * @param   config Pointer to keypad configuration
  * @param   row Pointer to store detected row
  * @param   col Pointer to store detected column
  * @retval  true if a key is detected, false otherwise
  */
-static bool Keypad_ScanMatrix(KeypadHandle_t* handle, uint8_t* row, uint8_t* col)
+static bool Keypad_ScanMatrix(const KeypadConfig_t* config, uint8_t* row, uint8_t* col)
 {
-    for (uint8_t r = 0; r < KEYPAD_ROWS; r++) {
-        Keypad_SetRowLow(&handle->config, r);
+    bool found = false;
 
-        /* Small delay for signal settling */
-        for (volatile uint32_t i = 0; i < 10; i++) {
+    for (uint8_t r = 0; r < KEYPAD_ROWS && !found; r++) {
+        Keypad_SetRowLow(config, r);
+
+        /* Let the pull-ups settle before sampling the columns */
+        for (volatile uint32_t i = 0; i < KEYPAD_SETTLE_LOOPS; i++) {
             __NOP();
         }
 
         for (uint8_t c = 0; c < KEYPAD_COLS; c++) {
-            if (Keypad_ReadColumn(&handle->config, c)) {
+            if (Keypad_ReadColumn(config, c)) {
                 *row = r;
                 *col = c;
-
-                /* Reset all rows high */
-                for (uint8_t i = 0; i < KEYPAD_ROWS; i++) {
-                    HAL_GPIO_WritePin(handle->config.rows[i].port,
-                                      handle->config.rows[i].pin, GPIO_PIN_SET);
-                }
-
-                return true;
+                found = true;
+                break;
             }
         }
     }
 
-    /* Reset all rows high */
-    for (uint8_t i = 0; i < KEYPAD_ROWS; i++) {
-        HAL_GPIO_WritePin(handle->config.rows[i].port,
-                          handle->config.rows[i].pin, GPIO_PIN_SET);
-    }
+    Keypad_SetAllRowsHigh(config);
 
-    return false;
+    return found;
 }
 
 /* Exported functions --------------------------------------------------------*/
@@ -243,32 +215,28 @@ char Keypad_GetKey(KeypadHandle_t* handle)
     char key = KEYPAD_NO_KEY;
 
     /* Scan for pressed key */
-    if (Keypad_ScanMatrix(handle, &row, &col)) {
+    if (Keypad_ScanMatrix(&handle->config, &row, &col)) {
         key = handle->keyMap[row][col];
     }
 
     uint32_t currentTime = HAL_GetTick();
 
-    /* Debounce logic */
+    /* Reading changed: restart the debounce window */
     if (key != handle->currentKey) {
-        /* Key state changed, start debounce timer */
         handle->currentKey = key;
         handle->lastKeyTime = currentTime;
         return KEYPAD_NO_KEY;
     }
 
-    /* Check if debounce time has passed */
+    /* Only act once the reading has been stable for the debounce interval */
     if ((currentTime - handle->lastKeyTime) >= handle->config.debounceMs) {
-        if (key != KEYPAD_NO_KEY && key != handle->lastKey) {
-            /* New key detected after debounce */
+        if (key == KEYPAD_NO_KEY) {
+            /* A stable release re-arms the next press */
+            handle->lastKey = KEYPAD_NO_KEY;
+        } else if (key != handle->lastKey) {
             handle->lastKey = key;
             return key;
         }
-    }
-
-    /* Key released */
-    if (key == KEYPAD_NO_KEY) {
-        handle->lastKey = KEYPAD_NO_KEY;
     }
 
     return KEYPAD_NO_KEY;
@@ -286,7 +254,7 @@ char Keypad_GetKeyRaw(KeypadHandle_t* handle)
     }
 
     uint8_t row, col;
-    if (Keypad_ScanMatrix(handle, &row, &col)) {
+    if (Keypad_ScanMatrix(&handle->config, &row, &col)) {
         return handle->keyMap[row][col];
     }
 
@@ -305,7 +273,7 @@ bool Keypad_IsKeyPressed(KeypadHandle_t* handle)
     }
 
     uint8_t row, col;
-    return Keypad_ScanMatrix(handle, &row, &col);
+    return Keypad_ScanMatrix(&handle->config, &row, &col);
 }
 
 /**
@@ -347,7 +315,7 @@ bool Keypad_GetKeyPosition(KeypadHandle_t* handle, uint8_t* row, uint8_t* col)
         return false;
     }
 
-    return Keypad_ScanMatrix(handle, row, col);
+    return Keypad_ScanMatrix(&handle->config, row, col);
 }
 
 /**

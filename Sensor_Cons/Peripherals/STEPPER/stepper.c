@@ -61,21 +61,11 @@ static const uint8_t waveDriveSequence[4][4] = {
 
 /* Private variables ---------------------------------------------------------*/
 
-/** @defgroup STEPPER_Private_Variables Private Variables
- * @{
- */
-
-/* Global stepper handle for interrupt handling */
-static STEPPER_Handle_t *g_hstep = NULL;
-
-/** @} */
-
 /* Private function prototypes -----------------------------------------------*/
 static void STEPPER_MspInit(STEPPER_Handle_t *hstep);
 static void STEPPER_MspDeInit(STEPPER_Handle_t *hstep);
 static void STEPPER_SetStep(STEPPER_Handle_t *hstep, uint8_t step);
 static uint8_t STEPPER_GetMaxSteps(STEPPER_StepMode_t mode);
-static uint32_t STEPPER_CalculateDelay(uint16_t rpm, uint16_t stepsPerRev);
 static STEPPER_StatusTypeDef STEPPER_ValidateConfig(STEPPER_Config_t *config);
 static STEPPER_StatusTypeDef STEPPER_MoveStep(STEPPER_Handle_t *hstep);
 
@@ -101,7 +91,6 @@ STEPPER_StatusTypeDef STEPPER_Init(STEPPER_Handle_t *hstep,
     memset(hstep, 0, sizeof(STEPPER_Handle_t));
     hstep->htim = htim;
     hstep->pins = *pins;
-    g_hstep = hstep;
 
     /* Initialize MSP (GPIO pins) */
     STEPPER_MspInit(hstep);
@@ -137,7 +126,6 @@ STEPPER_StatusTypeDef STEPPER_DeInit(STEPPER_Handle_t *hstep)
     STEPPER_MspDeInit(hstep);
 
     hstep->isInitialized = false;
-    g_hstep = NULL;
 
     return STEPPER_OK;
 }
@@ -164,7 +152,7 @@ STEPPER_StatusTypeDef STEPPER_Config(STEPPER_Handle_t *hstep, STEPPER_Config_t *
     hstep->config = *config;
 
     /* Calculate step delay for default speed */
-    hstep->stepDelay = STEPPER_CalculateDelay(60, config->stepsPerRevolution); /* 60 RPM default */
+    hstep->stepDelay = STEPPER_RPMToDelay(60, config->stepsPerRevolution); /* 60 RPM default */
 
     return STEPPER_OK;
 }
@@ -197,10 +185,7 @@ STEPPER_StatusTypeDef STEPPER_MoveSteps(STEPPER_Handle_t *hstep,
 
     /* Set direction and speed */
     hstep->direction = direction;
-    hstep->currentSpeed = speed;
-    hstep->stepDelay = STEPPER_CalculateDelay(speed, hstep->config.stepsPerRevolution);
-    hstep->targetPosition = hstep->currentPosition +
-                           (direction == STEPPER_DIR_CW ? steps : -(int32_t)steps);
+    hstep->stepDelay = STEPPER_RPMToDelay(speed, hstep->config.stepsPerRevolution);
 
     /* Start movement */
     hstep->isRunning = true;
@@ -247,46 +232,6 @@ STEPPER_StatusTypeDef STEPPER_MoveToPosition(STEPPER_Handle_t *hstep,
 }
 
 /**
- * @brief   Rotate stepper motor continuously
- * @details Starts continuous rotation at specified speed
- * @param   hstep Pointer to stepper motor handle
- * @param   direction Direction of rotation
- * @param   speed Speed in RPM
- * @retval  STEPPER_StatusTypeDef Operation status
- */
-STEPPER_StatusTypeDef STEPPER_RotateContinuous(STEPPER_Handle_t *hstep,
-                                              STEPPER_Direction_t direction,
-                                              uint16_t speed)
-{
-    if (hstep == NULL || !hstep->isInitialized) {
-        return STEPPER_NOT_INITIALIZED;
-    }
-
-    if (hstep->isRunning) {
-        return STEPPER_BUSY;
-    }
-
-    /* Set parameters */
-    hstep->direction = direction;
-    hstep->currentSpeed = speed;
-    hstep->stepDelay = STEPPER_CalculateDelay(speed, hstep->config.stepsPerRevolution);
-    hstep->isRunning = true;
-
-    /* In a real implementation, this would start a timer interrupt
-       For now, we'll simulate continuous rotation with a loop */
-    while (hstep->isRunning) {
-        STEPPER_MoveStep(hstep);
-
-        /* Delay between steps */
-        for (volatile uint32_t delay = 0; delay < hstep->stepDelay * 10; delay++) {
-            /* Busy wait */
-        }
-    }
-
-    return STEPPER_OK;
-}
-
-/**
  * @brief   Stop stepper motor
  * @details Stops motor movement immediately
  * @param   hstep Pointer to stepper motor handle
@@ -307,17 +252,6 @@ STEPPER_StatusTypeDef STEPPER_Stop(STEPPER_Handle_t *hstep)
     HAL_GPIO_WritePin(hstep->pins.port4, hstep->pins.pin4, GPIO_PIN_RESET);
 
     return STEPPER_OK;
-}
-
-/**
- * @brief   Emergency stop stepper motor
- * @details Stops motor immediately without deceleration
- * @param   hstep Pointer to stepper motor handle
- * @retval  STEPPER_StatusTypeDef Operation status
- */
-STEPPER_StatusTypeDef STEPPER_EmergencyStop(STEPPER_Handle_t *hstep)
-{
-    return STEPPER_Stop(hstep);
 }
 
 /**
@@ -392,63 +326,6 @@ STEPPER_StatusTypeDef STEPPER_GetStatus(STEPPER_Handle_t *hstep)
 }
 
 /**
- * @brief   Enable/disable limit switches
- * @details Configures limit switch functionality
- * @param   hstep Pointer to stepper motor handle
- * @param   enable Enable/disable limit switches
- * @retval  STEPPER_StatusTypeDef Operation status
- */
-STEPPER_StatusTypeDef STEPPER_EnableLimitSwitches(STEPPER_Handle_t *hstep, bool enable)
-{
-    if (hstep == NULL) {
-        return STEPPER_INVALID_PARAM;
-    }
-
-    hstep->config.enableLimitSwitches = enable;
-
-    return STEPPER_OK;
-}
-
-/**
- * @brief   Home stepper motor
- * @details Moves motor to home position using limit switches
- * @param   hstep Pointer to stepper motor handle
- * @param   direction Direction to move for homing
- * @param   speed Homing speed in RPM
- * @retval  STEPPER_StatusTypeDef Operation status
- */
-STEPPER_StatusTypeDef STEPPER_Home(STEPPER_Handle_t *hstep,
-                                  STEPPER_Direction_t direction,
-                                  uint16_t speed)
-{
-    /* Basic homing implementation - in real application, would check limit switches */
-    /* For now, just move to position 0 */
-    return STEPPER_MoveToPosition(hstep, 0, speed);
-}
-
-/**
- * @brief   Set acceleration/deceleration
- * @details Configures acceleration and deceleration parameters
- * @param   hstep Pointer to stepper motor handle
- * @param   acceleration Acceleration in steps/sec²
- * @param   deceleration Deceleration in steps/sec²
- * @retval  STEPPER_StatusTypeDef Operation status
- */
-STEPPER_StatusTypeDef STEPPER_SetAcceleration(STEPPER_Handle_t *hstep,
-                                             uint16_t acceleration,
-                                             uint16_t deceleration)
-{
-    if (hstep == NULL) {
-        return STEPPER_INVALID_PARAM;
-    }
-
-    hstep->config.acceleration = acceleration;
-    hstep->config.deceleration = deceleration;
-
-    return STEPPER_OK;
-}
-
-/**
  * @brief   Convert RPM to step delay
  * @details Calculates delay between steps for given RPM
  * @param   rpm Speed in RPM
@@ -511,10 +388,7 @@ STEPPER_Config_t STEPPER_GetDefaultConfig(void)
     STEPPER_Config_t config = {
         .stepsPerRevolution = STEPPER_DEFAULT_STEPS_PER_REV,
         .maxSpeedRPM = 500,
-        .acceleration = 1000,
-        .deceleration = 1000,
-        .stepMode = STEPPER_MODE_FULL_STEP,
-        .enableLimitSwitches = false
+        .stepMode = STEPPER_MODE_FULL_STEP
     };
 
     return config;
@@ -550,9 +424,7 @@ static void STEPPER_MspInit(STEPPER_Handle_t *hstep)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* Enable GPIO clocks for all used ports */
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOE_CLK_ENABLE();
+    /* GPIO driver enables the port clocks */
 
     /* Configure coil pins */
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -561,19 +433,19 @@ static void STEPPER_MspInit(STEPPER_Handle_t *hstep)
 
     /* Coil 1 */
     GPIO_InitStruct.Pin = hstep->pins.pin1;
-    HAL_GPIO_Init(hstep->pins.port1, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(hstep->pins.port1, &GPIO_InitStruct);
 
     /* Coil 2 */
     GPIO_InitStruct.Pin = hstep->pins.pin2;
-    HAL_GPIO_Init(hstep->pins.port2, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(hstep->pins.port2, &GPIO_InitStruct);
 
     /* Coil 3 */
     GPIO_InitStruct.Pin = hstep->pins.pin3;
-    HAL_GPIO_Init(hstep->pins.port3, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(hstep->pins.port3, &GPIO_InitStruct);
 
     /* Coil 4 */
     GPIO_InitStruct.Pin = hstep->pins.pin4;
-    HAL_GPIO_Init(hstep->pins.port4, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(hstep->pins.port4, &GPIO_InitStruct);
 
     /* Set all coils to low initially */
     HAL_GPIO_WritePin(hstep->pins.port1, hstep->pins.pin1, GPIO_PIN_RESET);
@@ -612,16 +484,16 @@ static void STEPPER_SetStep(STEPPER_Handle_t *hstep, uint8_t step)
     /* Get the appropriate step sequence */
     switch (hstep->config.stepMode) {
         case STEPPER_MODE_FULL_STEP:
-            stepPattern = fullStepSequence[step % 4];
+            stepPattern = fullStepSequence[step % maxSteps];
             break;
         case STEPPER_MODE_HALF_STEP:
-            stepPattern = halfStepSequence[step % 8];
+            stepPattern = halfStepSequence[step % maxSteps];
             break;
         case STEPPER_MODE_WAVE_DRIVE:
-            stepPattern = waveDriveSequence[step % 4];
+            stepPattern = waveDriveSequence[step % maxSteps];
             break;
         default:
-            stepPattern = fullStepSequence[step % 4];
+            stepPattern = fullStepSequence[step % maxSteps];
             break;
     }
 
@@ -650,27 +522,9 @@ static uint8_t STEPPER_GetMaxSteps(STEPPER_StepMode_t mode)
             return 4;
         case STEPPER_MODE_HALF_STEP:
             return 8;
-        case STEPPER_MODE_MICROSTEP_4:
-            return 16;
-        case STEPPER_MODE_MICROSTEP_8:
-            return 32;
-        case STEPPER_MODE_MICROSTEP_16:
-            return 64;
         default:
             return 4;
     }
-}
-
-/**
- * @brief   Calculate step delay from RPM
- * @details Converts RPM to microseconds delay between steps
- * @param   rpm Speed in RPM
- * @param   stepsPerRev Steps per revolution
- * @retval  uint32_t Delay in microseconds
- */
-static uint32_t STEPPER_CalculateDelay(uint16_t rpm, uint16_t stepsPerRev)
-{
-    return STEPPER_RPMToDelay(rpm, stepsPerRev);
 }
 
 /**
@@ -701,23 +555,21 @@ static STEPPER_StatusTypeDef STEPPER_ValidateConfig(STEPPER_Config_t *config)
  */
 static STEPPER_StatusTypeDef STEPPER_MoveStep(STEPPER_Handle_t *hstep)
 {
-    static uint8_t currentStep = 0;
-
     /* Set step pattern */
-    STEPPER_SetStep(hstep, currentStep);
+    STEPPER_SetStep(hstep, hstep->currentStep);
 
     /* Update position */
     if (hstep->direction == STEPPER_DIR_CW) {
         hstep->currentPosition++;
-        currentStep++;
+        hstep->currentStep++;
     } else {
         hstep->currentPosition--;
-        currentStep--;
+        hstep->currentStep--;
     }
 
     /* Wrap step counter */
     uint8_t maxSteps = STEPPER_GetMaxSteps(hstep->config.stepMode);
-    currentStep %= maxSteps;
+    hstep->currentStep %= maxSteps;
 
     return STEPPER_OK;
 }

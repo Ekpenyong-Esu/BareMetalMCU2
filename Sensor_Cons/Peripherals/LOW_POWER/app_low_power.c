@@ -27,7 +27,6 @@
 #define APP_DISPLAY_DIM_TIMEOUT_MS       5000    /* 5 seconds */
 #define APP_DISPLAY_OFF_TIMEOUT_MS       10000   /* 10 seconds */
 #define APP_LOW_POWER_SHORT_MS           120000  /* 2 minutes */
-#define APP_LOW_POWER_MEDIUM_MS          600000  /* 10 minutes */
 #define APP_SDRAM_STABILIZE_MS           10
 #define APP_FADE_DIM_MS                  300
 #define APP_FADE_POWER_MS                500
@@ -49,11 +48,7 @@ static bool display_is_dimmed = false;
 static bool touchscreen_is_active = true;
 static bool sdram_is_active = true;
 /* Last accepted touch tick for debounce */
-static uint32_t _app_last_touch_tick = 0;
-
-/* GUI state backup */
-static int temp_value_backup = DEFAULT_TEMP_VALUE;
-static int humidity_value_backup = DEFAULT_HUMIDITY_VALUE;
+static uint32_t last_touch_tick = 0;
 
 /* Dim overlay */
 static lv_obj_t *s_dim_overlay = NULL;
@@ -67,7 +62,6 @@ static void APP_TouchscreenPowerOff(void);
 static void APP_TouchscreenPowerOn(void);
 static void APP_SDRAM_PowerOff(void);
 static void APP_SDRAM_PowerOn(void);
-static void APP_SaveGUIState(void);
 static void APP_RestoreGUIState(void);
 static void APP_FadeToBlack(uint32_t msec, bool power_off_after);
 static void APP_FadeFromBlack(uint32_t msec);
@@ -92,7 +86,7 @@ PWR_StatusTypeDef APP_LowPowerInit(void)
      * Ensure TS_Init()/TS_ITConfig is run before entering low power if wake is required. */
     log_debug("APP: Wakeup pins delegated to touchscreen driver");
 
-    /* Ensure backlight GPIO is configured */
+    /* GPIOK is outside the GPIO driver's supported A-I range, so init it directly. */
     __HAL_RCC_GPIOK_CLK_ENABLE();
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = LCD_BL_Pin;
@@ -122,36 +116,31 @@ void APP_UpdateActivity(void)
  */
 void APP_TouchActivity(void)
 {
-    uint32_t _now = HAL_GetTick();
+    uint32_t now = HAL_GetTick();
 
-    /* Coalesce repeated touch activity calls coming from EXTI and LVGL input.
-     * Some hardware/drivers trigger both an EXTI callback and LVGL sampling
-     * on the same touch. Ignore duplicate calls within debounce window. */
-    if ((_now - _app_last_touch_tick) < APP_TOUCH_ACTIVITY_DEBOUNCE_MS)
+    /* Some hardware triggers both an EXTI callback and LVGL sampling for a single
+       touch; ignore the duplicate. */
+    if ((now - last_touch_tick) < APP_TOUCH_ACTIVITY_DEBOUNCE_MS)
     {
         log_debug("APP: Touch activity ignored (debounce)");
         return;
     }
 
-    _app_last_touch_tick = _now;
-    last_activity_time = _now;
+    last_touch_tick = now;
+    last_activity_time = now;
 
     log_debug("APP: Touch activity detected");
 
-    /* Undim if dimmed */
     if (display_is_dimmed)
     {
         APP_DisplayDim(false);
-        display_is_dimmed = false;
     }
 
-    /* Power on if off */
     if (!display_is_on)
     {
         APP_DisplayPowerOn();
     }
 
-    /* Ensure touchscreen is active */
     if (!touchscreen_is_active)
     {
         APP_TouchscreenPowerOn();
@@ -167,17 +156,17 @@ bool APP_ShouldEnterLowPower(void)
     uint32_t current_time = HAL_GetTick();
     uint32_t inactive_time = current_time - last_activity_time;
 
-    /* Dim timeout */
-    if (inactive_time >= APP_DISPLAY_DIM_TIMEOUT_MS && !display_is_dimmed && display_is_on)
+    /* Later deadline first: dimming happens on the way to power-off, so testing
+       the dim state here would permanently block the power-off branch. */
+    if (display_is_on && inactive_time >= APP_DISPLAY_OFF_TIMEOUT_MS)
     {
-        APP_DisplayDim(true);
+        APP_DisplayPowerOff();
         return false;
     }
 
-    /* Display off timeout */
-    if (inactive_time >= APP_DISPLAY_OFF_TIMEOUT_MS && display_is_on && !display_is_dimmed)
+    if (display_is_on && !display_is_dimmed && inactive_time >= APP_DISPLAY_DIM_TIMEOUT_MS)
     {
-        APP_DisplayPowerOff();
+        APP_DisplayDim(true);
         return false;
     }
 
@@ -207,26 +196,18 @@ PWR_StatusTypeDef APP_EnterLowPowerMode(void)
     PWR_LowPowerConfigTypeDef config;
     PWR_GetDefaultLowPowerConfig(&config);
 
-    /* Select mode based on inactivity */
+    /* wakeupSources stays 0: EXTI (touch INT) is the only wake source */
     if (inactive_time < APP_LOW_POWER_SHORT_MS)
     {
         config.mode = PWR_LOW_POWER_MODE_LIGHT;
         config.keepPeripherals = true;
-        config.wakeupSources = 0;  /* EXTI wake-up only */
-    }
-    else if (inactive_time < APP_LOW_POWER_MEDIUM_MS)
-    {
-        config.mode = PWR_LOW_POWER_MODE_DEEP;
-        config.keepPeripherals = false;
-        config.wakeupSources = 0;  /* EXTI wake-up only */
     }
     else
     {
-        /* Use DEEP for long sleep (EXTI can wake from Stop mode) */
         config.mode = PWR_LOW_POWER_MODE_DEEP;
         config.keepPeripherals = false;
-        config.wakeupSources = 0;
     }
+    config.wakeupSources = 0;
 
     config.wakeupTimeMs = APP_LOW_POWER_SHORT_MS;
     config.optimizeVoltage = true;
@@ -248,17 +229,13 @@ PWR_StatusTypeDef PWR_OptimizeForLowPower(bool keepPeripherals)
 
     if (!keepPeripherals)
     {
-        /* Save GUI state first */
-        APP_SaveGUIState();
-
         /* Power off display and touchscreen but keep INT enabled */
         APP_DisplayPowerOff();
 
-        /* Wait briefly for fade animation to complete so LVGL callbacks finish
-         * and any overlay objects are removed before we power off peripherals
-         * (prevents dangling LVGL objects or callbacks against powered-down SDRAM/LTDC). */
-        uint32_t _wait_start = HAL_GetTick();
-        while (s_dim_overlay && (HAL_GetTick() - _wait_start) < 1000)
+        /* Let the fade animation finish so LVGL callbacks release the overlay before
+           the SDRAM/LTDC it draws into are powered down. */
+        uint32_t wait_start = HAL_GetTick();
+        while (s_dim_overlay && (HAL_GetTick() - wait_start) < 1000)
         {
             lv_timer_handler();
             HAL_Delay(5);
@@ -475,11 +452,11 @@ static void APP_FadeToBlack(uint32_t msec, bool power_off_after)
  */
 static void APP_FadeFromBlack(uint32_t msec)
 {
-    if (!s_dim_overlay) { return; }
-
-    /* Ensure backlight is on */
+    /* Restore brightness state unconditionally; only the animation needs an overlay. */
     HAL_GPIO_WritePin(LCD_BL_GPIO_Port, LCD_BL_Pin, GPIO_PIN_SET);
     display_is_dimmed = false;
+
+    if (!s_dim_overlay) { return; }
 
     lv_anim_t anim;
     lv_anim_init(&anim);
@@ -616,22 +593,14 @@ static void APP_SDRAM_PowerOn(void)
 
 /* State management ----------------------------------------------------------*/
 
-static void APP_SaveGUIState(void)
-{
-    log_debug("APP: Saving GUI state");
-    temp_value_backup = DEFAULT_TEMP_VALUE;
-    humidity_value_backup = DEFAULT_HUMIDITY_VALUE;
-}
-
 static void APP_RestoreGUIState(void)
 {
     log_debug("APP: Restoring GUI state");
 
-    /* Reinitialize LVGL application */
+    /* LVGL_App exposes only setters, so there is nothing to snapshot on the way
+       down; the UI comes back up showing its defaults. */
     LVGL_App_Init();
-
-    /* Restore values */
-    LVGL_App_UpdateTemperature(temp_value_backup);
-    LVGL_App_UpdateHumidity(humidity_value_backup);
+    LVGL_App_UpdateTemperature(DEFAULT_TEMP_VALUE);
+    LVGL_App_UpdateHumidity(DEFAULT_HUMIDITY_VALUE);
     LVGL_App_UpdateStatus("System Active");
 }

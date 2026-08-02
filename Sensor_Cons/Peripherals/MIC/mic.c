@@ -11,6 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "mic.h"
+#include "gpio.h"
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
@@ -37,7 +38,6 @@ static void MIC_ProcessPDMData(MIC_HandleTypeDef *hmic);
 static void MIC_ApplyVolumeControl(MIC_HandleTypeDef *hmic, int16_t *buffer, uint32_t length);
 static void MIC_ApplyGainControl(MIC_HandleTypeDef *hmic, int16_t *buffer, uint32_t length);
 static void MIC_UpdateStatistics(MIC_HandleTypeDef *hmic, int16_t *buffer, uint32_t length);
-static MIC_StatusTypeDef MIC_ConfigurePDMFilter(MIC_HandleTypeDef *hmic);
 static bool MIC_IsNoiseGateOpen(MIC_HandleTypeDef *hmic, float level);
 static void MIC_PerformFFT(int16_t *input, float *magnitude, uint32_t length);
 static float MIC_CalculateSpectralCentroid(float *spectrum, uint32_t length, uint32_t sample_rate);
@@ -87,23 +87,15 @@ MIC_StatusTypeDef MIC_Init(MIC_HandleTypeDef *hmic, I2S_HandleTypeDef *hi2s, DMA
     /* Set default configuration */
     MIC_ConfigTypeDef default_config = {
         .SampleRate = MIC_SAMPLE_RATE_16KHZ,
-        .AudioFormat = MIC_FORMAT_PCM16,
         .Gain = MIC_GAIN_0DB,
         .Volume = MIC_DEFAULT_VOLUME,
         .NoiseGateEnable = false,
         .NoiseGateThreshold = MIC_NOISE_FLOOR,
-        .AutoGainControl = false,
         .HighPassFilter = true,
         .BufferSize = MIC_PCM_SAMPLES
     };
 
     status = MIC_Configure(hmic, &default_config);
-    if (status != MIC_OK) {
-        return status;
-    }
-
-    /* Configure PDM filter */
-    status = MIC_ConfigurePDMFilter(hmic);
     if (status != MIC_OK) {
         return status;
     }
@@ -216,6 +208,10 @@ MIC_StatusTypeDef MIC_StartRecording(MIC_HandleTypeDef *hmic)
     hmic->AudioBuffer.Position = 0;
     hmic->AudioBuffer.IsFull = false;
     hmic->BufferReady = false;
+
+    /* Drop filter history from the previous recording */
+    hmic->HpPrevInput = 0;
+    hmic->HpPrevOutput = 0;
 
     /* Reset statistics */
     MIC_ResetStatistics(hmic);
@@ -715,8 +711,7 @@ static MIC_StatusTypeDef MIC_InitGPIO(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* Enable GPIO clocks */
-    __HAL_RCC_GPIOC_CLK_ENABLE();
+    /* GPIO driver enables the port clock */
 
     /* Configure I2S CLK pin (PC10) */
     GPIO_InitStruct.Pin = MIC_CLK_PIN;
@@ -724,7 +719,7 @@ static MIC_StatusTypeDef MIC_InitGPIO(void)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF6_SPI3;
-    HAL_GPIO_Init(MIC_CLK_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(MIC_CLK_GPIO_PORT, &GPIO_InitStruct);
 
     /* Configure PDM Data pin (PC3) */
     GPIO_InitStruct.Pin = MIC_DATA_PIN;
@@ -732,7 +727,7 @@ static MIC_StatusTypeDef MIC_InitGPIO(void)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI3;
-    HAL_GPIO_Init(MIC_DATA_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(MIC_DATA_GPIO_PORT, &GPIO_InitStruct);
 
     return MIC_OK;
 }
@@ -752,15 +747,13 @@ static void MIC_ProcessPDMData(MIC_HandleTypeDef *hmic)
 
     /* Apply filters if enabled */
     if (hmic->Config.HighPassFilter) {
-        /* Simple high-pass filter implementation */
-        static int16_t prev_input = 0;
-        static int16_t prev_output = 0;
-
+        /* Filter state lives in the handle so it is per-instance and gets reset
+           on every MIC_StartRecording(). */
         for (uint32_t i = 0; i < MIC_PCM_SAMPLES; i++) {
             int16_t current_input = hmic->PCMBuffer[i];
-            int16_t filtered = (int16_t)(((float)current_input - (float)prev_input + (float)prev_output) * MIC_HP_FILTER_COEFF);
-            prev_input = current_input;
-            prev_output = filtered;
+            int16_t filtered = (int16_t)(((float)current_input - (float)hmic->HpPrevInput + (float)hmic->HpPrevOutput) * MIC_HP_FILTER_COEFF);
+            hmic->HpPrevInput = current_input;
+            hmic->HpPrevOutput = filtered;
             hmic->PCMBuffer[i] = filtered;
         }
     }
@@ -863,23 +856,6 @@ static void MIC_UpdateStatistics(MIC_HandleTypeDef *hmic, int16_t *buffer, uint3
         float noise_floor = MIC_NOISE_FLOOR_LINEAR; /* -60 dB */
         hmic->Statistics.SNR = MIC_DB_SCALE_FACTOR * log10f(rms / noise_floor);
     }
-}
-
-/**
- * @brief Configure PDM filter
- * @param hmic Pointer to microphone handle structure
- * @retval MIC_StatusTypeDef Status of the operation
- */
-static MIC_StatusTypeDef MIC_ConfigurePDMFilter(MIC_HandleTypeDef *hmic)
-{
-    if (hmic == NULL) {
-        return MIC_INVALID_PARAM;
-    }
-
-    /* PDM filter configuration would go here */
-    /* This is a simplified implementation */
-
-    return MIC_OK;
 }
 
 /**

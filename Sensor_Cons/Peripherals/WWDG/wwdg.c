@@ -11,7 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "wwdg.h"
-#include "../LOG/log.h"
+#include "log.h"
 
 /* Private defines -----------------------------------------------------------*/
 #define WWDG_DEFAULT_PRESCALER      WWDG_PRESCALER_8
@@ -210,19 +210,6 @@ WWDG_StatusTypeDef WWDG_RefreshWithCounter(uint32_t counter)
     /* Write new counter value directly */
     WRITE_REG(hwwdg.Instance->CR, (WWDG_CR_WDGA | counter));
 
-    return WWDG_OK;
-}
-
-/**
- * @brief   Start the watchdog
- * @details Enables WWDG countdown
- * @param   None
- * @retval  WWDG_StatusTypeDef Operation status
- * @note    WWDG is started automatically by HAL_WWDG_Init()
- */
-WWDG_StatusTypeDef WWDG_Start(void)
-{
-    /* WWDG is started automatically by HAL_WWDG_Init() */
     return WWDG_OK;
 }
 

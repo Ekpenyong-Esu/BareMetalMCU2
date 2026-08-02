@@ -22,14 +22,13 @@ extern "C" {
 #define LTDC_DISPLAY_HEIGHT         320     /*!< Display height in pixels */
 #define LTDC_MAX_LAYERS             2       /*!< Maximum number of display layers */
 
-#if 0 /* (Legacy) ILI9341 timing parameters - not used */
-#endif
-#define LTDC_HSYNC_WIDTH            9        /*!< Horizontal sync width (from doc) */
-#define LTDC_VSYNC_HEIGHT           1        /*!< Vertical sync height (from doc) */
-#define LTDC_HBP_WIDTH              29       /*!< Horizontal back porch (from doc) */
-#define LTDC_VBP_HEIGHT             3        /*!< Vertical back porch (from doc) */
-#define LTDC_HFP_WIDTH              2        /*!< Horizontal front porch (from doc) */
-#define LTDC_VFP_HEIGHT             2        /*!< Vertical front porch (from doc) */
+/* ILI9341 RGB panel porch timings (true widths, not accumulated register values) */
+#define LTDC_HSYNC_WIDTH            10       /*!< Horizontal sync width */
+#define LTDC_VSYNC_HEIGHT           2        /*!< Vertical sync height */
+#define LTDC_HBP_WIDTH              20       /*!< Horizontal back porch */
+#define LTDC_VBP_HEIGHT             2        /*!< Vertical back porch */
+#define LTDC_HFP_WIDTH              10       /*!< Horizontal front porch */
+#define LTDC_VFP_HEIGHT             4        /*!< Vertical front porch */
 
 /* Memory allocation constants -----------------------------------------------*/
 #define LTDC_BYTES_PER_PIXEL_RGB565 2       /*!< Bytes per pixel for RGB565 format */
@@ -186,7 +185,6 @@ HAL_StatusTypeDef LTDC_WaitForReload(LTDC_Driver_t *driver, uint32_t timeout_ms)
 /* Framebuffer functions */
 HAL_StatusTypeDef LTDC_SetFramebuffer(LTDC_Driver_t *driver, uint8_t layer, uint32_t address);
 HAL_StatusTypeDef LTDC_ClearFramebuffer(LTDC_Driver_t *driver, uint8_t layer, uint32_t color);
-HAL_StatusTypeDef LTDC_FillFramebuffer(LTDC_Driver_t *driver, uint8_t layer, uint32_t color);
 HAL_StatusTypeDef LTDC_CopyFramebuffer(LTDC_Driver_t *driver, uint8_t srcLayer, uint8_t dstLayer);
 
 /* Drawing functions (simplified)
@@ -198,7 +196,6 @@ HAL_StatusTypeDef LTDC_DrawPixel(LTDC_Driver_t *driver, uint16_t x, uint16_t y, 
 
 /* Display control functions */
 HAL_StatusTypeDef LTDC_SetBackgroundColor(LTDC_Driver_t *driver, uint32_t color);
-HAL_StatusTypeDef LTDC_SetDisplayBrightness(LTDC_Driver_t *driver, uint8_t brightness);
 HAL_StatusTypeDef LTDC_DisplayOn(LTDC_Driver_t *driver);
 HAL_StatusTypeDef LTDC_DisplayOff(LTDC_Driver_t *driver);
 

@@ -27,10 +27,14 @@ extern "C" {
 /** @defgroup XPT2046_Display_Specifications Specifications
  * @{
  */
-#define XPT2046_MAX_X                  4095    /**< Maximum X coordinate */
-#define XPT2046_MAX_Y                  4095    /**< Maximum Y coordinate */
-#define XPT2046_MIN_PRESSURE           10      /**< Minimum pressure threshold */
 #define XPT2046_MAX_PRESSURE           4095    /**< Maximum pressure value */
+
+/* Typical raw span of a resistive panel: the touch layer never reaches the ADC
+   rails, so mapping from 0..4095 would make the screen edges unreachable. */
+#define XPT2046_RAW_X_MIN_DEFAULT      200     /**< Default raw X at the left edge */
+#define XPT2046_RAW_X_MAX_DEFAULT      3900    /**< Default raw X at the right edge */
+#define XPT2046_RAW_Y_MIN_DEFAULT      200     /**< Default raw Y at the top edge */
+#define XPT2046_RAW_Y_MAX_DEFAULT      3900    /**< Default raw Y at the bottom edge */
 
 /* Touch states */
 #define XPT2046_STATE_RELEASED         0       /**< Touch released */
@@ -74,9 +78,12 @@ typedef struct {
     uint16_t irq_pin;               /**< Interrupt pin */
     uint16_t width;                 /**< Display width for coordinate mapping */
     uint16_t height;                /**< Display height for coordinate mapping */
+    uint16_t raw_x_min;             /**< Raw X reported at the left edge */
+    uint16_t raw_x_max;             /**< Raw X reported at the right edge */
+    uint16_t raw_y_min;             /**< Raw Y reported at the top edge */
+    uint16_t raw_y_max;             /**< Raw Y reported at the bottom edge */
     bool flip_x;                    /**< Flip X coordinates */
     bool flip_y;                    /**< Flip Y coordinates */
-    uint16_t calibration[7];        /**< Calibration matrix (6 coefficients + offset) */
 } XPT2046_Config_t;
 
 /**
@@ -86,7 +93,6 @@ typedef struct {
     XPT2046_Config_t config;        /**< Configuration */
     XPT2046_TouchPoint_t touch;     /**< Current touch point */
     bool initialized;               /**< Initialization status */
-    uint32_t last_touch_time;       /**< Last touch timestamp */
 } XPT2046_Handle_t;
 
 /* Exported functions -------------------------------------------------------*/
@@ -113,29 +119,19 @@ XPT2046_StatusTypeDef XPT2046_Init(XPT2046_Handle_t *hxpt,
                                   uint16_t width, uint16_t height);
 
 /**
- * @brief   Deinitialize XPT2046 touchscreen controller
- * @details Releases resources and disables the touchscreen
+ * @brief   Replace the default raw span with values measured on the panel
+ * @details Prompting the user for the corner touches belongs to the application.
  * @param   hxpt Pointer to XPT2046 handle
+ * @param   raw_x_min Raw X read at the left edge
+ * @param   raw_x_max Raw X read at the right edge
+ * @param   raw_y_min Raw Y read at the top edge
+ * @param   raw_y_max Raw Y read at the bottom edge
  * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_DeInit(XPT2046_Handle_t *hxpt);
+XPT2046_StatusTypeDef XPT2046_SetCalibration(XPT2046_Handle_t *hxpt,
+                                            uint16_t raw_x_min, uint16_t raw_x_max,
+                                            uint16_t raw_y_min, uint16_t raw_y_max);
 
-/**
- * @brief   Configure XPT2046 touchscreen parameters
- * @details Sets touchscreen configuration options
- * @param   hxpt Pointer to XPT2046 handle
- * @param   config Pointer to configuration structure
- * @retval  XPT2046_StatusTypeDef Operation status
- */
-XPT2046_StatusTypeDef XPT2046_Config(XPT2046_Handle_t *hxpt, XPT2046_Config_t *config);
-
-/**
- * @brief   Set calibration matrix
- * @param   hxpt Pointer to XPT2046 handle
- * @param   calibration Calibration matrix (7 values)
- * @retval  XPT2046_StatusTypeDef Operation status
- */
-XPT2046_StatusTypeDef XPT2046_SetCalibration(XPT2046_Handle_t *hxpt, uint16_t *calibration);
 
 /** @} */
 
@@ -164,51 +160,6 @@ XPT2046_StatusTypeDef XPT2046_ReadTouch(XPT2046_Handle_t *hxpt, XPT2046_TouchPoi
  * @retval  XPT2046_StatusTypeDef Operation status
  */
 XPT2046_StatusTypeDef XPT2046_Update(XPT2046_Handle_t *hxpt);
-
-/**
- * @brief   Get current touch point
- * @param   hxpt Pointer to XPT2046 handle
- * @param   touch Pointer to touch point structure to fill
- * @retval  XPT2046_StatusTypeDef Operation status
- */
-XPT2046_StatusTypeDef XPT2046_GetTouch(XPT2046_Handle_t *hxpt, XPT2046_TouchPoint_t *touch);
-
-/** @} */
-
-/** @defgroup XPT2046_Calibration Touchscreen Calibration
- * @{
- */
-
-/**
- * @brief   Start calibration process
- * @param   hxpt Pointer to XPT2046 handle
- * @retval  XPT2046_StatusTypeDef Operation status
- */
-XPT2046_StatusTypeDef XPT2046_StartCalibration(XPT2046_Handle_t *hxpt);
-
-/**
- * @brief   Get calibration point
- * @param   hxpt Pointer to XPT2046 handle
- * @param   point_index Calibration point index (0-4)
- * @param   x_display Expected X coordinate on display
- * @param   y_display Expected Y coordinate on display
- * @param   x_touch Pointer to store raw X touch value
- * @param   y_touch Pointer to store raw Y touch value
- * @retval  XPT2046_StatusTypeDef Operation status
- */
-XPT2046_StatusTypeDef XPT2046_GetCalibrationPoint(XPT2046_Handle_t *hxpt,
-                                                 uint8_t point_index,
-                                                 uint16_t x_display, uint16_t y_display,
-                                                 uint16_t *x_touch, uint16_t *y_touch);
-
-/**
- * @brief   Compute calibration matrix
- * @param   hxpt Pointer to XPT2046 handle
- * @param   points Array of calibration points (5 points, each with display and touch coordinates)
- * @retval  XPT2046_StatusTypeDef Operation status
- */
-XPT2046_StatusTypeDef XPT2046_ComputeCalibration(XPT2046_Handle_t *hxpt,
-                                                uint16_t points[5][4]); // [point][x_display, y_display, x_touch, y_touch]
 
 /** @} */
 

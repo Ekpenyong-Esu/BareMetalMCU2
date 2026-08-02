@@ -1,13 +1,11 @@
 /**
   ******************************************************************************
   * @file    gpio.h
-  * @brief   GPIO module interface for STM32F429
-  * @details This file contains all the function prototypes for
-  *          the GPIO peripheral configuration and control.
-  *          It provides comprehensive APIs to initialize and control GPIO pins
-  *          on the STM32F429 microcontroller.
-  * @version 2.0
-  * @date    2024-12-19
+  * @brief   Reusable GPIO driver for STM32F4
+  * @details Single entry point for GPIO: configuring a pin, reading/writing pin
+  *          and port state, and unmasking a pin's EXTI line in the NVIC.
+  *          Peripherals call this driver instead of the HAL, so a port to
+  *          another MCU family only has to replace gpio.c.
   ******************************************************************************
   */
 
@@ -21,137 +19,101 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx.h"
 
-
-/* Exported types ------------------------------------------------------------*/
-
-/**
- * @brief GPIO driver handle structure
- */
-typedef struct {
-    GPIO_TypeDef *Port;                    /**< GPIO port (GPIOA-GPIOI) */
-    GPIO_InitTypeDef Init;                 /**< GPIO initialization structure */
-    uint8_t initialized;                   /**< Initialization status flag */
-    uint32_t errorCode;                    /**< Last error code */
-} GPIO_Driver_Handle_t;
-
-/**
- * @brief GPIO driver error codes
- */
-typedef enum {
-    GPIO_DRIVER_ERROR_NONE = 0x00U,       /**< Operation successful */
-    GPIO_DRIVER_ERROR_INIT = 0x01U,       /**< Initialization failed */
-    GPIO_DRIVER_ERROR_CONFIG = 0x02U,     /**< Configuration error */
-    GPIO_DRIVER_ERROR_PIN = 0x04U         /**< Invalid pin specification */
-} GPIO_Driver_Error_t;
-
-/* Exported constants --------------------------------------------------------*/
-
-/* GPIO_PIN_0..GPIO_PIN_15 and GPIO_PIN_All come from stm32f4xx_hal_gpio.h. */
-
-/* Exported macro ------------------------------------------------------------*/
-
 /* Exported functions --------------------------------------------------------*/
 
-/**
- * @brief Initialize GPIO driver handle
- * @param handle: Pointer to GPIO driver handle
- * @retval HAL_StatusTypeDef: Operation status
- */
-HAL_StatusTypeDef GPIO_Driver_Init(GPIO_Driver_Handle_t *handle);
+/* --- Configuration -------------------------------------------------------- */
 
 /**
- * @brief Deinitialize GPIO driver handle
- * @param handle: Pointer to GPIO driver handle
- * @retval HAL_StatusTypeDef: Operation status
+ * @brief  Enable the peripheral clock of a GPIO port
+ * @param  GPIOx: GPIO port (GPIOA..GPIOI)
+ * @retval HAL_OK, or HAL_ERROR if the port is not one of GPIOA..GPIOI
  */
-HAL_StatusTypeDef GPIO_Driver_DeInit(GPIO_Driver_Handle_t *handle);
+HAL_StatusTypeDef GPIO_Driver_ClockEnable(GPIO_TypeDef *GPIOx);
 
 /**
- * @brief Configure a single GPIO pin (enables the port clock first)
- * @param GPIOx: GPIO port
- * @param GPIO_Init: GPIO initialization structure
- * @retval HAL_StatusTypeDef: Operation status
+ * @brief  Configure one or more pins of a port
+ * @param  GPIOx: GPIO port
+ * @param  GPIO_Init: mode, pull, speed and alternate function
+ * @note   Enables the port clock first, so callers never need the per-port
+ *         __HAL_RCC_GPIOx_CLK_ENABLE macro.
+ * @note   A GPIO_MODE_IT_* mode also configures the EXTI line; call
+ *         GPIO_Driver_EnableIRQ afterwards to unmask it in the NVIC.
+ * @retval HAL_OK or HAL_ERROR
  */
 HAL_StatusTypeDef GPIO_Driver_Pin_Init(GPIO_TypeDef *GPIOx, GPIO_InitTypeDef *GPIO_Init);
 
 /**
- * @brief Read GPIO pin state
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @retval GPIO_PinState: Pin state (SET or RESET)
+ * @brief  Reset one or more pins to their default (analog, floating) state
+ * @param  GPIOx: GPIO port
+ * @param  GPIO_Pin: pin mask
+ * @retval HAL_OK or HAL_ERROR
+ */
+HAL_StatusTypeDef GPIO_Driver_Pin_DeInit(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin);
+
+/* --- Pin state ------------------------------------------------------------ */
+
+/**
+ * @brief  Read the level of a single pin
+ * @param  GPIOx: GPIO port
+ * @param  GPIO_Pin: pin mask (one bit)
+ * @retval GPIO_PIN_SET or GPIO_PIN_RESET
  */
 GPIO_PinState GPIO_Driver_ReadPin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin);
 
 /**
- * @brief Write GPIO pin state
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @param PinState: Pin state to be written (SET or RESET)
- * @retval None
+ * @brief  Drive one or more output pins
+ * @param  GPIOx: GPIO port
+ * @param  GPIO_Pin: pin mask
+ * @param  PinState: GPIO_PIN_SET or GPIO_PIN_RESET
  */
 void GPIO_Driver_WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState);
 
 /**
- * @brief Toggle GPIO pin state
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @retval None
+ * @brief  Invert one or more output pins
+ * @param  GPIOx: GPIO port
+ * @param  GPIO_Pin: pin mask
  */
 void GPIO_Driver_TogglePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin);
 
+/* --- Port state ----------------------------------------------------------- */
+
 /**
- * @brief Read GPIO port value
- * @param GPIOx: GPIO port
- * @retval uint16_t: Port value
+ * @brief  Read all 16 pins of a port at once
+ * @param  GPIOx: GPIO port
+ * @retval Port input level, bit n = pin n
  */
 uint16_t GPIO_Driver_ReadPort(GPIO_TypeDef *GPIOx);
 
 /**
- * @brief Write GPIO port value
- * @param GPIOx: GPIO port
- * @param PortValue: Port value
- * @retval None
+ * @brief  Drive all 16 pins of a port at once
+ * @param  GPIOx: GPIO port
+ * @param  PortValue: bit n = pin n
+ * @note   Writes every pin of the port, including ones owned by other drivers.
  */
 void GPIO_Driver_WritePort(GPIO_TypeDef *GPIOx, uint16_t PortValue);
 
-/**
- * @brief Enable GPIO interrupt
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @param edge: Interrupt edge (EXTI_TRIGGER_RISING/FALLING/RISING_FALLING)
- * @retval HAL_StatusTypeDef: Operation status
- */
-HAL_StatusTypeDef GPIO_Driver_EnableIT(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, uint32_t edge);
+/* --- Interrupts ----------------------------------------------------------- */
 
 /**
- * @brief Disable GPIO interrupt
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @retval HAL_StatusTypeDef: Operation status
+ * @brief  Enable the NVIC channel serving a pin's EXTI line
+ * @param  GPIO_Pin: pin mask (one bit)
+ * @param  PreemptPriority: NVIC pre-emption priority
+ * @param  SubPriority: NVIC sub priority
+ * @note   The edge comes from the GPIO_MODE_IT_* mode passed to
+ *         GPIO_Driver_Pin_Init; this only unmasks the interrupt.
+ * @note   Pins 5..9 and 10..15 each share one NVIC channel, so the priority
+ *         applies to every pin in that group.
+ * @retval HAL_OK, or HAL_ERROR if GPIO_Pin is not a single valid pin
  */
-HAL_StatusTypeDef GPIO_Driver_DisableIT(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin);
+HAL_StatusTypeDef GPIO_Driver_EnableIRQ(uint16_t GPIO_Pin, uint32_t PreemptPriority, uint32_t SubPriority);
 
 /**
- * @brief Clear GPIO interrupt pending bit
- * @param GPIO_Pin: GPIO pin
- * @retval None
+ * @brief  Disable the NVIC channel serving a pin's EXTI line
+ * @param  GPIO_Pin: pin mask (one bit)
+ * @note   Disables the whole shared channel for pins 5..15.
+ * @retval HAL_OK, or HAL_ERROR if GPIO_Pin is not a single valid pin
  */
-void GPIO_Driver_ClearITPendingBit(uint16_t GPIO_Pin);
-
-/**
- * @brief Lock GPIO pin configuration
- * @param GPIOx: GPIO port
- * @param GPIO_Pin: GPIO pin
- * @retval HAL_StatusTypeDef: Operation status
- */
-HAL_StatusTypeDef GPIO_Driver_LockPin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin);
-
-/**
- * @brief Get GPIO driver error code
- * @param handle: Pointer to GPIO driver handle
- * @retval uint32_t: Error code
- */
-uint32_t GPIO_Driver_GetError(GPIO_Driver_Handle_t *handle);
+HAL_StatusTypeDef GPIO_Driver_DisableIRQ(uint16_t GPIO_Pin);
 
 #ifdef __cplusplus
 }

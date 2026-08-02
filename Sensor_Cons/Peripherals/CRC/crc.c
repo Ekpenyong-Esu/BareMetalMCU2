@@ -6,13 +6,12 @@
  */
 
 #include "crc.h"
-#include "../LOG/log.h"
+#include "log.h"
 #include <string.h>
 
 /* Private defines */
 #define CRC_CALCULATION_TIMEOUT      1000U
 #define CRC_INIT_TIMEOUT             1000U
-#define CRC_MAX_DATA_SIZE_BYTES      4096U
 #define CRC_MSB_MASK                 0x80000000U
 #define CRC_SHIFT_24                 24U
 #define CRC_BITS_PER_WORD            32U
@@ -117,7 +116,7 @@ HAL_StatusTypeDef CRC_Calculate(const uint8_t *data, uint32_t size, uint32_t *cr
         return HAL_ERROR;
     }
 
-    if (size > CRC_MAX_DATA_SIZE_BYTES) {
+    if (size > CRC_MAX_DATA_SIZE) {
         CRC_ErrorHandler(CRC_ERROR_DATA_SIZE);
         return HAL_ERROR;
     }
@@ -129,7 +128,7 @@ HAL_StatusTypeDef CRC_Calculate(const uint8_t *data, uint32_t size, uint32_t *cr
 
     /* Calculate CRC based on method */
     if (current_config.method == CRC_METHOD_HARDWARE) {
-        *crc = CRC_CalculateSoftware(data, size);
+        *crc = HAL_CRC_Calculate(&hcrc, (uint32_t*)data, size / 4U);
         crc_status.hardware_usage_count++;
     } else {
         *crc = CRC_CalculateSoftware(data, size);

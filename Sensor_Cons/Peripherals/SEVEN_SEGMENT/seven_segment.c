@@ -8,6 +8,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "seven_segment.h"
+#include "gpio.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -35,6 +36,16 @@ static void Seg_HT1621_SendData(SegDisplayHandle_t* handle, uint8_t addr, uint8_
 static void Seg_HT1621_WriteBit(SegDisplayHandle_t* handle, bool bit);
 
 static void Seg_DelayUs(uint32_t us);
+static uint8_t Seg_GetDigitCount(const SegDisplayHandle_t* handle);
+
+/* Private helpers -----------------------------------------------------------*/
+
+/** @brief   Get digit count regardless of driver type */
+static uint8_t Seg_GetDigitCount(const SegDisplayHandle_t* handle) {
+    return (handle->config.driverType == SEG_DRIVER_GPIO)
+           ? handle->config.config.gpio.digitCount
+           : handle->config.config.ht1621.digitCount;
+}
 
 /* Exported functions --------------------------------------------------------*/
 
@@ -77,7 +88,6 @@ SegStatus_t Seg_Init(SegDisplayHandle_t* handle, const SegDisplayConfig_t* confi
 
     handle->currentDigit = 0;
     handle->enabled = true;
-    handle->brightness = 100;
     handle->initialized = true;
 
     return SEG_OK;
@@ -169,41 +179,13 @@ SegStatus_t Seg_Clear(SegDisplayHandle_t* handle)
         return SEG_NOT_INITIALIZED;
     }
 
-    uint8_t digitCount = (handle->config.driverType == SEG_DRIVER_GPIO)
-                         ? handle->config.config.gpio.digitCount
-                         : handle->config.config.ht1621.digitCount;
+    uint8_t digitCount = Seg_GetDigitCount(handle);
 
     memset(handle->displayBuffer, SEG_PATTERN_BLANK, digitCount);
 
     if (handle->config.driverType == SEG_DRIVER_HT1621) {
         Seg_Refresh(handle);
     }
-
-    return SEG_OK;
-}
-
-/**
- * @brief   Set display brightness (HT1621 only)
- */
-SegStatus_t Seg_SetBrightness(SegDisplayHandle_t* handle, uint8_t brightness)
-{
-    if (handle == NULL) {
-        return SEG_INVALID_PARAM;
-    }
-
-    if (!handle->initialized) {
-        return SEG_NOT_INITIALIZED;
-    }
-
-    if (brightness > 100) {
-        brightness = 100;
-    }
-
-    handle->brightness = brightness;
-
-    /* Note: HT1621 doesn't have built-in brightness control
-     * This would require PWM on backlight or bias adjustment
-     * For now, just store the value for potential future use */
 
     return SEG_OK;
 }
@@ -222,9 +204,7 @@ SegStatus_t Seg_SetDigit(SegDisplayHandle_t* handle, uint8_t position,
         return SEG_NOT_INITIALIZED;
     }
 
-    uint8_t digitCount = (handle->config.driverType == SEG_DRIVER_GPIO)
-                         ? handle->config.config.gpio.digitCount
-                         : handle->config.config.ht1621.digitCount;
+    uint8_t digitCount = Seg_GetDigitCount(handle);
 
     if (position >= digitCount || value > 15) {
         return SEG_INVALID_PARAM;
@@ -258,9 +238,7 @@ SegStatus_t Seg_SetPattern(SegDisplayHandle_t* handle, uint8_t position,
         return SEG_NOT_INITIALIZED;
     }
 
-    uint8_t digitCount = (handle->config.driverType == SEG_DRIVER_GPIO)
-                         ? handle->config.config.gpio.digitCount
-                         : handle->config.config.ht1621.digitCount;
+    uint8_t digitCount = Seg_GetDigitCount(handle);
 
     if (position >= digitCount) {
         return SEG_INVALID_PARAM;
@@ -288,9 +266,7 @@ SegStatus_t Seg_DisplayInt(SegDisplayHandle_t* handle, int32_t value)
         return SEG_NOT_INITIALIZED;
     }
 
-    uint8_t digitCount = (handle->config.driverType == SEG_DRIVER_GPIO)
-                         ? handle->config.config.gpio.digitCount
-                         : handle->config.config.ht1621.digitCount;
+    uint8_t digitCount = Seg_GetDigitCount(handle);
 
     bool negative = (value < 0);
     if (negative) {
@@ -349,9 +325,7 @@ SegStatus_t Seg_DisplayFloat(SegDisplayHandle_t* handle, float value,
         return SEG_NOT_INITIALIZED;
     }
 
-    uint8_t digitCount = (handle->config.driverType == SEG_DRIVER_GPIO)
-                         ? handle->config.config.gpio.digitCount
-                         : handle->config.config.ht1621.digitCount;
+    uint8_t digitCount = Seg_GetDigitCount(handle);
 
     if (decimals >= digitCount) {
         decimals = digitCount - 1;
@@ -412,9 +386,7 @@ SegStatus_t Seg_DisplayHex(SegDisplayHandle_t* handle, uint32_t value)
         return SEG_NOT_INITIALIZED;
     }
 
-    uint8_t digitCount = (handle->config.driverType == SEG_DRIVER_GPIO)
-                         ? handle->config.config.gpio.digitCount
-                         : handle->config.config.ht1621.digitCount;
+    uint8_t digitCount = Seg_GetDigitCount(handle);
 
     /* Clear buffer first */
     memset(handle->displayBuffer, SEG_PATTERN_BLANK, digitCount);
@@ -461,9 +433,7 @@ SegStatus_t Seg_SetChar(SegDisplayHandle_t* handle, uint8_t position, char ch)
         return SEG_NOT_INITIALIZED;
     }
 
-    uint8_t digitCount = (handle->config.driverType == SEG_DRIVER_GPIO)
-                         ? handle->config.config.gpio.digitCount
-                         : handle->config.config.ht1621.digitCount;
+    uint8_t digitCount = Seg_GetDigitCount(handle);
 
     if (position >= digitCount) {
         return SEG_INVALID_PARAM;
@@ -491,9 +461,7 @@ SegStatus_t Seg_DisplayString(SegDisplayHandle_t* handle, const char* str)
         return SEG_NOT_INITIALIZED;
     }
 
-    uint8_t digitCount = (handle->config.driverType == SEG_DRIVER_GPIO)
-                         ? handle->config.config.gpio.digitCount
-                         : handle->config.config.ht1621.digitCount;
+    uint8_t digitCount = Seg_GetDigitCount(handle);
 
     /* Clear buffer first */
     memset(handle->displayBuffer, SEG_PATTERN_BLANK, digitCount);
@@ -647,9 +615,7 @@ SegStatus_t Seg_Test(SegDisplayHandle_t* handle)
         return SEG_NOT_INITIALIZED;
     }
 
-    uint8_t digitCount = (handle->config.driverType == SEG_DRIVER_GPIO)
-                         ? handle->config.config.gpio.digitCount
-                         : handle->config.config.ht1621.digitCount;
+    uint8_t digitCount = Seg_GetDigitCount(handle);
 
     /* Display 8. on all digits */
     memset(handle->displayBuffer, SEG_PATTERN_8 | SEG_PATTERN_DP, digitCount);
@@ -671,6 +637,8 @@ static void Seg_GPIO_Init(SegDisplayHandle_t* handle)
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     SegGpioConfig_t* gpioConfig = &handle->config.config.gpio;
 
+    /* GPIO driver enables the port clock for each used port */
+
     /* Configure segment pins as outputs */
     for (uint8_t i = 0; i < SEG_COUNT; i++) {
         if (gpioConfig->segments[i].port != NULL) {
@@ -678,7 +646,7 @@ static void Seg_GPIO_Init(SegDisplayHandle_t* handle)
             GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
             GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-            HAL_GPIO_Init(gpioConfig->segments[i].port, &GPIO_InitStruct);
+            GPIO_Driver_Pin_Init(gpioConfig->segments[i].port, &GPIO_InitStruct);
         }
     }
 
@@ -689,7 +657,7 @@ static void Seg_GPIO_Init(SegDisplayHandle_t* handle)
             GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
             GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-            HAL_GPIO_Init(gpioConfig->digits[i].port, &GPIO_InitStruct);
+            GPIO_Driver_Pin_Init(gpioConfig->digits[i].port, &GPIO_InitStruct);
         }
     }
 
@@ -767,20 +735,22 @@ static void Seg_HT1621_Init(SegDisplayHandle_t* handle)
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     SegHT1621Config_t* ht1621Config = &handle->config.config.ht1621;
 
+    /* GPIO driver enables the port clock for each used port */
+
     /* Configure CS pin */
     GPIO_InitStruct.Pin = ht1621Config->pins.csPin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(ht1621Config->pins.csPort, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(ht1621Config->pins.csPort, &GPIO_InitStruct);
 
     /* Configure WR pin */
     GPIO_InitStruct.Pin = ht1621Config->pins.wrPin;
-    HAL_GPIO_Init(ht1621Config->pins.wrPort, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(ht1621Config->pins.wrPort, &GPIO_InitStruct);
 
     /* Configure DATA pin */
     GPIO_InitStruct.Pin = ht1621Config->pins.dataPin;
-    HAL_GPIO_Init(ht1621Config->pins.dataPort, &GPIO_InitStruct);
+    GPIO_Driver_Pin_Init(ht1621Config->pins.dataPort, &GPIO_InitStruct);
 
     /* Set initial pin states */
     HAL_GPIO_WritePin(ht1621Config->pins.csPort, ht1621Config->pins.csPin, GPIO_PIN_SET);

@@ -451,35 +451,12 @@ const char* DMA2D_GetStateString(uint32_t state);
 HAL_StatusTypeDef DMA2D_EnableLCDMode(void);
 
 /**
- * @brief Configure DMA2D for optimal SDRAM access
- * @note This function optimizes DMA2D settings for external SDRAM
- * @return HAL_StatusTypeDef
- */
-HAL_StatusTypeDef DMA2D_EnableSDRAMMode(void);
-
-/**
  * @brief Perform DMA2D self-test
  * @return HAL_StatusTypeDef
  *         - HAL_OK: Self-test passed
  *         - HAL_ERROR: Self-test failed
  */
 HAL_StatusTypeDef DMA2D_SelfTest(void);
-
-/* ============================================================================
- * Version Information
- * ============================================================================ */
-
-/**
- * @brief Get DMA2D driver version
- * @return const char* Version string
- */
-const char* DMA2D_GetVersion(void);
-
-/**
- * @brief Get DMA2D driver capabilities
- * @return uint32_t Bitmask of supported features
- */
-uint32_t DMA2D_GetCapabilities(void);
 
 /* External DMA2D handle for interrupt handlers */
 extern DMA2D_HandleTypeDef hdma2d;

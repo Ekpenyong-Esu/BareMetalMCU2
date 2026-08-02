@@ -80,7 +80,6 @@ ULTRASONIC_SetTemperature(&hultra, 30);  // 30°C
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| triggerTimeout | 1000ms | Trigger pulse timeout |
 | measurementTimeout | 100ms | Echo measurement timeout |
 | minDistance | 20mm | Minimum measurable distance |
 | maxDistance | 4000mm | Maximum measurable distance |

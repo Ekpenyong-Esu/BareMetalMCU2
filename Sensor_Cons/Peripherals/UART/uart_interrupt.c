@@ -63,7 +63,7 @@ UART_Status_t UART_IT_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t siz
         return UART_ERROR;
     }
 
-    uartExampleRxComplete = 0;
+    rxComplete = 0;
     /* Use HAL_UARTEx_ReceiveToIdle_IT for better command reception with IDLE detection */
     HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle_IT(handle->huart, data, size);
     if (status != HAL_OK) {
@@ -79,7 +79,7 @@ UART_Status_t UART_IT_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t siz
 
     if (timeout > 0) {
         uint32_t tickstart = HAL_GetTick();
-        while (!uartExampleRxComplete) {
+        while (!rxComplete) {
             if ((HAL_GetTick() - tickstart) > timeout) {
                 log_debug("UART Receive timeout");
                 return UART_TIMEOUT_ERROR;
@@ -91,12 +91,7 @@ UART_Status_t UART_IT_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t siz
 }
 
 /*
- * UART interrupt handler belongs in Core/Src/stm32f4xx_it.c, not here.
- * When you enable interrupt-driven UART, copy this stub to stm32f4xx_it.c:
- *
- *   void USART1_IRQHandler(void) {
- *       if (uartHandle.huart && uartHandle.huart->Instance == USART1) {
- *           HAL_UART_IRQHandler(uartHandle.huart);
- *       }
- *   }
+ * UART interrupt vector is owned by the interrupt layer, not this driver.
+ * USART1_IRQHandler() is defined in Core/Src/stm32f4xx_it.c and dispatches
+ * here via HAL_UART_IRQHandler(uartHandle.huart).
  */

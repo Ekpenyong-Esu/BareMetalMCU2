@@ -82,7 +82,7 @@ if (TS_GetTouchData(&hts, &touchData) == TS_OK) {
 
 ```c
 // Enable interrupts
-TS_EnableIT(&hts);
+TS_EnableInterrupt(&hts, true);
 
 // Set callbacks
 hts.TouchCallback = MyTouchCallback;
@@ -122,27 +122,21 @@ void MyGestureCallback(TS_GestureTypeDef gesture) {
 
 ### 4. Calibration
 
+`TS_Init` seeds typical raw bounds. To calibrate, have the user touch two opposite
+corners, record the raw ADC values and hand them to the driver:
+
 ```c
 TS_CalibrationTypeDef calibration;
 
-// Perform calibration (user must touch specific points)
-if (TS_Calibrate(&hts, &calibration) == TS_OK) {
-    printf("Calibration completed successfully\\n");
-}
-
-// Or set manual calibration values
 calibration.MinX = 300;
 calibration.MaxX = 3700;
 calibration.MinY = 300;
 calibration.MaxY = 3700;
-calibration.ScaleX = (float)TS_DISPLAY_WIDTH / (calibration.MaxX - calibration.MinX);
-calibration.ScaleY = (float)TS_DISPLAY_HEIGHT / (calibration.MaxY - calibration.MinY);
-calibration.OffsetX = -calibration.MinX;
-calibration.OffsetY = -calibration.MinY;
-calibration.IsCalibrated = true;
 
 TS_SetCalibration(&hts, &calibration);
 ```
+
+The crosshair UI and storing the values belong to the application, not the driver.
 
 ## API Reference
 
@@ -156,24 +150,23 @@ TS_SetCalibration(&hts, &calibration);
 
 - `TS_GetTouchData(hts, data)` - Get current touch data
 - `TS_IsTouched(hts)` - Check if screen is currently touched
-- `TS_GetGesture(hts, gesture)` - Get detected gesture
+- `TS_GetSingleTouch(hts, touch)` - Get one mapped touch point
+- `TS_GetTouchCount(hts, count)` - Number of active touches
+- `TS_GetPressure(hts, pressure)` - Read touch pressure
 
 ### Configuration Functions
 
-- `TS_SetConfig(hts, config)` - Set touchscreen configuration
-- `TS_GetConfig(hts, config)` - Get current configuration
-- `TS_SetPressureThreshold(hts, threshold)` - Set pressure threshold
+- `TS_Configure(hts, config)` - Apply a touchscreen configuration
+- `TS_GetDefaultConfig(config)` - Fill a configuration with defaults
 
 ### Calibration Functions
 
-- `TS_Calibrate(hts, calibration)` - Perform interactive calibration
-- `TS_SetCalibration(hts, calibration)` - Set calibration data
+- `TS_SetCalibration(hts, calibration)` - Set the raw ADC bounds of the panel
 - `TS_GetCalibration(hts, calibration)` - Get current calibration
 
 ### Interrupt Functions
 
-- `TS_EnableIT(hts)` - Enable touchscreen interrupts
-- `TS_DisableIT(hts)` - Disable touchscreen interrupts
+- `TS_EnableInterrupt(hts, enable)` - Enable or disable touchscreen interrupts
 - `TS_IRQHandler(hts)` - Handle touchscreen interrupt
 
 ## Configuration Options
@@ -221,7 +214,7 @@ The `touchscreen_example.c` file provides comprehensive examples:
    - Ensure proper power supply
 
 2. **Inaccurate Touch Position**
-   - Perform calibration with `TS_Calibrate()`
+   - Measure the raw corner values and apply them with `TS_SetCalibration()`
    - Check pressure threshold settings
    - Verify display coordinate mapping
 

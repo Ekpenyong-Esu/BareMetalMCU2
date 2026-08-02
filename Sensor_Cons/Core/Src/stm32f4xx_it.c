@@ -21,6 +21,8 @@
 #include "main.h"
 #include "stm32f4xx_it.h"
 #include "uart.h"
+#include "rtc.h"
+#include "mic.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "SEGGER_SYSVIEW.h"
@@ -251,6 +253,63 @@ void EXTI0_IRQHandler(void)
   SEGGER_SYSVIEW_RecordEnterISR();
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
   SEGGER_SYSVIEW_RecordExitISR();
+}
+
+/**
+  * @brief This function handles USART1 global interrupt (UART interrupt mode).
+  */
+void USART1_IRQHandler(void)
+{
+  if (uartHandle.huart != NULL && uartHandle.huart->Instance == USART1) {
+    HAL_UART_IRQHandler(uartHandle.huart);
+  }
+}
+
+/**
+  * @brief This function handles DMA2 stream5 global interrupt (UART1 RX).
+  */
+void DMA2_Stream5_IRQHandler(void)
+{
+  if (uartHandle.huart != NULL && uartHandle.huart->hdmarx != NULL) {
+    HAL_DMA_IRQHandler(uartHandle.huart->hdmarx);
+  }
+}
+
+/**
+  * @brief This function handles DMA2 stream7 global interrupt (UART1 TX).
+  */
+void DMA2_Stream7_IRQHandler(void)
+{
+  if (uartHandle.huart != NULL && uartHandle.huart->hdmatx != NULL) {
+    HAL_DMA_IRQHandler(uartHandle.huart->hdmatx);
+  }
+}
+
+/**
+  * @brief This function handles RTC Alarm (A and B) through EXTI line.
+  *        Deferred to the RTC driver via RTC_ISR_Dispatch().
+  */
+void RTC_Alarm_IRQHandler(void)
+{
+  RTC_ISR_Dispatch();
+}
+
+/**
+  * @brief This function handles DMA2 stream1 global interrupt (MIC/audio).
+  *        Deferred to the MIC driver via MIC_DMA_IRQHandler().
+  */
+void DMA2_Stream1_IRQHandler(void)
+{
+  MIC_DMA_IRQHandler();
+}
+
+/**
+  * @brief This function handles I2S2 global interrupt (MIC PDM audio).
+  *        Deferred to the MIC driver via MIC_I2S_IRQHandler().
+  */
+void I2S2_IRQHandler(void)
+{
+  MIC_I2S_IRQHandler();
 }
 
 /**

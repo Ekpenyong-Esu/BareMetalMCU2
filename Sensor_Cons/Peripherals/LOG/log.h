@@ -3,11 +3,25 @@
 
 #include "stm32f4xx_hal.h"
 
+// ----------------------------------------------------------------------------
+// Configuration
+// Each option can be overridden from the build (e.g. -DLOG_USE_UART=1) or by
+// defining it before including this header.
+// ----------------------------------------------------------------------------
 
-// Define these to enable/disable logging methods
-// Set to 1 to enable, 0 to disable
+// Select the output backend. Set to 1 to enable, 0 to disable.
+// If both are enabled, LOG_USE_PRINTF takes precedence.
+#ifndef LOG_USE_PRINTF
 #define LOG_USE_PRINTF 1  // Use printf for logging
+#endif
+#ifndef LOG_USE_UART
 #define LOG_USE_UART 0    // Use UART for logging (requires log_init)
+#endif
+
+// Size of the internal line buffer used when LOG_USE_UART is enabled
+#ifndef LOG_BUFFER_SIZE
+#define LOG_BUFFER_SIZE 128
+#endif
 
 // Show full file path or only filename in logs.
 // Set to 1 to include full path (e.g., /home/.../file.c), 0 to include only the basename (file.c)

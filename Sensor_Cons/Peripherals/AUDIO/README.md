@@ -6,13 +6,11 @@ This directory contains a comprehensive audio driver implementation for the STM3
 
 - **Multiple Audio Interfaces**: Support for SAI and I2S interfaces
 - **Flexible Configuration**: Configurable sample rates, bit depths, and channel configurations
-- **DMA Support**: Efficient DMA-based audio data transfer
-- **Codec Integration**: Built-in support for audio codecs (WM8994 example)
+- **DMA Support**: Efficient DMA-based audio playback
+- **Codec Integration**: Cirrus Logic CS43L22 control over I2C
 - **Buffer Management**: Circular buffer implementation for continuous audio streaming
 - **Volume Control**: Digital volume control with mute functionality
-- **Audio Processing**: Basic audio processing functions (mixing, filtering)
 - **Statistics**: Performance monitoring and error tracking
-- **Comprehensive Examples**: Multiple example functions demonstrating usage
 
 ## Files
 
@@ -31,9 +29,8 @@ This directory contains a comprehensive audio driver implementation for the STM3
 
 ### SAI Interface (Recommended)
 - SAI1 peripheral on STM32F429
-- Audio codec (e.g., WM8994, CS42L51)
-- I2C interface for codec control
-- External audio PLL configuration
+- Cirrus Logic CS43L22 codec (external; the DISC1 has no onboard codec)
+- I2C3 for codec control, plus the codec RESET line on PD4
 
 ### I2S Interface (Alternative)
 - SPI3 peripheral configured for I2S
@@ -74,8 +71,7 @@ void main(void) {
         .BitDepth = AUDIO_FORMAT_16BIT,
         .Channels = AUDIO_CHANNEL_STEREO,
         .BufferSize = 4096,
-        .EnableDMA = true,
-        .EnableInterrupts = true
+        .EnableDMA = true
     };
     AUDIO_Init_Custom(&config);
 }
@@ -99,24 +95,6 @@ AUDIO_Play();
 AUDIO_Stop();
 ```
 
-### Audio Recording
-```c
-uint8_t recordBuffer[4096];
-uint32_t bytesRead;
-
-// Start recording
-AUDIO_Record();
-
-// Wait for recording to complete
-HAL_Delay(1000);
-
-// Stop recording
-AUDIO_Stop();
-
-// Read recorded data
-AUDIO_ReadBuffer(recordBuffer, sizeof(recordBuffer), &bytesRead);
-```
-
 ### Volume Control
 ```c
 // Set volume to 50%
@@ -127,15 +105,6 @@ AUDIO_SetMute(true);
 
 // Unmute audio
 AUDIO_SetMute(false);
-```
-
-### Audio Processing
-```c
-// Mix two audio streams
-AUDIO_MixStreams(stream1, stream2, output, sampleCount);
-
-// Apply gain
-AUDIO_SetGain(1.5f);  // 1.5x amplification
 ```
 
 ## Example Functions

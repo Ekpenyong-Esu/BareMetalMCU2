@@ -11,7 +11,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "ir_distance.h"
-#include "../LOG/log.h"
+#include "log.h"
 #include "adc.h"
 #include "stm32f4xx_hal.h"
 #include <stdlib.h>
@@ -21,32 +21,10 @@
 /* Private defines -----------------------------------------------------------*/
 
 /** @defgroup IR_DISTANCE_Private_Defines Private Defines
- * @{
- */
+ * @{ */
 
 /* ADC conversion constants */
 #define IR_DISTANCE_ADC_MAX_VALUE       4095U   /* 12-bit ADC */
-#define IR_DISTANCE_VOLTAGE_MAX         3.3f    /* 3.3V reference */
-
-/* GP2Y0A21YK calibration curve constants */
-#define IR_DISTANCE_GP2Y0A21YK_A        4.8f
-#define IR_DISTANCE_GP2Y0A21YK_B        -0.8f
-#define IR_DISTANCE_GP2Y0A21YK_K        27.86f
-
-/* GP2Y0A02YK calibration curve constants */
-#define IR_DISTANCE_GP2Y0A02YK_A        5.0f
-#define IR_DISTANCE_GP2Y0A02YK_B        -0.7f
-#define IR_DISTANCE_GP2Y0A02YK_K        13.5f
-
-/* GP2Y0A41SK calibration curve constants */
-#define IR_DISTANCE_GP2Y0A41SK_A        4.9f
-#define IR_DISTANCE_GP2Y0A41SK_B        -0.9f
-#define IR_DISTANCE_GP2Y0A41SK_K        65.0f
-
-/* GP2Y0A51SK calibration curve constants */
-#define IR_DISTANCE_GP2Y0A51SK_A        5.1f
-#define IR_DISTANCE_GP2Y0A51SK_B        -0.9f
-#define IR_DISTANCE_GP2Y0A51SK_K        120.0f
 
 /** @} */
 
@@ -96,7 +74,6 @@ static IR_DISTANCE_StatusTypeDef IR_DISTANCE_ValidateConfig(IR_DISTANCE_Config_t
 static uint16_t IR_DISTANCE_ReadAdc(IR_DISTANCE_Handle_t *hird);
 static uint16_t IR_DISTANCE_CalculateDistanceFromCurve(IR_DISTANCE_Handle_t *hird, uint16_t adcValue);
 static uint16_t IR_DISTANCE_Interpolate(uint16_t x, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
-static float IR_DISTANCE_AdcToVoltage(uint16_t adcValue, float scale, float offset);
 
 /* Exported functions -------------------------------------------------------*/
 
@@ -399,9 +376,7 @@ IR_DISTANCE_Config_t IR_DISTANCE_GetDefaultConfig(IR_DISTANCE_SensorType_t senso
     IR_DISTANCE_Config_t config = {
         .sensorType = sensorType,
         .averagingSamples = IR_DISTANCE_DEFAULT_AVERAGING_SAMPLES,
-        .measurementTimeout = IR_DISTANCE_DEFAULT_MEASUREMENT_TIMEOUT,
-        .voltageScale = IR_DISTANCE_DEFAULT_VOLTAGE_SCALE,
-        .voltageOffset = IR_DISTANCE_DEFAULT_VOLTAGE_OFFSET
+        .measurementTimeout = IR_DISTANCE_DEFAULT_MEASUREMENT_TIMEOUT
     };
 
     /* Set range based on sensor type */
@@ -466,10 +441,6 @@ static IR_DISTANCE_StatusTypeDef IR_DISTANCE_ValidateConfig(IR_DISTANCE_Config_t
     }
 
     if (config->averagingSamples == 0 || config->averagingSamples > 100) {
-        return IR_DISTANCE_INVALID_PARAM;
-    }
-
-    if (config->voltageScale <= 0.0f) {
         return IR_DISTANCE_INVALID_PARAM;
     }
 
@@ -541,17 +512,4 @@ static uint16_t IR_DISTANCE_Interpolate(uint16_t x, uint16_t x1, uint16_t y1, ui
     }
 
     return y1 + ((y2 - y1) * (x - x1)) / (x2 - x1);
-}
-
-/**
- * @brief   Convert ADC value to voltage
- * @details Converts raw ADC reading to voltage
- * @param   adcValue Raw ADC value
- * @param   scale Voltage scaling factor
- * @param   offset Voltage offset
- * @retval  float Voltage value
- */
-static float IR_DISTANCE_AdcToVoltage(uint16_t adcValue, float scale, float offset)
-{
-    return ((adcValue * scale) / IR_DISTANCE_ADC_MAX_VALUE) + offset;
 }
