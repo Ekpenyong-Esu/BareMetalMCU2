@@ -1,6 +1,9 @@
 /**
  * @file uart_config.h
- * @brief UART configuration parameters for STM32F429I-DISC1
+ * @brief UART tunables for STM32F429I-DISC1
+ *
+ * Values a board bring-up may want to change. Behaviour lives in the driver
+ * modules; this header only holds numbers.
  */
 
 #ifndef UART_CONFIG_H
@@ -11,11 +14,6 @@ extern "C" {
 #endif
 
 #include "stm32f4xx_hal.h"
-#include "uart_ring_buffer.h"
-
-/* Completion flags owned by uart.c, where the HAL callbacks set them */
-extern volatile uint8_t txComplete;
-extern volatile uint8_t rxComplete;
 
 /* Default UART configuration */
 #define UART_DEFAULT_BAUDRATE     115200
@@ -29,7 +27,7 @@ extern volatile uint8_t rxComplete;
 #define UART_CHAR_TIMEOUT   100   /* Timeout for single character reception */
 
 
-/* DMA configuration */
+/* DMA wiring for USART1, consumed by HAL_UART_MspInit() in Core */
 #define UART_DMA_TX_CHANNEL      DMA_CHANNEL_4
 #define UART_DMA_RX_CHANNEL      DMA_CHANNEL_4
 #define UART_DMA_TX_STREAM       DMA2_Stream7

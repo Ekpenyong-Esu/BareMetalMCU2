@@ -31,6 +31,10 @@ This folder provides a modular implementation of all major timer (TIM) features 
 
 ## Features Implemented & When to Use Them
 
+- **Clock** (`tim_clock.h`/`.c`):
+  - *What*: Enables a timer's peripheral clock and reports the clock actually feeding its counter (which is twice the APB bus clock whenever the APB prescaler is above 1).
+  - *When to use*: Before any `*_Init` call, and whenever you need to turn a desired frequency into a prescaler. Also tells you whether a timer has output channels at all (TIM6/TIM7 do not).
+
 - **Base Timer** (`tim_base.h`/`.c`):
   - *What*: Provides a simple up-counter for periodic interrupts or timekeeping.
   - *When to use*: For basic time delays, periodic tasks, or as a timebase for other modules.
@@ -71,9 +75,15 @@ TIM_Start_IT(&htim3);
 ```c
 #include "tim_pwm.h"
 TIM_HandleTypeDef htim2;
-TIM_PWM_Init(&htim2, TIM2, 83, 999); // 1kHz PWM
+
+/* Ask for a frequency: enables the clock and derives the prescaler for you. */
+TIM_PWM_InitHz(&htim2, TIM2, 1000u, 1000u);        // 1 kHz, 1000 duty steps
 TIM_PWM_ConfigChannel(&htim2, TIM_CHANNEL_1, 500); // 50% duty
 TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+
+/* Or set the dividers yourself, after enabling the clock: */
+TIM_Clock_Enable(TIM2);
+TIM_PWM_Init(&htim2, TIM2, 83, 999);               // 1 kHz at 84 MHz
 ```
 
 ### 3. Input Capture (Frequency Measurement)
@@ -118,6 +128,7 @@ TIM_DMA_PWM_Stop(&htim8, TIM_CHANNEL_1);
 ## File Structure
 
 - `tim.h`             - Public interface aggregator (includes all module headers)
+- `tim_clock.*`       - Timer clock enable and rate query
 - `tim_base.*`        - Base timer (up-counter) operations
 - `tim_pwm.*`         - PWM output
 - `tim_ic.*`          - Input capture

@@ -38,7 +38,7 @@ static void Led_SetPhysical(LedHandle_t* handle, LedState_t state)
 
     /* Determine pin state based on active level and desired LED state */
     if (handle->config.activeLow) {
-        pinState = (state == LED_ON) ? GPIO_PIN_RESET : GPIO_PIN_SET;
+        pinState = (state == LED_ON) ? GPIO_PIN_RESET : GPIO_PIN_SET;  // The LED is connected to power and the mcu drives it low to turn on
     } else {
         pinState = (state == LED_ON) ? GPIO_PIN_SET : GPIO_PIN_RESET;
     }

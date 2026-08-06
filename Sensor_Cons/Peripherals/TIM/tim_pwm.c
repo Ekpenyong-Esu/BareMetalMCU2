@@ -5,6 +5,8 @@
 
 #include "tim_pwm.h"
 
+#include "tim_clock.h"
+
 /* ========================== PWM Output ========================== */
 
 HAL_StatusTypeDef TIM_PWM_Init(TIM_HandleTypeDef *htim,
@@ -24,6 +26,25 @@ HAL_StatusTypeDef TIM_PWM_Init(TIM_HandleTypeDef *htim,
     htim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
     return HAL_TIM_PWM_Init(htim);
+}
+
+HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim,
+                                 TIM_TypeDef *instance,
+                                 uint32_t frequencyHz,
+                                 uint32_t steps)
+{
+    if (htim == NULL || frequencyHz == 0u || steps == 0u ||
+        !TIM_Clock_HasOutputChannels(instance) || !TIM_Clock_Enable(instance)) {
+        return HAL_ERROR;
+    }
+
+    uint32_t divider = TIM_Clock_GetHz(instance) / (frequencyHz * steps);
+
+    if (divider == 0u || divider > 0x10000u) {
+        return HAL_ERROR;
+    }
+
+    return TIM_PWM_Init(htim, instance, divider - 1u, steps - 1u);
 }
 
 HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim,

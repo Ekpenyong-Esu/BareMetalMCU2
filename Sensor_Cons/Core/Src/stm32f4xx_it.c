@@ -20,7 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_it.h"
-#include "uart.h"
+#include "uart_core.h"
 #include "rtc.h"
 #include "mic.h"
 /* Private includes ----------------------------------------------------------*/
@@ -72,7 +72,6 @@ extern HCD_HandleTypeDef hhcd_USB_OTG_HS;
 extern DMA2D_HandleTypeDef hdma2d;
 extern LTDC_HandleTypeDef hltdc;
 extern TIM_HandleTypeDef htim6;
-extern UART_Handle_t uartHandle;
 /* DMA handles */
 extern DMA_HandleTypeDef hdma_uart1_tx;  /* UART TX DMA handle */
 extern DMA_HandleTypeDef hdma_uart1_rx;  /* UART RX DMA handle */
@@ -260,8 +259,10 @@ void EXTI0_IRQHandler(void)
   */
 void USART1_IRQHandler(void)
 {
-  if (uartHandle.huart != NULL && uartHandle.huart->Instance == USART1) {
-    HAL_UART_IRQHandler(uartHandle.huart);
+  UART_Handle_t *uart = UART_GetActiveHandle();
+
+  if (uart != NULL && uart->huart != NULL && uart->huart->Instance == USART1) {
+    HAL_UART_IRQHandler(uart->huart);
   }
 }
 
@@ -270,8 +271,10 @@ void USART1_IRQHandler(void)
   */
 void DMA2_Stream5_IRQHandler(void)
 {
-  if (uartHandle.huart != NULL && uartHandle.huart->hdmarx != NULL) {
-    HAL_DMA_IRQHandler(uartHandle.huart->hdmarx);
+  UART_Handle_t *uart = UART_GetActiveHandle();
+
+  if (uart != NULL && uart->huart != NULL && uart->huart->hdmarx != NULL) {
+    HAL_DMA_IRQHandler(uart->huart->hdmarx);
   }
 }
 
@@ -280,8 +283,10 @@ void DMA2_Stream5_IRQHandler(void)
   */
 void DMA2_Stream7_IRQHandler(void)
 {
-  if (uartHandle.huart != NULL && uartHandle.huart->hdmatx != NULL) {
-    HAL_DMA_IRQHandler(uartHandle.huart->hdmatx);
+  UART_Handle_t *uart = UART_GetActiveHandle();
+
+  if (uart != NULL && uart->huart != NULL && uart->huart->hdmatx != NULL) {
+    HAL_DMA_IRQHandler(uart->huart->hdmatx);
   }
 }
 

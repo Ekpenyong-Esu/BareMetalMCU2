@@ -273,7 +273,11 @@ endif()
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Application 1: Blink & Heartbeat
     ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/blink_heartbeat.c
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/heartbeat.c
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/blink_steady.c
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/heartbeat_fade_hardware.c
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/heartbeat_fade_software.c
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/heartbeat_onoff.c
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/heartbeat_rhythm.c
 )
 
 # Make application headers available to the build

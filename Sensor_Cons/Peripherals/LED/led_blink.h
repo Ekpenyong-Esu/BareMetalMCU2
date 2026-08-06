@@ -15,10 +15,6 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "led.h"
 
-/* Exported constants --------------------------------------------------------*/
-#define LED_BLINK_FAST      200u    /**< Fast blink period (ms) */
-#define LED_BLINK_SLOW      1000u   /**< Slow blink period (ms) */
-
 /* Exported types ------------------------------------------------------------*/
 
 /**
@@ -51,7 +47,7 @@ bool LedBlink_Init(LedBlink_t* blink, LedHandle_t* led);
 bool LedBlink_Start(LedBlink_t* blink, uint32_t periodMs, uint32_t nowMs);
 
 /**
- * @brief   Stop blinking, leaving the LED in its current state
+ * @brief   Stop blinking and switch the LED off
  * @param   blink Pointer to blink engine
  * @retval  true if successful, false otherwise
  */

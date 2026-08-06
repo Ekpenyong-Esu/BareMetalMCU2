@@ -1,6 +1,9 @@
 /**
  * @file uart_dma.h
- * @brief UART DMA mode implementation for STM32F429I-DISC1
+ * @brief DMA transfer mode
+ *
+ * Buffer transfers are offloaded to a DMA stream; the streams themselves are
+ * wired up by HAL_UART_MspInit() in Core.
  */
 
 #ifndef UART_DMA_H
@@ -10,35 +13,9 @@
 extern "C" {
 #endif
 
-#include "uart.h"
+#include "uart_types.h"
 
-/**
- * @brief Initialize UART DMA mode
- * @param handle UART handle pointer
- * @return UART_Status_t Status of operation
- */
-UART_Status_t UART_DMA_Init(UART_Handle_t* handle);
-
-/**
- * @brief Transmit data using UART DMA
- * @param handle UART handle pointer
- * @param data Pointer to data buffer
- * @param size Size of data to transmit
- * @param timeout Timeout duration in milliseconds
- * @return UART_Status_t Status of operation
- */
-UART_Status_t UART_DMA_Transmit(UART_Handle_t* handle, const uint8_t* data, uint16_t size, uint32_t timeout);
-
-/**
- * @brief Receive data using UART DMA
- * @param handle UART handle pointer
- * @param data Pointer to data buffer
- * @param size Size of data to receive
- * @param timeout Timeout duration in milliseconds
- * @return UART_Status_t Status of operation
- */
-UART_Status_t UART_DMA_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size, uint32_t timeout);
-
+extern const UART_ModeOps_t UART_DmaOps;
 
 #ifdef __cplusplus
 }

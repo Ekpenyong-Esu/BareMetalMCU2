@@ -17,7 +17,7 @@
 int main(void)
 {
     SYS_Init();                 /* HAL init, system clock, SysTick */
-    App_BlinkHeartbeat_Run();   /* Runs its own super-loop; never returns */
+    BlinkHeartbeat_Run();       /* Runs its own super-loop; never returns */
 }
 
 #ifdef USE_FULL_ASSERT

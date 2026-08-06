@@ -2,57 +2,45 @@
  * @file    blink_heartbeat.h
  * @brief   Application 1 - Blink & Heartbeat.
  *
- * A self-contained demo for the STM32F429I-DISC1 on-board LEDs:
- *   - Green LED (PG13): alternates every few seconds between a fixed-rate
- *     "activity" blink and a breathing fade driven by software PWM.
- *   - Red LED   (PG14): "heartbeat" double-pulse pattern (lub-dub ... rest).
+ * Composes four independent LED behaviours, each in its own module:
+ *   - blink_steady           : external LED (PB4)  on/off at a fixed rate
+ *   - heartbeat_onoff        : red LED     (PG14) lub-dub, fully lit or dark
+ *   - heartbeat_fade_software: green LED   (PG13) lub-dub, CPU-generated PWM
+ *   - heartbeat_fade_hardware: external LED (PA5) lub-dub, TIM2-generated PWM
  *
- * The on-board LEDs have no timer alternate function, so the breathing effect
- * is produced by the cooperative software-PWM module rather than a TIM channel.
+ * The three heartbeat modules share one beat timing table (heartbeat_rhythm.h)
+ * and differ only in how they turn a beat into light, which makes the cost of
+ * bit-banging a waveform visible next to letting a timer do it.
  *
  * The application is fully non-blocking. It never calls a delay; all timing is
- * derived from HAL_GetTick() and the microsecond counter in SYS. This keeps the
- * CPU free and lets the demo cooperate with other tasks in a super-loop.
+ * derived from HAL_GetTick(). This keeps the CPU free and lets the demo
+ * cooperate with other tasks in a super-loop.
  *
  * Layering:
- *   main.c                    -> chooses and runs the application
- *   blink_heartbeat           -> orchestration + phase alternation (this module)
- *   heartbeat                 -> lub-dub pattern player (reusable)
- *   led_blink / led_pwm       -> time-driven LED behaviours
- *   led (driver)              -> LED on/off state
- *   board.h                   -> which pins the LEDs are wired to
+ *   main.c                        -> chooses and runs the application
+ *   blink_heartbeat               -> composition only (this module)
+ *   blink_steady / heartbeat_*    -> one LED behaviour each
+ *   led_blink / led_pattern       -> reusable timing engines (drivers)
+ *   led / led_pwm / led_pwm_timer -> LED state and PWM output stages (drivers)
+ *   board.h                       -> which pins the LEDs are wired to
  */
 
-#ifndef APP_BLINK_HEARTBEAT_H
-#define APP_BLINK_HEARTBEAT_H
+#ifndef BLINK_HEARTBEAT_H
+#define BLINK_HEARTBEAT_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdbool.h>
-
 /**
- * @brief  Initialise the on-board LEDs and start both patterns.
+ * @brief  Start every behaviour, then tick them forever.
  * @note   Requires the system clock and time bases to be running (SYS_Init).
- * @retval true on success, false if an LED could not be initialised.
+ *         Does not return; calls Error_Handler() if a behaviour fails to start.
  */
-bool App_BlinkHeartbeat_Init(void);
-
-/**
- * @brief  Advance the LED patterns. Call once per super-loop iteration.
- * @note   Non-blocking; returns immediately when no LED needs updating.
- */
-void App_BlinkHeartbeat_Task(void);
-
-/**
- * @brief  Convenience entry point: initialise, then run the task loop forever.
- * @note   Does not return.
- */
-void App_BlinkHeartbeat_Run(void);
+void BlinkHeartbeat_Run(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* APP_BLINK_HEARTBEAT_H */
+#endif /* BLINK_HEARTBEAT_H */

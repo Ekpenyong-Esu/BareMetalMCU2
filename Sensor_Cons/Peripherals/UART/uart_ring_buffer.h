@@ -1,6 +1,10 @@
 /**
  * @file uart_ring_buffer.h
- * @brief Ring buffer implementation for UART DMA
+ * @brief Fixed-capacity byte queue
+ *
+ * A plain container: it stores bytes and knows nothing about UART, so it has
+ * no opinion on where the bytes came from and does no logging. The driver
+ * embeds one per link so reception can outrun the reader.
  */
 
 #ifndef UART_RING_BUFFER_H
@@ -8,8 +12,10 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "uart.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define RING_BUFFER_SIZE 512
 
@@ -20,16 +26,34 @@ typedef struct {
     volatile uint32_t count;
 } RingBuffer_t;
 
-extern RingBuffer_t rxRingBuffer;  // Make ring buffer accessible to other files
-
+/** Empty the buffer and clear its storage. */
 void RingBuffer_Init(RingBuffer_t *ringBuffer);
-bool RingBuffer_Put(RingBuffer_t *ringBuffer, uint8_t data);
-bool RingBuffer_Get(RingBuffer_t *ringBuffer, uint8_t *data);
-uint32_t RingBuffer_Available(RingBuffer_t *ringBuffer);
-bool RingBuffer_IsFull(RingBuffer_t *ringBuffer);
-bool RingBuffer_IsEmpty(RingBuffer_t *ringBuffer);
-UART_Status_t UART_RingBuffer_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size);
-void UART_RingBuffer_PutData(uint8_t* data, uint16_t size);
-void UART_RingBuffer_Init(void);
 
-#endif // UART_RING_BUFFER_H
+/** Append one byte; false when the buffer is full. */
+bool RingBuffer_Put(RingBuffer_t *ringBuffer, uint8_t data);
+
+/** Remove the oldest byte; false when the buffer is empty. */
+bool RingBuffer_Get(RingBuffer_t *ringBuffer, uint8_t *data);
+
+/**
+ * @brief  Append several bytes, stopping when the buffer is full
+ * @retval Number of bytes actually stored
+ */
+uint32_t RingBuffer_PutBytes(RingBuffer_t *ringBuffer, const uint8_t *data, uint32_t count);
+
+/**
+ * @brief  Read several bytes, all or nothing
+ * @note   Leaves the buffer untouched unless the full count is queued, so a
+ *         partial packet survives until a later call can complete it.
+ */
+bool RingBuffer_GetBytes(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t count);
+
+uint32_t RingBuffer_Available(const RingBuffer_t *ringBuffer);
+bool RingBuffer_IsFull(const RingBuffer_t *ringBuffer);
+bool RingBuffer_IsEmpty(const RingBuffer_t *ringBuffer);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* UART_RING_BUFFER_H */

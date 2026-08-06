@@ -29,6 +29,23 @@ HAL_StatusTypeDef TIM_PWM_Init(TIM_HandleTypeDef *htim,
                                uint32_t period);
 
 /**
+ * @brief  Initialize timer for PWM output at a given frequency
+ * @details Enables the timer clock and derives the prescaler from the clock
+ *          actually feeding the timer, so callers state what they want rather
+ *          than computing dividers.
+ * @param  htim        Timer handle
+ * @param  instance    Timer peripheral; must have output channels
+ * @param  frequencyHz Desired PWM carrier frequency
+ * @param  steps       Duty resolution, i.e. compare values per period
+ * @retval HAL_OK on success, HAL_ERROR if the timer has no output channels or
+ *         the requested frequency is unreachable at this resolution
+ */
+HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim,
+                                 TIM_TypeDef *instance,
+                                 uint32_t frequencyHz,
+                                 uint32_t steps);
+
+/**
  * @brief  Configure PWM channel duty cycle
  * @param  htim    Timer handle
  * @param  channel TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, or TIM_CHANNEL_4
