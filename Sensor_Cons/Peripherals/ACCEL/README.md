@@ -4,9 +4,15 @@ This directory contains a comprehensive MMA8452Q accelerometer driver implementa
 
 ## Files Overview
 
-- **`accel.h`** - Header file containing function prototypes, type definitions, and register definitions
-- **`accel.c`** - Main implementation file with all accelerometer communication functions
-- **`accel_example.c`** - Example code demonstrating various accelerometer operations
+- **`accel_types.h`** - Status codes, configuration/sample structs, rate/range/mode constants
+- **`accel_mma8452q.h`** - MMA8452Q register map and bit definitions
+- **`accel_io.c/.h`** - Register-level SPI access (read, write, read-modify-write, burst)
+- **`accel_convert.c/.h`** - 14-bit sample decoding and g conversion
+- **`accel_data.c/.h`** - Sample acquisition (`ACCEL_ReadData`, `ACCEL_ReadRawData`)
+- **`accel_config.c/.h`** - Mode, data rate, range, filters, interrupt configuration
+- **`accel_calibration.c/.h`** - Offset calibration
+- **`accel_diag.c/.h`** - Self-test and status strings
+- **`accel_core.c/.h`** - Init/DeInit, device identification, cached range
 
 ## Features
 
@@ -32,7 +38,8 @@ This directory contains a comprehensive MMA8452Q accelerometer driver implementa
 
 ### Basic Initialization and Reading
 ```c
-#include "accel.h"
+#include "accel_core.h"
+#include "accel_data.h"
 
 // Initialize accelerometer with default settings (100Hz, ±2g, active mode)
 ACCEL_StatusTypeDef status = ACCEL_Init();

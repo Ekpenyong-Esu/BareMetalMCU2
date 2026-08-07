@@ -41,6 +41,8 @@ typedef enum {
 void log_init(UART_HandleTypeDef *huart);
 
 // Core logging function that accepts caller location
+// Not reentrant with LOG_USE_UART: the line buffer is shared, so logging from
+// an interrupt while the main loop logs will interleave the two lines.
 void log_logf(log_level_t level, const char *file, int line, const char *format, ...);
 
 // Convenience macros that automatically pass __FILE__ and __LINE__

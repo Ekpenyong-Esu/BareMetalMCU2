@@ -10,7 +10,7 @@
 #include "lv_port_disp.h"
 #include "fmc.h"
 #include "lvgl.h"
-#include "ltdc.h"
+#include "ltdc_core.h"
 #include <stdint.h>
 #include <string.h>
 #include "stm32f4xx_hal.h"
@@ -114,7 +114,7 @@ void lv_port_disp_init(void)
 
 
     /* Point LTDC to framebuffer */
-    HAL_LTDC_SetAddress(&hltdc, FB_BASE_ADDR, 0);
+    HAL_LTDC_SetAddress(LTDC_GetHandle(), FB_BASE_ADDR, 0);
 
     /* Create LVGL display (v9 API) */
     lv_display_t *disp = lv_display_create(DISP_HOR_RES, DISP_VER_RES);

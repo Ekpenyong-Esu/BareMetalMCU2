@@ -31,10 +31,16 @@ The MEMS driver provides a complete interface for controlling and reading data f
 
 ```
 MEMS/
-├── mems.h              # Main driver header file
-├── mems.c              # Main driver implementation
-├── mems_example.h      # Examples header file
-├── mems_example.c      # Examples implementation
+├── mems_l3gd20.h       # L3GD20 register map and bit definitions
+├── mems_types.h        # Status, enums, config structs, handle
+├── mems_hw.h/.c        # Board wiring: chip select, SPI5 pins, INT pins
+├── mems_io.h/.c        # Register read/write/update over SPI
+├── mems_convert.h/.c   # Raw sample to degrees per second
+├── mems_gyro.h/.c      # Gyro configuration and sample acquisition
+├── mems_interrupt.h/.c # CTRL_REG3 interrupt routing
+├── mems_calibration.h/.c # Zero-rate offset calibration
+├── mems_diag.h/.c      # Device info, status, temperature, self-test
+├── mems_core.h/.c      # Init / DeInit / Reset / default config
 └── README.md           # This documentation file
 ```
 
@@ -108,7 +114,8 @@ if (MEMS_Init(&hmems, &hspi5) == MEMS_OK) {
 }
 ```
 ```c
-#include "mems.h"
+#include "mems_core.h"
+#include "mems_gyro.h"
 
 MEMS_HandleTypeDef hmems;
 SPI_HandleTypeDef hspi5;
@@ -159,8 +166,12 @@ Ensure that the STM32F429 Discovery board is properly connected and powered. The
 
 ### 2. Include Headers
 ```c
-#include "mems.h"
-#include "mems_example.h"  // For examples
+#include "mems_core.h"        // Init / DeInit / Reset / default config
+#include "mems_hw.h"          // MEMS_SetCS for an off-board device
+#include "mems_gyro.h"        // Configuration and sample acquisition
+#include "mems_calibration.h" // Zero-rate offset calibration
+#include "mems_diag.h"        // Device info, status, temperature, self-test
+#include "mems_interrupt.h"   // Interrupt routing
 ```
 
 ### 3. Initialize SPI5

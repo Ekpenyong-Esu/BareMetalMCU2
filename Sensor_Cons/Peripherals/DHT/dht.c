@@ -34,7 +34,8 @@ static inline void dht_line_input(GPIO_TypeDef *port, uint16_t pin)
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    /* Keeps the line defined if the module has no external pull-up. */
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_Driver_Pin_Init(port, &GPIO_InitStruct);
 }
 
@@ -43,7 +44,7 @@ static inline bool dht_wait_level(GPIO_TypeDef *port, uint16_t pin, GPIO_PinStat
     uint32_t start = DWT->CYCCNT;
     uint32_t ticks = dht_us_to_ticks(timeout_us);
     while ((DWT->CYCCNT - start) < ticks) {
-        if (HAL_GPIO_ReadPin(port, pin) == level) {
+        if (GPIO_Driver_ReadPin(port, pin) == level) {
             return true;
         }
     }
@@ -63,6 +64,11 @@ HAL_StatusTypeDef DHT_Init(DHT_Handle_t *hdht, DHT_Type_t type, GPIO_TypeDef *po
     DWT->CYCCNT = 0;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
+    // Every delay here spins on CYCCNT, so a stalled counter would hang forever
+    if (DWT->CYCCNT == 0U) {
+        return HAL_ERROR;
+    }
+
     hdht->type = type;
     hdht->port = port;
     hdht->pin = pin;
@@ -72,9 +78,17 @@ HAL_StatusTypeDef DHT_Init(DHT_Handle_t *hdht, DHT_Type_t type, GPIO_TypeDef *po
     hdht->temperatureC = 0.0f;
 
     dht_line_output(port, pin);
-    HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
+    GPIO_Driver_WritePin(port, pin, GPIO_PIN_SET);
 
     return HAL_OK;
+}
+
+// Leaves the bus idle high so the sensor can see the next start pulse
+static HAL_StatusTypeDef dht_finish(DHT_Handle_t *hdht, HAL_StatusTypeDef status)
+{
+    dht_line_output(hdht->port, hdht->pin);
+    GPIO_Driver_WritePin(hdht->port, hdht->pin, GPIO_PIN_SET);
+    return status;
 }
 
 HAL_StatusTypeDef DHT_Read(DHT_Handle_t *hdht)
@@ -92,35 +106,53 @@ HAL_StatusTypeDef DHT_Read(DHT_Handle_t *hdht)
 
     // Any early return below leaves no fresh sample
     hdht->valid = false;
+    // Rate-limit failed attempts too, so a missing sensor is not hammered
+    hdht->lastReadMs = now;
 
     uint8_t data[5] = {0};
 
     // Start signal: pull low
     dht_line_output(hdht->port, hdht->pin);
-    HAL_GPIO_WritePin(hdht->port, hdht->pin, GPIO_PIN_RESET);
+    GPIO_Driver_WritePin(hdht->port, hdht->pin, GPIO_PIN_RESET);
     if (hdht->type == DHT_TYPE_DHT11) {
         HAL_Delay(18); // 18 ms
     } else {
         HAL_Delay(2);  // >1 ms for DHT22
     }
-    HAL_GPIO_WritePin(hdht->port, hdht->pin, GPIO_PIN_SET);
+    GPIO_Driver_WritePin(hdht->port, hdht->pin, GPIO_PIN_SET);
     dht_delay_us(30);
 
     // Switch to input
     dht_line_input(hdht->port, hdht->pin);
 
+    /* The response and the 40 data bits are decoded from pulse widths of a few
+       tens of microseconds, so any interrupt taken here corrupts the frame.
+       DWT keeps counting with interrupts masked, and the section is ~5 ms. */
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+
+    HAL_StatusTypeDef status = HAL_OK;
+
     // Wait for sensor response: 80us low, 80us high
-    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) { return HAL_TIMEOUT; }
-    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_SET, 100)) { return HAL_TIMEOUT; }
-    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) { return HAL_TIMEOUT; }
+    if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100) ||
+        !dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_SET, 100) ||
+        !dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) {
+        status = HAL_TIMEOUT;
+    }
 
     // Read 40 bits
-    for (uint8_t i = 0; i < 40; i++) {
+    for (uint8_t i = 0; (status == HAL_OK) && (i < 40); i++) {
         // Wait for line to go high (start of bit)
-        if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_SET, 70)) { return HAL_TIMEOUT; }
+        if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_SET, 70)) {
+            status = HAL_TIMEOUT;
+            break;
+        }
         uint32_t start = DWT->CYCCNT;
         // Wait for line to go low (end of bit)
-        if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) { return HAL_TIMEOUT; }
+        if (!dht_wait_level(hdht->port, hdht->pin, GPIO_PIN_RESET, 100)) {
+            status = HAL_TIMEOUT;
+            break;
+        }
         uint32_t widthTicks = DWT->CYCCNT - start;
         uint32_t widthUs = widthTicks / (SystemCoreClock / 1000000U);
         if (widthUs > DHT_BIT_ONE_THRESHOLD_US) {
@@ -128,13 +160,15 @@ HAL_StatusTypeDef DHT_Read(DHT_Handle_t *hdht)
         }
     }
 
-    // Restore line to output high
-    dht_line_output(hdht->port, hdht->pin);
-    HAL_GPIO_WritePin(hdht->port, hdht->pin, GPIO_PIN_SET);
+    __set_PRIMASK(primask);
+
+    if (status != HAL_OK) {
+        return dht_finish(hdht, status);
+    }
 
     uint8_t checksum = data[0] + data[1] + data[2] + data[3];
     if (checksum != data[4]) {
-        return HAL_ERROR;
+        return dht_finish(hdht, HAL_ERROR);
     }
 
     if (hdht->type == DHT_TYPE_DHT11) {
@@ -151,9 +185,8 @@ HAL_StatusTypeDef DHT_Read(DHT_Handle_t *hdht)
         hdht->temperatureC = (rawTemp & 0x8000U) ? -tempC : tempC;
     }
 
-    hdht->lastReadMs = now;
     hdht->valid = true;
-    return HAL_OK;
+    return dht_finish(hdht, HAL_OK);
 }
 
 bool DHT_IsValid(const DHT_Handle_t *hdht)

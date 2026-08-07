@@ -63,8 +63,11 @@ void DMA1_Stream1_IRQHandler(void);
 void DMA1_Stream3_IRQHandler(void);
 void DMA1_Stream5_IRQHandler(void);
 void DMA1_Stream6_IRQHandler(void);
+void DMA1_Stream7_IRQHandler(void);
+void DMA2_Stream3_IRQHandler(void);
 void DMA2_Stream5_IRQHandler(void);
 void DMA2_Stream7_IRQHandler(void);
+void SPI2_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

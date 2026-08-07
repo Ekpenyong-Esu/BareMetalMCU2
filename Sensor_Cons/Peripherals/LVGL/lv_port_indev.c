@@ -21,7 +21,9 @@
 #include <stdint.h>
 #include "lvgl.h"
 #include "lv_port_indev.h"
-#include "touchscreen.h"
+#include "ts_core.h"
+#include "ts_touch.h"
+#include "ts_events.h"
 #include "i2c.h"
 #include "app_low_power.h"  /* Application low power management */
 
@@ -118,7 +120,7 @@ static void touch_read(lv_indev_t *indev, lv_indev_data_t *data)
 void lv_port_indev_init(void)
 {
     /* Initialize touchscreen with I2C3 handle */
-    if (TS_Init(&hts, &hi2c3) != TS_OK) {
+    if (TS_Init(&hts, I2C_GetHandle()) != TS_OK) {
         return;
     }
 

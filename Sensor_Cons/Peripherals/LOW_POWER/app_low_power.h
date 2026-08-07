@@ -1,58 +1,15 @@
 /**
   ******************************************************************************
   * @file    app_low_power.h
-  * @brief   Application-specific low power mode interface
-  * @details This file contains function prototypes for GUI application
-  *          low power management including display and touchscreen control.
-  * @version 1.0
-  * @date    2025-12-11
+  * @brief   Application low power management - public aggregator
   ******************************************************************************
   */
 
-#ifndef __APP_LOW_POWER_H__
-#define __APP_LOW_POWER_H__
+#ifndef APP_LOW_POWER_H
+#define APP_LOW_POWER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "app_low_power_types.h"
+#include "app_low_power_core.h"
+#include "app_low_power_activity.h"
 
-/* Includes ------------------------------------------------------------------*/
-#include "pwr.h"
-#include <stdbool.h>
-
-/* Exported functions -------------------------------------------------------*/
-
-/**
- * @brief   Initialize application low power management
- * @details Sets up activity monitoring and low power timeouts
- * @retval  PWR_StatusTypeDef Operation status
- */
-PWR_StatusTypeDef APP_LowPowerInit(void);
-
-/**
- * @brief   Update activity timestamp
- * @details Call this function whenever user interacts with the GUI
- * @retval  None
- */
-void APP_UpdateActivity(void);
-void APP_TouchActivity(void);
-
-/**
- * @brief   Check if system should enter low power mode
- * @details Monitors activity and decides if low power mode is needed
- * @retval  bool True if low power mode should be entered
- */
-bool APP_ShouldEnterLowPower(void);
-
-/**
- * @brief   Enter application-optimized low power mode
- * @details Automatically selects best low power mode based on inactivity time
- * @retval  PWR_StatusTypeDef Operation status
- */
-PWR_StatusTypeDef APP_EnterLowPowerMode(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __APP_LOW_POWER_H__ */
+#endif /* APP_LOW_POWER_H */

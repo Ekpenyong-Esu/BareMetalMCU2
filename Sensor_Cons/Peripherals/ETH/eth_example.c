@@ -56,11 +56,6 @@
 /* Ethernet handle */
 ETH_Handle_t ethHandle;
 
-/* Buffers for Ethernet communication */
-#define ETH_MAX_FRAME_SIZE 1518
-uint8_t txBuffer[ETH_MAX_FRAME_SIZE];
-uint8_t rxBuffer[ETH_MAX_FRAME_SIZE];
-
 /* Example MAC address */
 uint8_t macAddress[MAC_ADDR_LEN] = {0x00, MAC_BYTE_1, MAC_BYTE_2, MAC_BYTE_3, MAC_BYTE_4, MAC_BYTE_5};
 
@@ -103,10 +98,6 @@ void ETH_Example_Init(void) {
         .duplexMode = ETH_FULLDUPLEX_MODE,                 /* Full duplex */
         .mediaInterface = ETH_MEDIA_INTERFACE_RMII         /* RMII interface */
     };
-
-    /* Assign buffers */
-    ethHandle.rxBuffer = rxBuffer;
-    ethHandle.txBuffer = txBuffer;
 
     /* Initialize Ethernet */
     if (ETH_Init(&ethHandle, &ethConfig) != HAL_OK) {

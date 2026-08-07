@@ -1,0 +1,125 @@
+/**
+  ******************************************************************************
+  * @file    ili9488_cmd.h
+  * @brief   ILI9488 controller command opcodes
+  ******************************************************************************
+  */
+
+#ifndef ILI9488_CMD_H
+#define ILI9488_CMD_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Standard commands */
+#define ILI9488_CMD_NOP                 0x00
+#define ILI9488_CMD_SOFTWARE_RESET      0x01
+#define ILI9488_CMD_READ_DISP_ID        0x04
+#define ILI9488_CMD_READ_DISP_STATUS    0x09
+#define ILI9488_CMD_READ_DISP_POWER     0x0A
+#define ILI9488_CMD_READ_DISP_MADCTL    0x0B
+#define ILI9488_CMD_READ_DISP_PIXEL     0x0C
+#define ILI9488_CMD_READ_DISP_IMAGE     0x0D
+#define ILI9488_CMD_READ_DISP_SIGNAL    0x0E
+#define ILI9488_CMD_READ_DISP_DIAG      0x0F
+#define ILI9488_CMD_SLEEP_IN            0x10
+#define ILI9488_CMD_SLEEP_OUT           0x11
+#define ILI9488_CMD_PARTIAL_MODE_ON     0x12
+#define ILI9488_CMD_NORMAL_DISP_ON      0x13
+#define ILI9488_CMD_DISP_INVERSION_OFF  0x20
+#define ILI9488_CMD_DISP_INVERSION_ON   0x21
+#define ILI9488_CMD_ALL_PIXEL_OFF       0x22
+#define ILI9488_CMD_ALL_PIXEL_ON        0x23
+#define ILI9488_CMD_DISPLAY_OFF         0x28
+#define ILI9488_CMD_DISPLAY_ON          0x29
+#define ILI9488_CMD_COLUMN_ADDR_SET     0x2A
+#define ILI9488_CMD_PAGE_ADDR_SET       0x2B
+#define ILI9488_CMD_MEMORY_WRITE        0x2C
+#define ILI9488_CMD_MEMORY_READ         0x2E
+#define ILI9488_CMD_PARTIAL_AREA        0x30
+#define ILI9488_CMD_VERT_SCROLL_DEF     0x33
+#define ILI9488_CMD_TEARING_OFF         0x34
+#define ILI9488_CMD_TEARING_ON          0x35
+#define ILI9488_CMD_MEMORY_ACCESS_CTL   0x36
+#define ILI9488_CMD_VERT_SCROLL_START   0x37
+#define ILI9488_CMD_IDLE_MODE_OFF       0x38
+#define ILI9488_CMD_IDLE_MODE_ON        0x39
+#define ILI9488_CMD_PIXEL_FORMAT_SET    0x3A
+#define ILI9488_CMD_WRITE_MEMORY_CONT   0x3C
+#define ILI9488_CMD_READ_MEMORY_CONT    0x3E
+#define ILI9488_CMD_SET_TEAR_SCANLINE   0x44
+#define ILI9488_CMD_GET_SCANLINE        0x45
+#define ILI9488_CMD_WRITE_DISP_BRIGHT   0x51
+#define ILI9488_CMD_READ_DISP_BRIGHT    0x52
+#define ILI9488_CMD_WRITE_CTRL_DISP     0x53
+#define ILI9488_CMD_READ_CTRL_DISP      0x54
+#define ILI9488_CMD_WRITE_ADAPT_BRIGHT  0x55
+#define ILI9488_CMD_READ_ADAPT_BRIGHT   0x56
+#define ILI9488_CMD_WRITE_CABC_MIN      0x5E
+#define ILI9488_CMD_READ_CABC_MIN       0x5F
+#define ILI9488_CMD_READ_ID1            0xDA
+#define ILI9488_CMD_READ_ID2            0xDB
+#define ILI9488_CMD_READ_ID3            0xDC
+
+/* Extended commands */
+#define ILI9488_CMD_INTERFACE_MODE      0xB0
+#define ILI9488_CMD_FRAME_RATE_NORMAL   0xB1
+#define ILI9488_CMD_FRAME_RATE_IDLE     0xB2
+#define ILI9488_CMD_FRAME_RATE_PARTIAL  0xB3
+#define ILI9488_CMD_INVERSION_CONTROL   0xB4
+#define ILI9488_CMD_BLANKING_PORCH      0xB5
+#define ILI9488_CMD_DISPLAY_FUNCTION    0xB6
+#define ILI9488_CMD_ENTRY_MODE_SET      0xB7
+#define ILI9488_CMD_BACKLIGHT_CONTROL1  0xB8
+#define ILI9488_CMD_BACKLIGHT_CONTROL2  0xB9
+#define ILI9488_CMD_BACKLIGHT_CONTROL3  0xBA
+#define ILI9488_CMD_BACKLIGHT_CONTROL4  0xBB
+#define ILI9488_CMD_BACKLIGHT_CONTROL5  0xBC
+#define ILI9488_CMD_BACKLIGHT_CONTROL7  0xBE
+#define ILI9488_CMD_BACKLIGHT_CONTROL8  0xBF
+#define ILI9488_CMD_POWER_CONTROL1      0xC0
+#define ILI9488_CMD_POWER_CONTROL2      0xC1
+#define ILI9488_CMD_POWER_CONTROL3      0xC2
+#define ILI9488_CMD_POWER_CONTROL4      0xC3
+#define ILI9488_CMD_POWER_CONTROL5      0xC4
+#define ILI9488_CMD_VCOM_CONTROL1       0xC5
+#define ILI9488_CMD_CABC_CONTROL1       0xC6
+#define ILI9488_CMD_CABC_CONTROL2       0xC8
+#define ILI9488_CMD_CABC_CONTROL3       0xC9
+#define ILI9488_CMD_CABC_CONTROL4       0xCA
+#define ILI9488_CMD_CABC_CONTROL5       0xCB
+#define ILI9488_CMD_CABC_CONTROL6       0xCC
+#define ILI9488_CMD_CABC_CONTROL7       0xCD
+#define ILI9488_CMD_CABC_CONTROL8       0xCE
+#define ILI9488_CMD_CABC_CONTROL9       0xCF
+#define ILI9488_CMD_POSITIVE_GAMMA      0xE0
+#define ILI9488_CMD_NEGATIVE_GAMMA      0xE1
+#define ILI9488_CMD_DIGITAL_GAMMA1      0xE2
+#define ILI9488_CMD_DIGITAL_GAMMA2      0xE3
+#define ILI9488_CMD_ADJUST_CONTROL1     0xE9   /* Also documented as Set Image Function */
+#define ILI9488_CMD_ADJUST_CONTROL2     0xEA
+#define ILI9488_CMD_ADJUST_CONTROL3     0xEB
+#define ILI9488_CMD_ADJUST_CONTROL4     0xEC
+#define ILI9488_CMD_ADJUST_CONTROL5     0xED
+#define ILI9488_CMD_SPI_READ_CMD        0xFB
+#define ILI9488_CMD_SPI_TIMING1         0xFC
+#define ILI9488_CMD_SPI_TIMING2         0xFD
+
+/* Pixel Format Set (0x3A) values. The serial interface only supports 12- and
+   18-bit; 16-bit RGB565 is a parallel-interface-only mode. */
+#define ILI9488_PIXEL_FORMAT_12BIT      0x33
+#define ILI9488_PIXEL_FORMAT_18BIT      0x66
+
+/* Memory Access Control (0x36) bits */
+#define ILI9488_MADCTL_MY               0x80
+#define ILI9488_MADCTL_MX               0x40
+#define ILI9488_MADCTL_MV               0x20
+#define ILI9488_MADCTL_ML               0x10
+#define ILI9488_MADCTL_BGR              0x08
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* ILI9488_CMD_H */

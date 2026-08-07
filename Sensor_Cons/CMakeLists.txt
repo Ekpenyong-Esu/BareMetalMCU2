@@ -367,7 +367,9 @@ foreach(dir ${PERIPHERAL_DIRS})
 endforeach()
 
 # Step 3: Find all .c source files in peripheral subdirectories
-file(GLOB_RECURSE PERIPHERALS_SOURCES
+# CONFIGURE_DEPENDS re-runs the glob on each build so added/removed drivers are
+# picked up without a manual reconfigure.
+file(GLOB_RECURSE PERIPHERALS_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/Peripherals/*/*.c"
 )
 

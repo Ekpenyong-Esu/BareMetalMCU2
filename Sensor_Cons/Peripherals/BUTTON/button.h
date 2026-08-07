@@ -65,6 +65,9 @@ typedef struct {
  * @param   handle Pointer to button handle
  * @param   port GPIO port
  * @param   pin GPIO pin number
+ * @note    Defaults to active low with an internal pull-up. The on-board user
+ *          button (BOARD_BUTTON_*) is active HIGH, so use Button_InitCustom
+ *          with activeLow = false for it.
  * @retval  true if successful, false otherwise
  */
 bool Button_Init(ButtonHandle_t* handle, GPIO_TypeDef* port, uint16_t pin);

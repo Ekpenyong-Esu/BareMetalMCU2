@@ -40,11 +40,14 @@ void SystemClock_Config(void);
 
 /**
  * @brief   Free-running microsecond counter
- * @details Derived from the Cortex-M4 cycle counter (DWT). Intended for short
- *          interval measurements: the value wraps roughly every 25 seconds at
- *          168 MHz, so always compare with unsigned subtraction.
+ * @details Derived from the Cortex-M4 cycle counter (DWT).
+ * @note    The cycle counter wraps every 2^32 cycles, so this value jumps from
+ *          about 25565279 back to 0 at 168 MHz. Unsigned subtraction of two
+ *          readings is only valid if they do not straddle that point, so use
+ *          it for short intervals and fall back to HAL_GetTick() for longer
+ *          ones.
  * @param   None
- * @retval  Elapsed microseconds since SYS_Init()
+ * @retval  Elapsed microseconds since SYS_Init(), modulo the wrap above
  */
 uint32_t SYS_GetMicros(void);
 

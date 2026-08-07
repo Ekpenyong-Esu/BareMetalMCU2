@@ -81,8 +81,11 @@ QSPI_StatusTypeDef QSPI_ExitDeepPowerDown(QSPI_HandleStructTypeDef *hqspi_struct
 ## Usage Example
 
 ```c
-#include "qspi.h"
-#include "qspi_example.h"
+#include "qspi_core.h"
+#include "qspi_read.h"
+#include "qspi_write.h"
+#include "qspi_erase.h"
+#include "qspi_util.h"
 
 int main(void)
 {
@@ -185,8 +188,14 @@ Add these files to your CMakeLists.txt:
 ```cmake
 set(SOURCES
     # ... other sources ...
-    Peripherals/QSPI/qspi.c
-    Peripherals/QSPI/qspi_example.c
+    Peripherals/QSPI/qspi_hw.c
+    Peripherals/QSPI/qspi_io.c
+    Peripherals/QSPI/qspi_status.c
+    Peripherals/QSPI/qspi_read.c
+    Peripherals/QSPI/qspi_write.c
+    Peripherals/QSPI/qspi_erase.c
+    Peripherals/QSPI/qspi_util.c
+    Peripherals/QSPI/qspi_core.c
 )
 ```
 

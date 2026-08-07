@@ -1,317 +1,144 @@
 /**
- ******************************************************************************
- * @file    dac.c
- * @author  Mahonri
- * @brief   DAC peripheral driver implementation for STM32F429I Discovery board
- * @date    2025
- *
- * @details This file contains the implementation of the DAC peripheral driver.
- *          It provides a clean abstraction layer over the STM32 HAL DAC functions
- *          with additional error checking and utility functions.
- *
- *          Key features:
- *          - Parameter validation
- *          - State management
- *          - Error handling
- *          - Voltage conversion utilities
- *          - GPIO configuration
- *
- * @note    This implementation is specifically designed for STM32F429I Discovery board
- * @attention
- *          This software is provided as-is, without any express or implied warranties.
- *          In no event will the authors be held liable for any damages arising from
- *          the use of this software.
- *
- * @section dac_implementation Implementation Notes
- * - Uses STM32 HAL layer for low-level hardware access
- * - Implements MSP callbacks for GPIO configuration
- * - Provides thread-safe operations (when used with HAL locks)
- * - Supports 12-bit resolution with right-aligned data format
- ******************************************************************************
+ * @file dac.c
+ * @brief DAC initialization and lifecycle
  */
 
-/* Includes ------------------------------------------------------------------*/
-#include "dac.h"                    /**< DAC driver header */
-#include "stm32f4xx_hal_dac.h"      /**< STM32 HAL DAC header */
-#include "gpio.h"                   /**< GPIO driver (port clock ownership) */
-#include "log.h"             /**< Logging utilities */
-#include <string.h>                 /**< For memset function */
-
-
+#include "dac_core.h"
+#include "gpio.h"
+#include "log.h"
+#include <string.h>
 
 /**
- * @brief Initialize the DAC peripheral
- *
- * This function performs the following initialization steps:
- * 1. Validates input parameters
- * 2. Clears the handle structure
- * 3. Stores configuration
- * 4. Initializes STM32 HAL DAC
- * 5. Configures the DAC channel
- * 6. Sets initialization flag
- *
- * @param[in] hdac Pointer to DAC handle structure
- * @param[in] config Pointer to DAC configuration structure
- *
- * @return HAL_StatusTypeDef
- *         - HAL_OK: Initialization successful
- *         - HAL_ERROR: Initialization failed
+ * @brief   Validate a requested configuration
+ * @note    The HAL only asserts these, and assertions are compiled out here.
  */
-HAL_StatusTypeDef DAC_Init(DAC_HandleStruct* hdac, const DAC_ConfigTypeDef* config)
+static bool DAC_ValidateConfig(const DAC_ConfigTypeDef *config)
 {
-    log_debug("DAC: Initializing DAC");
-
-    /* Parameter validation */
-    if (!hdac || !config) {
-        return HAL_ERROR;
+    if (config == NULL) {
+        return false;
     }
 
-    /* HAL_DAC_MspInit only wires PA4 (DAC_OUT1), so channel 2 would get the wrong pin. */
     if (config->channel != DAC_CHANNEL_1) {
+        return false;
+    }
+
+    switch (config->trigger) {
+        case DAC_TRIGGER_NONE:
+        case DAC_TRIGGER_SOFTWARE:
+        case DAC_TRIGGER_T2_TRGO:
+        case DAC_TRIGGER_T4_TRGO:
+        case DAC_TRIGGER_T5_TRGO:
+        case DAC_TRIGGER_T6_TRGO:
+        case DAC_TRIGGER_T7_TRGO:
+        case DAC_TRIGGER_T8_TRGO:
+        case DAC_TRIGGER_EXT_IT9:
+            break;
+        default:
+            return false;
+    }
+
+    if ((config->output_buffer != DAC_OUTPUTBUFFER_ENABLE) &&
+        (config->output_buffer != DAC_OUTPUTBUFFER_DISABLE)) {
+        return false;
+    }
+
+    return true;
+}
+
+HAL_StatusTypeDef DAC_Init(DAC_HandleStruct *hdac, const DAC_ConfigTypeDef *config)
+{
+    DAC_ChannelConfTypeDef channelConfig = {0};
+
+    if (hdac == NULL) {
         return HAL_ERROR;
     }
 
-    /* Clear handle structure to ensure clean state */
     memset(hdac, 0, sizeof(*hdac));
 
-    /* Store configuration for later reference */
-    hdac->config = *config;
+    if (!DAC_ValidateConfig(config)) {
+        log_error("DAC: invalid configuration");
+        return HAL_ERROR;
+    }
 
-    /* Initialize STM32 HAL DAC handle */
+    hdac->config = *config;
     hdac->hal_handle.Instance = DAC;
 
-    /* Initialize DAC peripheral */
     if (HAL_DAC_Init(&hdac->hal_handle) != HAL_OK) {
+        log_error("DAC: HAL_DAC_Init failed");
         return HAL_ERROR;
     }
 
-    /* Configure DAC channel */
-    DAC_ChannelConfTypeDef sConfig = {0};
-    sConfig.DAC_Trigger = config->trigger;
-    sConfig.DAC_OutputBuffer = config->output_buffer;
+    channelConfig.DAC_Trigger = config->trigger;
+    channelConfig.DAC_OutputBuffer = config->output_buffer;
 
-    if (HAL_DAC_ConfigChannel(&hdac->hal_handle, &sConfig, config->channel) != HAL_OK) {
-        /* Cleanup on configuration failure */
-        HAL_DAC_DeInit(&hdac->hal_handle);
+    if (HAL_DAC_ConfigChannel(&hdac->hal_handle, &channelConfig, config->channel) != HAL_OK) {
+        (void)HAL_DAC_DeInit(&hdac->hal_handle);
+        log_error("DAC: channel configuration failed");
         return HAL_ERROR;
     }
 
-    /* Mark as initialized */
     hdac->initialized = true;
-
-    log_debug("DAC: DAC initialized successfully");
+    log_debug("DAC: initialized");
 
     return HAL_OK;
 }
 
-/**
- * @brief Deinitialize the DAC peripheral
- *
- * This function performs the following deinitialization steps:
- * 1. Validates input parameters and state
- * 2. Deinitializes STM32 HAL DAC
- * 3. Clears initialization flag
- *
- * @param[in] hdac Pointer to DAC handle structure
- *
- * @return HAL_StatusTypeDef
- *         - HAL_OK: Deinitialization successful
- *         - HAL_ERROR: Deinitialization failed
- */
-HAL_StatusTypeDef DAC_DeInit(DAC_HandleStruct* hdac)
+HAL_StatusTypeDef DAC_DeInit(DAC_HandleStruct *hdac)
 {
-    /* Parameter and state validation */
-    if (!hdac || !hdac->initialized) {
+    if ((hdac == NULL) || !hdac->initialized) {
         return HAL_ERROR;
     }
 
-    /* Deinitialize STM32 HAL DAC */
     if (HAL_DAC_DeInit(&hdac->hal_handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
-    /* Clear initialization flag */
     hdac->initialized = false;
 
     return HAL_OK;
 }
 
-/**
- * @brief Set DAC output value and start conversion
- *
- * This function sets the DAC output value and immediately starts conversion.
- * It combines the operations of setting value and starting conversion for
- * convenience in simple applications.
- *
- * @param[in] hdac Pointer to DAC handle structure
- * @param[in] channel DAC channel (must match initialized channel)
- * @param[in] value DAC output value (0 to DAC_MAX_VALUE_12BIT)
- *
- * @return HAL_StatusTypeDef
- *         - HAL_OK: Operation successful
- *         - HAL_ERROR: Operation failed
- */
-HAL_StatusTypeDef DAC_SetValue(DAC_HandleStruct* hdac, uint32_t channel, uint32_t value)
+bool DAC_IsInitialized(const DAC_HandleStruct *hdac)
 {
-    /* Parameter and state validation */
-    if (!hdac || !hdac->initialized || value > DAC_MAX_VALUE_12BIT) {
-        return HAL_ERROR;
-    }
+    return ((hdac != NULL) && hdac->initialized);
+}
 
-    /* Set DAC value with 12-bit right alignment */
-    if (HAL_DAC_SetValue(&hdac->hal_handle, channel, DAC_ALIGN_12B_R, value) != HAL_OK) {
-        return HAL_ERROR;
-    }
-
-    /* Start DAC conversion */
-    if (HAL_DAC_Start(&hdac->hal_handle, channel) != HAL_OK) {
-        return HAL_ERROR;
-    }
-
-    return HAL_OK;
+bool DAC_IsChannelValid(const DAC_HandleStruct *hdac, uint32_t channel)
+{
+    return ((hdac != NULL) && hdac->initialized && (channel == hdac->config.channel));
 }
 
 /**
- * @brief Start DAC conversion
- *
- * This function starts DAC conversion using the previously set value.
- * Use this function for fine-grained control over conversion timing.
- *
- * @param[in] hdac Pointer to DAC handle structure
- * @param[in] channel DAC channel to start
- *
- * @return HAL_StatusTypeDef
- *         - HAL_OK: Conversion started successfully
- *         - HAL_ERROR: Operation failed
+ * @brief   Enable the DAC clock and drive PA4 as an analog output
  */
-HAL_StatusTypeDef DAC_Start(DAC_HandleStruct* hdac, uint32_t channel)
+void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
 {
-    /* Parameter and state validation */
-    if (!hdac || !hdac->initialized) {
-        return HAL_ERROR;
+    GPIO_InitTypeDef gpioInit = {0};
+
+    if (hdac->Instance != DAC) {
+        return;
     }
 
-    /* Start DAC conversion */
-    return HAL_DAC_Start(&hdac->hal_handle, channel);
+    __HAL_RCC_DAC_CLK_ENABLE();
+
+    /* The GPIO driver owns the port clock. */
+    gpioInit.Pin = DAC_OUT1_PIN;
+    gpioInit.Mode = GPIO_MODE_ANALOG;
+    gpioInit.Pull = GPIO_NOPULL;
+    GPIO_Driver_Pin_Init(DAC_OUT1_PORT, &gpioInit);
 }
 
 /**
- * @brief Stop DAC conversion
- *
- * This function stops the ongoing DAC conversion. The DAC output will
- * hold the last converted value.
- *
- * @param[in] hdac Pointer to DAC handle structure
- * @param[in] channel DAC channel to stop
- *
- * @return HAL_StatusTypeDef
- *         - HAL_OK: Conversion stopped successfully
- *         - HAL_ERROR: Operation failed
+ * @brief   Release the DAC clock and return PA4 to its reset state
+ * @note    Without this the HAL weak default leaves the peripheral clocked and
+ *          the pin in analog mode after DAC_DeInit().
  */
-HAL_StatusTypeDef DAC_Stop(DAC_HandleStruct* hdac, uint32_t channel)
+void HAL_DAC_MspDeInit(DAC_HandleTypeDef *hdac)
 {
-    /* Parameter and state validation */
-    if (!hdac || !hdac->initialized) {
-        return HAL_ERROR;
+    if (hdac->Instance != DAC) {
+        return;
     }
 
-    /* Stop DAC conversion */
-    return HAL_DAC_Stop(&hdac->hal_handle, channel);
+    __HAL_RCC_DAC_CLK_DISABLE();
+    HAL_GPIO_DeInit(DAC_OUT1_PORT, DAC_OUT1_PIN);
 }
-
-/**
- * @brief Get current DAC output value
- *
- * This function reads the current value from the DAC data holding register.
- * Note that this returns the register value, not the actual analog output.
- *
- * @param[in] hdac Pointer to DAC handle structure
- * @param[in] channel DAC channel to read from
- *
- * @return uint32_t Current DAC register value (0 to DAC_MAX_VALUE_12BIT)
- *         Returns 0 if parameters are invalid
- */
-uint32_t DAC_GetValue(const DAC_HandleStruct* hdac, uint32_t channel)
-{
-    /* Parameter and state validation */
-    if (!hdac || !hdac->initialized) {
-        return 0;
-    }
-
-    /* Read DAC register value */
-    return HAL_DAC_GetValue(&hdac->hal_handle, channel);
-}
-
-/**
- * @brief Convert raw DAC value to voltage
- *
- * Utility function to convert a 12-bit DAC value to the corresponding
- * output voltage using the formula: Vout = (D * Vref) / (2^N - 1)
- *
- * @param[in] raw_value Raw DAC value (0 to DAC_MAX_VALUE_12BIT)
- *
- * @return float Output voltage in volts
- */
-float DAC_RawToVoltage(uint32_t raw_value)
-{
-    /* Convert using DAC transfer function */
-    return ((float)raw_value * DAC_REFERENCE_VOLTAGE) / DAC_MAX_VALUE_12BIT;
-}
-
-/**
- * @brief Convert voltage to raw DAC value
- *
- * Utility function to convert a voltage to the corresponding 12-bit DAC value.
- * Values outside the valid range are clamped to prevent overflow.
- *
- * @param[in] voltage Input voltage in volts
- *
- * @return uint32_t Raw DAC value (0 to DAC_MAX_VALUE_12BIT)
- */
-uint32_t DAC_VoltageToRaw(float voltage)
-{
-    /* Clamp voltage to valid range */
-    if (voltage < 0.0f) {
-        voltage = 0.0f;
-    }
-    if (voltage > DAC_REFERENCE_VOLTAGE) {
-        voltage = DAC_REFERENCE_VOLTAGE;
-    }
-
-    /* Convert using DAC transfer function */
-    return (uint32_t)((voltage * DAC_MAX_VALUE_12BIT) / DAC_REFERENCE_VOLTAGE);
-}
-
-/**
- * @brief DAC MSP Initialization callback
- *
- * This callback function is called by HAL_DAC_Init() to initialize
- * the DAC MSP (MCU Support Package). It configures:
- * - DAC peripheral clock
- * - GPIOA clock
- * - GPIO pin PA4 as analog output
- *
- * @param[in] hdac Pointer to DAC handle (HAL structure)
- *
- * @note This function is automatically called by HAL_DAC_Init()
- * @note GPIO configuration is specific to STM32F429I Discovery board
- */
-void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
-{
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-    /* Check if DAC instance is valid */
-    if (hdac->Instance == DAC) {
-        /* Enable DAC peripheral clock */
-        __HAL_RCC_DAC_CLK_ENABLE();
-
-        /* Configure PA4 (DAC_OUT1) as analog, no pull-up/pull-down */
-        /* GPIO driver enables the GPIOA port clock */
-        GPIO_InitStruct.Pin = GPIO_PIN_4;
-        GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_Driver_Pin_Init(GPIOA, &GPIO_InitStruct);
-    }
-}
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

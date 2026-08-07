@@ -18,25 +18,32 @@
 static ButtonState_t Button_ReadPin(const ButtonConfig_t* config)
 {
     GPIO_PinState pinState = GPIO_Driver_ReadPin(config->port, config->pin);
-    GPIO_PinState activeLevel = (int)config->activeLow ? GPIO_PIN_RESET : GPIO_PIN_SET;
+    GPIO_PinState activeLevel = config->activeLow ? GPIO_PIN_RESET : GPIO_PIN_SET;
 
     return (pinState == activeLevel) ? BUTTON_PRESSED : BUTTON_RELEASED;
 }
 
-static void Button_GPIO_Init(const ButtonConfig_t* config)
+static bool Button_GPIO_Init(const ButtonConfig_t* config)
 {
     GPIO_InitTypeDef gpioInit = {0};
 
     gpioInit.Pin = config->pin;
-    gpioInit.Mode = (int)config->enableInterrupt ? GPIO_MODE_IT_FALLING : GPIO_MODE_INPUT;
+    /* Both edges: the driver latches press and release, and a falling-only
+       line would never signal a press on an active-high button. */
+    gpioInit.Mode = config->enableInterrupt ? GPIO_MODE_IT_RISING_FALLING : GPIO_MODE_INPUT;
     gpioInit.Speed = GPIO_SPEED_FREQ_LOW;
-    gpioInit.Pull = (int)config->activeLow ? GPIO_PULLUP : GPIO_PULLDOWN;
+    gpioInit.Pull = config->activeLow ? GPIO_PULLUP : GPIO_PULLDOWN;
 
-    GPIO_Driver_Pin_Init(config->port, &gpioInit);
-
-    if (config->enableInterrupt) {
-        GPIO_Driver_EnableIRQ(config->pin, BUTTON_IRQ_PRIORITY, 0);
+    if (GPIO_Driver_Pin_Init(config->port, &gpioInit) != HAL_OK) {
+        return false;
     }
+
+    if (config->enableInterrupt &&
+        GPIO_Driver_EnableIRQ(config->pin, BUTTON_IRQ_PRIORITY, 0) != HAL_OK) {
+        return false;
+    }
+
+    return true;
 }
 
 /* Exported functions --------------------------------------------------------*/
@@ -60,12 +67,15 @@ bool Button_InitCustom(ButtonHandle_t* handle, const ButtonConfig_t* config)
         return false;
     }
 
+    handle->initialized = false;
     handle->config = *config;
     handle->lastChangeTime = HAL_GetTick();
     handle->pressEvent = false;
     handle->releaseEvent = false;
 
-    Button_GPIO_Init(&handle->config);
+    if (!Button_GPIO_Init(&handle->config)) {
+        return false;
+    }
 
     handle->state = Button_ReadPin(&handle->config);
     handle->lastState = handle->state;

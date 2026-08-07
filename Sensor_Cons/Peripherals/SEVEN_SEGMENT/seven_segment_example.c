@@ -8,7 +8,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "seven_segment.h"
+#include "seg_core.h"
+#include "seg_format.h"
 #include "stm32f4xx_hal.h"
 
 /* Private variables ---------------------------------------------------------*/

@@ -10,7 +10,7 @@
 #ifndef UART_TYPES_H
 #define UART_TYPES_H
 
-#include "stm32f4xx_hal.h"
+#include "stm32f4xx.h"
 #include "uart_ring_buffer.h"
 #include <stdbool.h>
 #include <stdint.h>

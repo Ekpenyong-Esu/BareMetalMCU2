@@ -22,7 +22,13 @@
 #include "stm32f4xx_it.h"
 #include "uart_core.h"
 #include "rtc.h"
-#include "mic.h"
+#include "mic_events.h"
+#include "audio_core.h"
+#include "dma2d_core.h"
+#include "ltdc_core.h"
+#include "rng_async.h"
+#include "wwdg_ewi.h"
+#include "eth_irq.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "SEGGER_SYSVIEW.h"
@@ -69,8 +75,6 @@
 
 /* External variables --------------------------------------------------------*/
 extern HCD_HandleTypeDef hhcd_USB_OTG_HS;
-extern DMA2D_HandleTypeDef hdma2d;
-extern LTDC_HandleTypeDef hltdc;
 extern TIM_HandleTypeDef htim6;
 /* DMA handles */
 extern DMA_HandleTypeDef hdma_uart1_tx;  /* UART TX DMA handle */
@@ -216,7 +220,7 @@ void LTDC_IRQHandler(void)
   /* USER CODE BEGIN LTDC_IRQn 0 */
 
   /* USER CODE END LTDC_IRQn 0 */
-  HAL_LTDC_IRQHandler(&hltdc);
+  LTDC_ISR_Dispatch();
   /* USER CODE BEGIN LTDC_IRQn 1 */
 
   /* USER CODE END LTDC_IRQn 1 */
@@ -230,7 +234,7 @@ void DMA2D_IRQHandler(void)
   /* USER CODE BEGIN DMA2D_IRQn 0 */
 
   /* USER CODE END DMA2D_IRQn 0 */
-  HAL_DMA2D_IRQHandler(&hdma2d);
+  DMA2D_ISR_Dispatch();
   /* USER CODE BEGIN DMA2D_IRQn 1 */
 
   /* USER CODE END DMA2D_IRQn 1 */
@@ -300,21 +304,66 @@ void RTC_Alarm_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles DMA2 stream1 global interrupt (MIC/audio).
+  * @brief This function handles DMA1 stream3 global interrupt (MIC PDM RX).
   *        Deferred to the MIC driver via MIC_DMA_IRQHandler().
   */
-void DMA2_Stream1_IRQHandler(void)
+void DMA1_Stream3_IRQHandler(void)
 {
   MIC_DMA_IRQHandler();
 }
 
 /**
-  * @brief This function handles I2S2 global interrupt (MIC PDM audio).
+  * @brief This function handles SPI2/I2S2 global interrupt (MIC PDM audio).
   *        Deferred to the MIC driver via MIC_I2S_IRQHandler().
   */
-void I2S2_IRQHandler(void)
+void SPI2_IRQHandler(void)
 {
   MIC_I2S_IRQHandler();
+}
+
+/**
+  * @brief This function handles DMA2 stream3 global interrupt (AUDIO SAI1_A TX).
+  *        Deferred to the audio driver via AUDIO_IRQHandler().
+  */
+void DMA2_Stream3_IRQHandler(void)
+{
+  AUDIO_IRQHandler();
+}
+
+/**
+  * @brief This function handles DMA1 stream7 global interrupt (AUDIO I2S3 TX).
+  *        Deferred to the audio driver via AUDIO_IRQHandler().
+  */
+void DMA1_Stream7_IRQHandler(void)
+{
+  AUDIO_IRQHandler();
+}
+
+/**
+  * @brief This function handles the shared HASH and RNG global interrupt.
+  *        Deferred to the RNG driver via RNG_IRQHandler().
+  */
+void HASH_RNG_IRQHandler(void)
+{
+  RNG_IRQHandler();
+}
+
+/**
+  * @brief This function handles the Window Watchdog early wakeup interrupt.
+  *        Deferred to the WWDG driver via WWDG_EWI_IRQHandler().
+  */
+void WWDG_IRQHandler(void)
+{
+  WWDG_EWI_IRQHandler();
+}
+
+/**
+  * @brief This function handles the Ethernet global interrupt.
+  *        Deferred to the ETH driver via ETH_Driver_IRQHandler().
+  */
+void ETH_IRQHandler(void)
+{
+  ETH_Driver_IRQHandler();
 }
 
 /**

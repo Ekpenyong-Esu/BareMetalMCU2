@@ -65,14 +65,15 @@ static void log_message_loc(log_level_t level, const char *file, int line, const
        the text WOULD have had, so clamp `pos` after every append to keep it
        in range and prevent a buffer overrun when a field is truncated. */
     int pos = snprintf(log_buffer, LOG_BUFFER_SIZE, "%s", level_str);
-    if (pos > LOG_BUFFER_SIZE) pos = LOG_BUFFER_SIZE;
+    if (pos < 0) pos = 0;
+    if (pos > LOG_BUFFER_SIZE - 1) pos = LOG_BUFFER_SIZE - 1;
 
     // Optional source location
-    if (file && pos < LOG_BUFFER_SIZE) {
+    if (file && (pos < (LOG_BUFFER_SIZE - 1))) {
         int n = snprintf(log_buffer + pos, LOG_BUFFER_SIZE - pos, "(%s:%d) ", log_display_name(file), line);
         if (n > 0) {
             pos += n;
-            if (pos > LOG_BUFFER_SIZE) pos = LOG_BUFFER_SIZE;
+            if (pos > LOG_BUFFER_SIZE - 1) pos = LOG_BUFFER_SIZE - 1;
         }
     }
 

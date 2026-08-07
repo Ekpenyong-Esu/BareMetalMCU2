@@ -14,11 +14,14 @@ A comprehensive CAN bus driver for STM32F429 microcontrollers, providing robust 
 
 ## Architecture
 
-The CAN driver consists of three main files:
+The CAN driver is split into focused modules:
 
-- `can.h` - Header file with API definitions and data structures
-- `can.c` - Implementation file with core functionality
-- `can_example.c` - Comprehensive examples and usage patterns
+- `can_types.h` - Shared vocabulary: frame, config, status, callbacks
+- `can_baudrate.h/.c` - Baud-rate timing tables
+- `can_filter.h/.c` - Filter bank configuration
+- `can_transfer.h/.c` - Frame transmit and receive
+- `can_events.h/.c` - HAL callbacks, interrupt enable/disable, callback registration
+- `can_core.h/.c` - Init/DeInit, mode switching, status, error mapping, statistics
 
 ## API Overview
 
@@ -131,7 +134,9 @@ CAN_EnableInterrupts();
 ### Basic Communication
 
 ```c
-#include "can.h"
+#include "can_core.h"
+#include "can_filter.h"
+#include "can_transfer.h"
 
 // Initialize CAN
 CAN_Config config = {

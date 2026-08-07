@@ -1,84 +1,97 @@
 /**
  * @file eth.c
- * @brief Ethernet Driver Implementation
- * @author Generated for STM32F429
- * @date 2025
- *
- * This file implements the Ethernet driver functions for STM32F4 series.
+ * @brief Ethernet initialization, lifecycle and MAC configuration
  */
 
-#include "eth.h"
+#include "eth_core.h"
+#include "eth_buffers.h"
+#include "eth_irq.h"
 #include "log.h"
 #include <string.h>
 
-/* Ethernet frame constants */
-#define ETH_HEADER_SIZE         14
-#define ETH_MIN_FRAME_SIZE      60
-#define ETH_TYPE_OFFSET         12
-#define ETH_PAYLOAD_OFFSET      14
-#define ETH_MAX_FRAME_SIZE      1518
-#define ETH_BYTE_MASK           0xFF
-
-/* Note: Callback wrappers removed as they are not used in current implementation */
-
 /**
- * @brief Initialize Ethernet with given configuration
+ * @brief   Validate a requested configuration
  */
-HAL_StatusTypeDef ETH_Init(ETH_Handle_t *handle, ETH_Config_t *config) {
-    log_debug("ETH: Initializing Ethernet");
+static bool ETH_ValidateConfig(const ETH_Config_t *config)
+{
+    if (config == NULL) {
+        return false;
+    }
 
-    if (handle == NULL || config == NULL) {
+    if ((config->speed != ETH_SPEED_10M) && (config->speed != ETH_SPEED_100M)) {
+        return false;
+    }
+
+    if ((config->duplexMode != ETH_FULLDUPLEX_MODE) &&
+        (config->duplexMode != ETH_HALFDUPLEX_MODE)) {
+        return false;
+    }
+
+    if ((config->mediaInterface != ETH_MEDIA_INTERFACE_MII) &&
+        (config->mediaInterface != ETH_MEDIA_INTERFACE_RMII)) {
+        return false;
+    }
+
+    /* A multicast source address is never legal as a station address. */
+    if ((config->macAddr[0] & 0x01U) != 0U) {
+        return false;
+    }
+
+    return true;
+}
+
+HAL_StatusTypeDef ETH_Init(ETH_Handle_t *handle, const ETH_Config_t *config)
+{
+    ETH_MACConfigTypeDef macConfig;
+
+    if (handle == NULL) {
         return HAL_ERROR;
     }
 
-    /* Copy configuration */
+    if (!ETH_ValidateConfig(config)) {
+        log_error("ETH: invalid configuration");
+        return HAL_ERROR;
+    }
+
+    memset(handle, 0, sizeof(ETH_Handle_t));
     handle->config = *config;
 
-    /* Initialize HAL ETH handle */
     handle->heth.Instance = ETH;
-    handle->heth.Init.MACAddr = (uint8_t *)config->macAddr;
-    handle->heth.Init.MediaInterface = (ETH_MediaInterfaceTypeDef)config->mediaInterface;
+    handle->heth.Init.MACAddr = handle->config.macAddr;
+    handle->heth.Init.MediaInterface = config->mediaInterface;
+    ETH_Buffers_Attach(&handle->heth);
+    ETH_Buffers_Reset();
 
-    /* Allocate DMA descriptors */
-    static ETH_DMADescTypeDef DMARxDscrTab[ETH_RX_DESC_CNT] __attribute__((section(".RxDecripSection")));
-    static ETH_DMADescTypeDef DMATxDscrTab[ETH_TX_DESC_CNT] __attribute__((section(".TxDecripSection")));
-
-    handle->heth.Init.TxDesc = DMATxDscrTab;
-    handle->heth.Init.RxDesc = DMARxDscrTab;
-    handle->heth.Init.RxBuffLen = ETH_MAX_FRAME_SIZE; /* Maximum frame size */
-
-    /* Initialize ETH */
     if (HAL_ETH_Init(&handle->heth) != HAL_OK) {
+        log_error("ETH: HAL_ETH_Init failed");
         return HAL_ERROR;
     }
 
-    /* Configure MAC (read-modify-write so the untouched fields keep HAL's defaults) */
-    ETH_MACConfigTypeDef macConfig = {0};
+    /* Apply the requested speed and duplex on top of the reset defaults. */
     if (HAL_ETH_GetMACConfig(&handle->heth, &macConfig) != HAL_OK) {
+        (void)HAL_ETH_DeInit(&handle->heth);
+        log_error("ETH: unable to read MAC configuration");
         return HAL_ERROR;
     }
 
-    macConfig.SourceAddrControl = ETH_SOURCEADDRESS_DISABLE;
-    macConfig.ChecksumOffload = DISABLE;
     macConfig.Speed = config->speed;
     macConfig.DuplexMode = config->duplexMode;
 
     if (HAL_ETH_SetMACConfig(&handle->heth, &macConfig) != HAL_OK) {
+        (void)HAL_ETH_DeInit(&handle->heth);
+        log_error("ETH: unable to apply MAC configuration");
         return HAL_ERROR;
     }
 
     handle->initialized = true;
-
-    log_debug("ETH: Ethernet initialized successfully");
+    log_info("ETH: initialized");
 
     return HAL_OK;
 }
 
-/**
- * @brief Deinitialize Ethernet
- */
-HAL_StatusTypeDef ETH_DeInit(ETH_Handle_t *handle) {
-    if (handle == NULL || !handle->initialized) {
+HAL_StatusTypeDef ETH_DeInit(ETH_Handle_t *handle)
+{
+    if ((handle == NULL) || !handle->initialized) {
         return HAL_ERROR;
     }
 
@@ -87,232 +100,98 @@ HAL_StatusTypeDef ETH_DeInit(ETH_Handle_t *handle) {
     }
 
     handle->initialized = false;
+    ETH_Buffers_Reset();
+
     return HAL_OK;
 }
 
-/**
- * @brief Start Ethernet communication
- */
-HAL_StatusTypeDef ETH_Start(ETH_Handle_t *handle) {
-    if (handle == NULL || !handle->initialized) {
+HAL_StatusTypeDef ETH_Start(ETH_Handle_t *handle)
+{
+    if ((handle == NULL) || !handle->initialized) {
         return HAL_ERROR;
+    }
+
+    if (ETH_IsInterruptModeEnabled()) {
+        return HAL_ETH_Start_IT(&handle->heth);
     }
 
     return HAL_ETH_Start(&handle->heth);
 }
 
-/**
- * @brief Stop Ethernet communication
- */
-HAL_StatusTypeDef ETH_Stop(ETH_Handle_t *handle) {
-    if (handle == NULL || !handle->initialized) {
+HAL_StatusTypeDef ETH_Stop(ETH_Handle_t *handle)
+{
+    if ((handle == NULL) || !handle->initialized) {
         return HAL_ERROR;
     }
 
     return HAL_ETH_Stop(&handle->heth);
 }
 
-/**
- * @brief Transmit Ethernet frame
- */
-HAL_StatusTypeDef ETH_TransmitFrame(ETH_Handle_t *handle, ETH_Frame_t *frame) {
-    if (handle == NULL || !handle->initialized || frame == NULL) {
-        return HAL_ERROR;
-    }
-
-    if (frame->payload == NULL || frame->payloadLength == 0) {
-        return HAL_ERROR;
-    }
-
-    /* Prepare frame buffer */
-    uint8_t *txBuffer = handle->txBuffer;
-    if (txBuffer == NULL) {
-        return HAL_ERROR;
-    }
-
-    /* Copy destination MAC */
-    memcpy(txBuffer, frame->destination, 6);
-    /* Copy source MAC */
-    memcpy(txBuffer + 6, frame->source, 6);
-    /* Copy type */
-    txBuffer[ETH_TYPE_OFFSET] = (frame->type >> 8) & ETH_BYTE_MASK;
-    txBuffer[ETH_TYPE_OFFSET + 1] = frame->type & ETH_BYTE_MASK;
-    /* Copy payload */
-    memcpy(txBuffer + ETH_PAYLOAD_OFFSET, frame->payload, frame->payloadLength);
-
-    /* Prepare transmit configuration */
-    ETH_TxPacketConfigTypeDef txConfig;
-    txConfig.Attributes = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
-    txConfig.Length = frame->payloadLength + ETH_HEADER_SIZE;
-    txConfig.TxBuffer = NULL; /* Use internal buffer */
-    txConfig.SrcAddrCtrl = ETH_SOURCEADDRESS_DISABLE;
-    txConfig.CRCPadCtrl = ETH_CRC_PAD_DISABLE;
-    txConfig.ChecksumCtrl = ETH_CHECKSUM_DISABLE;
-
-    /* Transmit frame */
-    return HAL_ETH_Transmit(&handle->heth, &txConfig, 0);
-}
-
-/**
- * @brief Receive Ethernet frame
- */
-HAL_StatusTypeDef ETH_ReceiveFrame(ETH_Handle_t *handle, ETH_Frame_t *frame) {
-    if (handle == NULL || !handle->initialized || frame == NULL) {
-        return HAL_ERROR;
-    }
-
-    if (handle->rxBuffer == NULL) {
-        return HAL_ERROR;
-    }
-
-    /* Receive frame */
-    void *rxBufferPtr = (void *)handle->rxBuffer;
-    uint32_t frameLength = 0;
-
-    HAL_StatusTypeDef status = HAL_ETH_ReadData(&handle->heth, &rxBufferPtr);
-    if (status != HAL_OK) {
-        return status;
-    }
-
-    /* Get frame length from buffer */
-    frameLength = *(uint32_t *)rxBufferPtr;
-
-    if (frameLength < ETH_HEADER_SIZE) { /* Minimum Ethernet frame size */
-        return HAL_ERROR;
-    }
-
-    /* Parse frame */
-    memcpy(frame->destination, handle->rxBuffer, 6);
-    memcpy(frame->source, handle->rxBuffer + 6, 6);
-    frame->type = (handle->rxBuffer[ETH_TYPE_OFFSET] << 8) | handle->rxBuffer[ETH_TYPE_OFFSET + 1];
-    frame->payloadLength = frameLength - ETH_HEADER_SIZE;
-    frame->payload = handle->rxBuffer + ETH_PAYLOAD_OFFSET;
-
-    return HAL_OK;
-}
-
-/**
- * @brief Check if the Ethernet peripheral is ready
- */
-bool ETH_IsReady(ETH_Handle_t *handle) {
-    if (handle == NULL || !handle->initialized) {
+bool ETH_IsReady(const ETH_Handle_t *handle)
+{
+    if ((handle == NULL) || !handle->initialized) {
         return false;
     }
 
-    return (HAL_ETH_GetState(&handle->heth) == HAL_ETH_STATE_READY);
+    return (handle->heth.gState == HAL_ETH_STATE_STARTED);
 }
 
-/**
- * @brief Get the configured Ethernet speed
- */
-uint32_t ETH_GetConfiguredSpeed(ETH_Handle_t *handle) {
-    if (handle == NULL || !handle->initialized) {
-        return 0;
+bool ETH_IsInitialized(const ETH_Handle_t *handle)
+{
+    return ((handle != NULL) && handle->initialized);
+}
+
+uint32_t ETH_GetConfiguredSpeed(const ETH_Handle_t *handle)
+{
+    if ((handle == NULL) || !handle->initialized) {
+        return 0U;
     }
 
     return handle->config.speed;
 }
 
-/**
- * @brief Get the configured Ethernet duplex mode
- */
-uint32_t ETH_GetConfiguredDuplex(ETH_Handle_t *handle) {
-    if (handle == NULL || !handle->initialized) {
-        return 0;
+uint32_t ETH_GetConfiguredDuplex(const ETH_Handle_t *handle)
+{
+    if ((handle == NULL) || !handle->initialized) {
+        return 0U;
     }
 
     return handle->config.duplexMode;
 }
 
-/**
- * @brief Set MAC address
- */
-HAL_StatusTypeDef ETH_SetMACAddress(ETH_Handle_t *handle, uint8_t *macAddr) {
-    if (handle == NULL || !handle->initialized || macAddr == NULL) {
+HAL_StatusTypeDef ETH_SetMACAddress(ETH_Handle_t *handle, const uint8_t *macAddr)
+{
+    uint32_t high;
+    uint32_t low;
+
+    if ((handle == NULL) || (macAddr == NULL) || !handle->initialized) {
+        return HAL_ERROR;
+    }
+
+    if ((macAddr[0] & 0x01U) != 0U) {
+        log_error("ETH: multicast address rejected as station address");
         return HAL_ERROR;
     }
 
     memcpy(handle->config.macAddr, macAddr, ETH_ADDR_LEN);
 
-    /* Program MAC address register 0 as well. Updating only the shadow copy
-       above made this function report success while the controller kept
-       filtering on its previous address. */
-    handle->heth.Instance->MACA0HR = ((uint32_t)macAddr[5] << 8) |
-                                      (uint32_t)macAddr[4];
-    handle->heth.Instance->MACA0LR = ((uint32_t)macAddr[3] << 24) |
-                                     ((uint32_t)macAddr[2] << 16) |
-                                     ((uint32_t)macAddr[1] << 8) |
-                                      (uint32_t)macAddr[0];
+    high = ((uint32_t)macAddr[5] << 8) | (uint32_t)macAddr[4];
+    low = ((uint32_t)macAddr[3] << 24) | ((uint32_t)macAddr[2] << 16) |
+          ((uint32_t)macAddr[1] << 8) | (uint32_t)macAddr[0];
+
+    handle->heth.Instance->MACA0HR = high;
+    handle->heth.Instance->MACA0LR = low;
+
     return HAL_OK;
 }
 
-/**
- * @brief Get MAC address
- */
-void ETH_GetMACAddress(ETH_Handle_t *handle, uint8_t *macAddr) {
-    if (handle != NULL && macAddr != NULL) {
-        memcpy(macAddr, handle->config.macAddr, ETH_ADDR_LEN);
-    }
-}
-
-/**
- * @brief Enable Ethernet interrupts
- */
-HAL_StatusTypeDef ETH_EnableInterrupts(ETH_Handle_t *handle) {
-    if (handle == NULL || !handle->initialized) {
+HAL_StatusTypeDef ETH_GetMACAddress(const ETH_Handle_t *handle, uint8_t *macAddr)
+{
+    if ((handle == NULL) || (macAddr == NULL) || !handle->initialized) {
         return HAL_ERROR;
     }
 
-    /* Enable ETH interrupt */
-    HAL_NVIC_SetPriority(ETH_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(ETH_IRQn);
+    memcpy(macAddr, handle->config.macAddr, ETH_ADDR_LEN);
 
     return HAL_OK;
-}
-
-/**
- * @brief Disable Ethernet interrupts
- */
-HAL_StatusTypeDef ETH_DisableInterrupts(ETH_Handle_t *handle) {
-    if (handle == NULL || !handle->initialized) {
-        return HAL_ERROR;
-    }
-
-    /* Disable ETH interrupt */
-    HAL_NVIC_DisableIRQ(ETH_IRQn);
-
-    return HAL_OK;
-}
-
-/**
- * @brief Ethernet IRQ Handler
- */
-void ETH_IRQHandler(ETH_Handle_t *handle) {
-    if (handle != NULL && handle->initialized) {
-        HAL_ETH_IRQHandler(&handle->heth);
-    }
-}
-
-/**
- * @brief ETH Transmit Complete Callback (weak implementation)
- */
-__weak void ETH_TxCpltCallback(ETH_HandleTypeDef *heth) {
-    /* User should implement this callback */
-    UNUSED(heth);
-}
-
-/**
- * @brief ETH Receive Complete Callback (weak implementation)
- */
-__weak void ETH_RxCpltCallback(ETH_HandleTypeDef *heth) {
-    /* User should implement this callback */
-    UNUSED(heth);
-}
-
-/**
- * @brief ETH Error Callback (weak implementation)
- */
-__weak void ETH_ErrorCallback(ETH_HandleTypeDef *heth) {
-    /* User should implement this callback */
-    UNUSED(heth);
 }

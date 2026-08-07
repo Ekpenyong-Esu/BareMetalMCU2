@@ -80,7 +80,7 @@ void GPIO_Driver_TogglePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin);
 /**
  * @brief  Read all 16 pins of a port at once
  * @param  GPIOx: GPIO port
- * @retval Port input level, bit n = pin n
+ * @retval Port input level, bit n = pin n, or 0 if GPIOx is NULL
  */
 uint16_t GPIO_Driver_ReadPort(GPIO_TypeDef *GPIOx);
 

@@ -1,306 +1,120 @@
 /**
   ******************************************************************************
   * @file    ultrasonic.c
-  * @brief   Ultrasonic distance sensor driver implementation
-  * @details This file provides the implementation of ultrasonic distance sensors
-  *          using timer input capture for echo pulse measurement.
-  * @version 1.0
-  * @date    2025-01-13
+  * @brief   Ultrasonic sensor lifecycle and configuration
   ******************************************************************************
   */
 
-/* Includes ------------------------------------------------------------------*/
-#include "ultrasonic.h"
-#include "../TIM/tim.h"
+#include "ultrasonic_core.h"
+#include "ultrasonic_capture.h"
+#include "ultrasonic_gpio.h"
 #include "log.h"
-#include "gpio.h"
-#include "stm32f4xx_hal.h"
-#include <stdlib.h>
 #include <string.h>
 
-/* Private defines -----------------------------------------------------------*/
-
-/** @defgroup ULTRASONIC_Private_Defines Private Defines
- * @{
- */
-
-/* Speed of sound correction factor per degree Celsius */
-#define ULTRASONIC_SPEED_CORRECTION    0.6f    /* m/s per °C */
-
-/* Echo width is measured in microseconds, so the capture timer is prescaled
-   to tick at exactly 1 MHz. */
-#define ULTRASONIC_TIMER_TICK_HZ       1000000U
-
-/** @} */
-
-/* Private function prototypes -----------------------------------------------*/
-static void ULTRASONIC_MspInit(ULTRASONIC_Handle_t *hultra);
-static void ULTRASONIC_MspDeInit(ULTRASONIC_Handle_t *hultra);
-static ULTRASONIC_StatusTypeDef ULTRASONIC_ValidateConfig(ULTRASONIC_Config_t *config);
-static uint16_t ULTRASONIC_CalculateDistance(uint32_t echoTime, uint8_t temperature);
-static float ULTRASONIC_GetSpeedOfSound(uint8_t temperature);
-static uint32_t ULTRASONIC_GetTimerPrescaler(const TIM_TypeDef *instance);
-
-/* Exported functions -------------------------------------------------------*/
-
-/**
- * @brief   Initialize ultrasonic sensor
- * @details Configures GPIO pins and timer for distance measurement
- * @param   hultra Pointer to ultrasonic sensor handle
- * @param   htim Pointer to timer handle for input capture
- * @param   channel Timer input capture channel
- * @param   pins Pointer to GPIO pin configuration
- * @retval  ULTRASONIC_StatusTypeDef Operation status
- */
-ULTRASONIC_StatusTypeDef ULTRASONIC_Init(ULTRASONIC_Handle_t *hultra,
-                                        TIM_HandleTypeDef *htim,
-                                        uint32_t channel,
-                                        ULTRASONIC_Pins_t *pins)
+static ULTRASONIC_StatusTypeDef ULTRASONIC_ValidateConfig(const ULTRASONIC_Config_t *config)
 {
-    if (hultra == NULL || htim == NULL || pins == NULL) {
+    if (config == NULL) {
+        return ULTRASONIC_INVALID_PARAM;
+    }
+
+    if (config->minDistance >= config->maxDistance ||
+        config->maxDistance > ULTRASONIC_ABS_MAX_DISTANCE) {
+        return ULTRASONIC_INVALID_PARAM;
+    }
+
+    if (config->temperature < ULTRASONIC_MIN_TEMPERATURE ||
+        config->temperature > ULTRASONIC_MAX_TEMPERATURE) {
+        return ULTRASONIC_INVALID_PARAM;
+    }
+
+    if (config->measurementTimeout == 0U) {
+        return ULTRASONIC_INVALID_PARAM;
+    }
+
+    return ULTRASONIC_OK;
+}
+
+ULTRASONIC_StatusTypeDef ULTRASONIC_Init(ULTRASONIC_Handle_t *hultra,
+                                         TIM_HandleTypeDef *htim,
+                                         uint32_t channel,
+                                         const ULTRASONIC_Pins_t *pins)
+{
+    ULTRASONIC_Config_t defaultConfig;
+    ULTRASONIC_StatusTypeDef status;
+
+    if (hultra == NULL || htim == NULL || htim->Instance == NULL || pins == NULL ||
+        pins->triggerPort == NULL || pins->echoPort == NULL) {
         log_error("ULTRASONIC: Invalid parameters provided to ULTRASONIC_Init");
         return ULTRASONIC_INVALID_PARAM;
     }
 
-    log_debug("ULTRASONIC: Initializing ultrasonic sensor with channel %d", channel);
+    log_debug("ULTRASONIC: initializing on capture channel %lu", (unsigned long)channel);
 
-    /* Initialize structure */
     memset(hultra, 0, sizeof(ULTRASONIC_Handle_t));
     hultra->htim = htim;
     hultra->channel = channel;
     hultra->pins = *pins;
-
-    /* No measurement is in flight yet, so the sensor is ready to be triggered */
+    hultra->echoState = ULTRASONIC_ECHO_IDLE;
     hultra->measurementDone = true;
 
-    /* Initialize MSP (GPIO pins) */
-    ULTRASONIC_MspInit(hultra);
-    log_debug("ULTRASONIC: GPIO pins initialized");
-
-    /* Configure timer for input capture at a 1 us resolution */
-    if (TIM_IC_Init(htim, htim->Instance, ULTRASONIC_GetTimerPrescaler(htim->Instance), 0xFFFF) != HAL_OK) {
-        log_error("ULTRASONIC: Failed to initialize timer for input capture");
-        return ULTRASONIC_ERROR;
+    defaultConfig = ULTRASONIC_GetDefaultConfig();
+    status = ULTRASONIC_ValidateConfig(&defaultConfig);
+    if (status != ULTRASONIC_OK) {
+        return status;
     }
-    log_debug("ULTRASONIC: Timer configured for input capture");
+    hultra->config = defaultConfig;
 
-    /* Configure input capture channel */
-    if (TIM_IC_ConfigChannel(htim, channel, TIM_ICPOLARITY_RISING) != HAL_OK) {
-        log_error("ULTRASONIC: Failed to configure input capture channel");
-        return ULTRASONIC_ERROR;
+    status = ULTRASONIC_GPIO_Init(&hultra->pins, htim->Instance);
+    if (status != ULTRASONIC_OK) {
+        return status;
     }
-    log_debug("ULTRASONIC: Input capture channel configured");
 
-    /* Set default configuration */
-    ULTRASONIC_Config_t default_config = ULTRASONIC_GetDefaultConfig();
-    ULTRASONIC_Config(hultra, &default_config);
-
-    /* Start timer */
-    TIM_Start(htim);
+    status = ULTRASONIC_CAPTURE_Init(htim, channel);
+    if (status != ULTRASONIC_OK) {
+        ULTRASONIC_GPIO_DeInit(&hultra->pins);
+        return status;
+    }
 
     hultra->isInitialized = true;
 
     log_info("ULTRASONIC: Ultrasonic sensor initialized successfully");
+
     return ULTRASONIC_OK;
 }
 
-/**
- * @brief   Deinitialize ultrasonic sensor
- * @details Stops timer and releases resources
- * @param   hultra Pointer to ultrasonic sensor handle
- * @retval  ULTRASONIC_StatusTypeDef Operation status
- */
 ULTRASONIC_StatusTypeDef ULTRASONIC_DeInit(ULTRASONIC_Handle_t *hultra)
 {
-    if (hultra == NULL) {
-        return ULTRASONIC_INVALID_PARAM;
-    }
+    ULTRASONIC_CHECK_HANDLE(hultra);
 
-    /* Stop timer */
-    TIM_Stop(hultra->htim);
+    (void)ULTRASONIC_CAPTURE_DeInit(hultra->htim, hultra->channel);
+    ULTRASONIC_GPIO_DeInit(&hultra->pins);
 
-    /* Deinitialize MSP */
-    ULTRASONIC_MspDeInit(hultra);
-
+    hultra->echoState = ULTRASONIC_ECHO_IDLE;
+    hultra->measurementDone = true;
     hultra->isInitialized = false;
 
     return ULTRASONIC_OK;
 }
 
-/**
- * @brief   Configure ultrasonic sensor parameters
- * @details Sets sensor configuration parameters
- * @param   hultra Pointer to ultrasonic sensor handle
- * @param   config Pointer to configuration structure
- * @retval  ULTRASONIC_StatusTypeDef Operation status
- */
 ULTRASONIC_StatusTypeDef ULTRASONIC_Config(ULTRASONIC_Handle_t *hultra,
-                                          ULTRASONIC_Config_t *config)
+                                           const ULTRASONIC_Config_t *config)
 {
-    if (hultra == NULL || config == NULL) {
+    ULTRASONIC_StatusTypeDef status;
+
+    if (hultra == NULL) {
         return ULTRASONIC_INVALID_PARAM;
     }
 
-    /* Validate configuration */
-    if (ULTRASONIC_ValidateConfig(config) != ULTRASONIC_OK) {
-        return ULTRASONIC_INVALID_PARAM;
+    status = ULTRASONIC_ValidateConfig(config);
+    if (status != ULTRASONIC_OK) {
+        return status;
     }
 
-    /* Store configuration */
     hultra->config = *config;
 
     return ULTRASONIC_OK;
 }
 
-/**
- * @brief   Start distance measurement
- * @details Triggers ultrasonic pulse and starts measurement
- * @param   hultra Pointer to ultrasonic sensor handle
- * @retval  ULTRASONIC_StatusTypeDef Operation status
- */
-ULTRASONIC_StatusTypeDef ULTRASONIC_StartMeasurement(ULTRASONIC_Handle_t *hultra)
-{
-    if (hultra == NULL || !hultra->isInitialized) {
-        log_error("ULTRASONIC: Sensor not initialized");
-        return ULTRASONIC_NOT_INITIALIZED;
-    }
-
-    if (!hultra->measurementDone) {
-        log_warning("ULTRASONIC: Sensor busy, previous measurement not complete");
-        return ULTRASONIC_BUSY;
-    }
-
-    log_debug("ULTRASONIC: Starting distance measurement");
-
-    /* Reset measurement flags */
-    hultra->measurementDone = false;
-    hultra->echoStart = 0;
-    hultra->echoEnd = 0;
-
-    /* Generate trigger pulse */
-    HAL_GPIO_WritePin(hultra->pins.triggerPort, hultra->pins.triggerPin, GPIO_PIN_SET);
-
-    /* Wait for trigger pulse width (10us) */
-    for (volatile uint32_t i = 0; i < (SystemCoreClock / 1000000) * ULTRASONIC_TRIGGER_PULSE_WIDTH; i++) {
-        /* Busy wait for approximately 10us */
-    }
-
-    HAL_GPIO_WritePin(hultra->pins.triggerPort, hultra->pins.triggerPin, GPIO_PIN_RESET);
-
-    /* Enable input capture interrupt for echo detection */
-    TIM_IC_Start_IT(hultra->htim, hultra->channel);
-
-    return ULTRASONIC_OK;
-}
-
-/**
- * @brief   Get measured distance
- * @details Returns the last measured distance in millimeters
- * @param   hultra Pointer to ultrasonic sensor handle
- * @retval  uint16_t Distance in millimeters (0 if no valid measurement)
- */
-uint16_t ULTRASONIC_GetDistance(ULTRASONIC_Handle_t *hultra)
-{
-    if (hultra == NULL) {
-        return 0;
-    }
-
-    return hultra->lastDistance;
-}
-
-/**
- * @brief   Check if measurement is complete
- * @details Returns true if a measurement cycle has finished
- * @param   hultra Pointer to ultrasonic sensor handle
- * @retval  bool True if measurement is complete
- */
-bool ULTRASONIC_IsMeasurementComplete(ULTRASONIC_Handle_t *hultra)
-{
-    if (hultra == NULL) {
-        return false;
-    }
-
-    return hultra->measurementDone;
-}
-
-/**
- * @brief   Wait for measurement completion
- * @details Blocks until measurement is complete or timeout occurs
- * @param   hultra Pointer to ultrasonic sensor handle
- * @param   timeout Timeout in milliseconds
- * @retval  ULTRASONIC_StatusTypeDef Operation status
- */
-ULTRASONIC_StatusTypeDef ULTRASONIC_WaitForMeasurement(ULTRASONIC_Handle_t *hultra,
-                                                      uint32_t timeout)
-{
-    if (hultra == NULL || !hultra->isInitialized) {
-        return ULTRASONIC_NOT_INITIALIZED;
-    }
-
-    uint32_t startTime = HAL_GetTick();
-
-    while (!hultra->measurementDone) {
-        if ((HAL_GetTick() - startTime) > timeout) {
-            /* Disable input capture interrupt */
-            TIM_IC_Stop(hultra->htim, hultra->channel);
-            return ULTRASONIC_TIMEOUT;
-        }
-        HAL_Delay(1);
-    }
-
-    return ULTRASONIC_OK;
-}
-
-/**
- * @brief   Perform single distance measurement
- * @details Triggers measurement and waits for completion
- * @param   hultra Pointer to ultrasonic sensor handle
- * @retval  uint16_t Distance in millimeters (0 if measurement failed)
- */
-uint16_t ULTRASONIC_MeasureDistance(ULTRASONIC_Handle_t *hultra)
-{
-    if (hultra == NULL || !hultra->isInitialized) {
-        return 0;
-    }
-
-    /* Start measurement */
-    if (ULTRASONIC_StartMeasurement(hultra) != ULTRASONIC_OK) {
-        return 0;
-    }
-
-    /* Wait for completion */
-    if (ULTRASONIC_WaitForMeasurement(hultra, hultra->config.measurementTimeout / 1000) != ULTRASONIC_OK) {
-        return 0;
-    }
-
-    return hultra->lastDistance;
-}
-
-/**
- * @brief   Set ambient temperature for speed correction
- * @details Updates temperature for accurate distance calculation
- * @param   hultra Pointer to ultrasonic sensor handle
- * @param   temperature Temperature in Celsius
- * @retval  ULTRASONIC_StatusTypeDef Operation status
- */
-ULTRASONIC_StatusTypeDef ULTRASONIC_SetTemperature(ULTRASONIC_Handle_t *hultra,
-                                                  uint8_t temperature)
-{
-    if (hultra == NULL) {
-        return ULTRASONIC_INVALID_PARAM;
-    }
-
-    hultra->config.temperature = temperature;
-
-    return ULTRASONIC_OK;
-}
-
-/**
- * @brief   Get default configuration
- * @details Returns a default configuration structure
- * @param   None
- * @retval  ULTRASONIC_Config_t Default configuration
- */
 ULTRASONIC_Config_t ULTRASONIC_GetDefaultConfig(void)
 {
     ULTRASONIC_Config_t config = {
@@ -313,190 +127,16 @@ ULTRASONIC_Config_t ULTRASONIC_GetDefaultConfig(void)
     return config;
 }
 
-/**
- * @brief   Timer input capture callback
- * @details Should be called from timer interrupt handler
- * @param   hultra Pointer to ultrasonic sensor handle
- * @retval  None
- */
-void ULTRASONIC_TIM_IC_CaptureCallback(ULTRASONIC_Handle_t *hultra)
+ULTRASONIC_StatusTypeDef ULTRASONIC_SetTemperature(ULTRASONIC_Handle_t *hultra,
+                                                   int8_t temperature)
 {
-    if (hultra == NULL) {
-        return;
-    }
+    ULTRASONIC_CHECK_HANDLE(hultra);
 
-    uint32_t currentCapture = TIM_IC_GetCapture(hultra->htim, hultra->channel);
-
-    if (hultra->echoStart == 0) {
-        /* Rising edge - echo start */
-        hultra->echoStart = currentCapture;
-
-        /* Switch to falling edge detection */
-        TIM_IC_ConfigChannel(hultra->htim, hultra->channel, TIM_ICPOLARITY_FALLING);
-    } else {
-        /* Falling edge - echo end */
-        hultra->echoEnd = currentCapture;
-
-        /* Calculate echo time */
-        uint32_t echoTime;
-        if (hultra->echoEnd >= hultra->echoStart) {
-            echoTime = hultra->echoEnd - hultra->echoStart;
-        } else {
-            /* Timer overflow */
-            echoTime = (hultra->htim->Instance->ARR - hultra->echoStart) + hultra->echoEnd;
-        }
-
-        /* Calculate distance */
-        hultra->lastDistance = ULTRASONIC_CalculateDistance(echoTime, hultra->config.temperature);
-
-        /* Reset for next measurement */
-        hultra->echoStart = 0;
-        hultra->echoEnd = 0;
-        hultra->measurementDone = true;
-
-        log_debug("ULTRASONIC: Measurement complete, distance: %d mm", hultra->lastDistance);
-
-        /* Switch back to rising edge detection */
-        TIM_IC_ConfigChannel(hultra->htim, hultra->channel, TIM_ICPOLARITY_RISING);
-
-        /* Disable input capture interrupt */
-        TIM_IC_Stop(hultra->htim, hultra->channel);
-    }
-}
-
-/* Private functions ---------------------------------------------------------*/
-
-/**
- * @brief   Initialize MSP (GPIO pins)
- * @details Configures GPIO pins for trigger and echo
- * @param   hultra Pointer to ultrasonic sensor handle
- * @retval  None
- */
-static void ULTRASONIC_MspInit(ULTRASONIC_Handle_t *hultra)
-{
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-    /* GPIO driver enables the port clocks */
-
-    /* Configure trigger pin as output */
-    GPIO_InitStruct.Pin = hultra->pins.triggerPin;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIO_Driver_Pin_Init(hultra->pins.triggerPort, &GPIO_InitStruct);
-
-    /* Configure echo pin as input with interrupt */
-    GPIO_InitStruct.Pin = hultra->pins.echoPin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-
-    /* Set alternate function based on timer */
-    if (hultra->htim->Instance == TIM1) {
-        GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
-    } else if (hultra->htim->Instance == TIM2) {
-        GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
-    } else if (hultra->htim->Instance == TIM3) {
-        GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-    } else if (hultra->htim->Instance == TIM4) {
-        GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
-    } else if (hultra->htim->Instance == TIM5) {
-        GPIO_InitStruct.Alternate = GPIO_AF2_TIM5;
-    }
-
-    GPIO_Driver_Pin_Init(hultra->pins.echoPort, &GPIO_InitStruct);
-}
-
-/**
- * @brief   Deinitialize MSP
- * @details Resets GPIO pins to default state
- * @param   hultra Pointer to ultrasonic sensor handle
- * @retval  None
- */
-static void ULTRASONIC_MspDeInit(ULTRASONIC_Handle_t *hultra)
-{
-    /* Reset pins to input mode */
-    HAL_GPIO_DeInit(hultra->pins.triggerPort, hultra->pins.triggerPin);
-    HAL_GPIO_DeInit(hultra->pins.echoPort, hultra->pins.echoPin);
-}
-
-/**
- * @brief   Validate configuration
- * @details Checks if configuration parameters are valid
- * @param   config Pointer to configuration structure
- * @retval  ULTRASONIC_StatusTypeDef Validation status
- */
-static ULTRASONIC_StatusTypeDef ULTRASONIC_ValidateConfig(ULTRASONIC_Config_t *config)
-{
-    if (config->minDistance >= config->maxDistance) {
+    if (temperature < ULTRASONIC_MIN_TEMPERATURE || temperature > ULTRASONIC_MAX_TEMPERATURE) {
         return ULTRASONIC_INVALID_PARAM;
     }
 
-    if (config->temperature > 50) {
-        return ULTRASONIC_INVALID_PARAM;
-    }
+    hultra->config.temperature = temperature;
 
     return ULTRASONIC_OK;
-}
-
-/**
- * @brief   Calculate distance from echo time
- * @details Converts echo pulse duration to distance in millimeters
- * @param   echoTime Echo pulse duration in timer ticks
- * @param   temperature Ambient temperature in Celsius
- * @retval  uint16_t Distance in millimeters
- */
-static uint16_t ULTRASONIC_CalculateDistance(uint32_t echoTime, uint8_t temperature)
-{
-    /* The capture timer is prescaled to 1 MHz, so one tick is one microsecond */
-    uint32_t echoTimeUs = echoTime;
-
-    /* Calculate speed of sound at given temperature */
-    float speedOfSound = ULTRASONIC_GetSpeedOfSound(temperature);
-
-    /* Distance = (time * speed) / 2 (round trip) */
-    /* Convert to mm: (time_us * speed_m/s * 1000) / (2 * 1000000) */
-    float distance = (echoTimeUs * speedOfSound * 1000.0f) / (2.0f * 1000000.0f);
-
-    return (uint16_t)distance;
-}
-
-/**
- * @brief   Get speed of sound at given temperature
- * @details Calculates speed of sound in air based on temperature
- * @param   temperature Temperature in Celsius
- * @retval  float Speed of sound in m/s
- */
-static float ULTRASONIC_GetSpeedOfSound(uint8_t temperature)
-{
-    /* Speed of sound = 331.3 + (0.6 * temperature) m/s */
-    return 331.3f + (ULTRASONIC_SPEED_CORRECTION * temperature);
-}
-
-/**
- * @brief   Compute the prescaler that yields a 1 MHz capture timebase
- * @details TIM1/TIM8..TIM11 are clocked from APB2, the remaining timers from
- *          APB1. Either bus doubles its timer clock whenever its prescaler is
- *          not 1, which is why the raw PCLK value alone is not enough.
- * @param   instance Timer peripheral used for input capture
- * @retval  uint32_t Prescaler value to load into TIMx_PSC
- */
-static uint32_t ULTRASONIC_GetTimerPrescaler(const TIM_TypeDef *instance)
-{
-    uint32_t timerClock;
-
-    if (instance == TIM1 || instance == TIM8 || instance == TIM9 ||
-        instance == TIM10 || instance == TIM11) {
-        timerClock = HAL_RCC_GetPCLK2Freq();
-        if ((RCC->CFGR & RCC_CFGR_PPRE2) != RCC_CFGR_PPRE2_DIV1) {
-            timerClock *= 2U;
-        }
-    } else {
-        timerClock = HAL_RCC_GetPCLK1Freq();
-        if ((RCC->CFGR & RCC_CFGR_PPRE1) != RCC_CFGR_PPRE1_DIV1) {
-            timerClock *= 2U;
-        }
-    }
-
-    return (timerClock / ULTRASONIC_TIMER_TICK_HZ) - 1U;
 }

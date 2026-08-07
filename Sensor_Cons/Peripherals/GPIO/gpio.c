@@ -72,26 +72,46 @@ HAL_StatusTypeDef GPIO_Driver_Pin_DeInit(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
 
 GPIO_PinState GPIO_Driver_ReadPin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
 {
+    if (GPIOx == NULL) {
+        return GPIO_PIN_RESET;
+    }
+
     return HAL_GPIO_ReadPin(GPIOx, GPIO_Pin);
 }
 
 void GPIO_Driver_WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState)
 {
+    if (GPIOx == NULL) {
+        return;
+    }
+
     HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
 }
 
 void GPIO_Driver_TogglePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
 {
+    if (GPIOx == NULL) {
+        return;
+    }
+
     HAL_GPIO_TogglePin(GPIOx, GPIO_Pin);
 }
 
 uint16_t GPIO_Driver_ReadPort(GPIO_TypeDef *GPIOx)
 {
+    if (GPIOx == NULL) {
+        return 0U;
+    }
+
     return (uint16_t)GPIOx->IDR;
 }
 
 void GPIO_Driver_WritePort(GPIO_TypeDef *GPIOx, uint16_t PortValue)
 {
+    if (GPIOx == NULL) {
+        return;
+    }
+
     GPIOx->ODR = PortValue;
 }
 

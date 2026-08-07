@@ -18,9 +18,11 @@ HAL_StatusTypeDef Buzzer_InitActive(Buzzer_t *buzzer, GPIO_TypeDef *port, uint16
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_Driver_Pin_Init(port, &GPIO_InitStruct);
+    if (GPIO_Driver_Pin_Init(port, &GPIO_InitStruct) != HAL_OK) {
+        return HAL_ERROR;
+    }
 
-    HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
+    GPIO_Driver_WritePin(port, pin, GPIO_PIN_RESET);
     return HAL_OK;
 }
 
@@ -45,7 +47,7 @@ void Buzzer_On(Buzzer_t *buzzer)
         return;
     }
     if (buzzer->mode == BUZZER_MODE_ACTIVE_GPIO) {
-        HAL_GPIO_WritePin(buzzer->port, buzzer->pin, GPIO_PIN_SET);
+        GPIO_Driver_WritePin(buzzer->port, buzzer->pin, GPIO_PIN_SET);
     } else if (buzzer->mode == BUZZER_MODE_PASSIVE_PWM) {
         /* Drive a square wave at whatever frequency Buzzer_Tone last set. */
         uint32_t period = __HAL_TIM_GET_AUTORELOAD(buzzer->htim);
@@ -59,7 +61,7 @@ void Buzzer_Off(Buzzer_t *buzzer)
         return;
     }
     if (buzzer->mode == BUZZER_MODE_ACTIVE_GPIO) {
-        HAL_GPIO_WritePin(buzzer->port, buzzer->pin, GPIO_PIN_RESET);
+        GPIO_Driver_WritePin(buzzer->port, buzzer->pin, GPIO_PIN_RESET);
     } else if (buzzer->mode == BUZZER_MODE_PASSIVE_PWM) {
         __HAL_TIM_SET_COMPARE(buzzer->htim, buzzer->channel, 0);
     }
@@ -75,13 +77,24 @@ HAL_StatusTypeDef Buzzer_Tone(Buzzer_t *buzzer, uint32_t frequencyHz, uint8_t du
     }
 
     uint32_t timerClk = buzzer->pwmTimerClockHz;
-    if (frequencyHz > timerClk) {
-        return HAL_ERROR;   /* period would underflow to 0xFFFFFFFF */
+
+    /* Ticks of the timer input clock in one period, before prescaling. */
+    uint32_t ticks = timerClk / frequencyHz;
+    if (ticks < 2U) {
+        return HAL_ERROR;   /* frequency too high to resolve a duty cycle */
     }
 
-    uint32_t period = (timerClk / frequencyHz) - 1U;
+    /* ARR is 16 bit on every F4 timer, so audio frequencies need a prescaler:
+       at 84 MHz a 1 kHz tone is 84000 ticks, which would wrap ARR silently. */
+    uint32_t prescaler = (ticks - 1U) / 65536U;
+    if (prescaler > 65535U) {
+        return HAL_ERROR;   /* frequency too low for this timer clock */
+    }
+
+    uint32_t period = (ticks / (prescaler + 1U)) - 1U;
     uint32_t pulse = (period + 1U) * dutyPercent / 100U;
 
+    __HAL_TIM_SET_PRESCALER(buzzer->htim, prescaler);
     __HAL_TIM_SET_AUTORELOAD(buzzer->htim, period);
     __HAL_TIM_SET_COMPARE(buzzer->htim, buzzer->channel, pulse);
 
@@ -97,7 +110,7 @@ bool Buzzer_IsOn(const Buzzer_t *buzzer)
         return false;
     }
     if (buzzer->mode == BUZZER_MODE_ACTIVE_GPIO) {
-        return HAL_GPIO_ReadPin(buzzer->port, buzzer->pin) == GPIO_PIN_SET;
+        return GPIO_Driver_ReadPin(buzzer->port, buzzer->pin) == GPIO_PIN_SET;
     }
     if (buzzer->mode == BUZZER_MODE_PASSIVE_PWM) {
         return __HAL_TIM_GET_COMPARE(buzzer->htim, buzzer->channel) > 0;
