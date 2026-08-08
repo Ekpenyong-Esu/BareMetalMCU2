@@ -48,13 +48,15 @@ static void SYS_MicrosInit(void)
   */
 void SYS_Init(void)
 {
-  log_debug("SYS: Initializing system");
-
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
   /* Configure the system clock */
   SystemClock_Config();
+
+  /* Nothing may be logged before this point: SWO derives its bit rate from the
+     core clock, so output sent on the 16 MHz HSI decodes as garbage. */
+  log_debug("SYS: Initializing system");
 
   /* Microsecond time base (needs the final core clock) */
   SYS_MicrosInit();

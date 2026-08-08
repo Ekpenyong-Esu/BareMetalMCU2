@@ -3,14 +3,16 @@
  * @brief   Application 1 - Blink & Heartbeat.
  *
  * Composes four independent LED behaviours, each in its own module:
- *   - blink_steady           : external LED (PB4)  on/off at a fixed rate
- *   - heartbeat_onoff        : red LED     (PG14) lub-dub, fully lit or dark
- *   - heartbeat_fade_software: green LED   (PG13) lub-dub, CPU-generated PWM
- *   - heartbeat_fade_hardware: external LED (PA5) lub-dub, TIM2-generated PWM
+ *   - blink_steady      : external LED (PB4)  on/off at a fixed rate
+ *   - led_heartbeat     : red LED     (PG14) lub-dub, fully lit or dark
+ *   - pwm_led_software  : green LED   (PG13) continuous breathe, CPU-generated PWM
+ *   - pwm_led_hardware  : external LED (PA5) continuous breathe, TIM2-generated PWM
  *
- * The three heartbeat modules share one beat timing table (heartbeat_rhythm.h)
- * and differ only in how they turn a beat into light, which makes the cost of
- * bit-banging a waveform visible next to letting a timer do it.
+ * The two PWM modules run the same waveform over the same period and differ
+ * only in who emits the carrier, which makes the cost of bit-banging one
+ * visible next to letting a timer do it. Neither switches its LED on or off:
+ * a beat forcing the LED dark between pulses reads as a blink and hides the
+ * dimming, which is why the rhythm belongs to led_heartbeat alone.
  *
  * The application is fully non-blocking. It never calls a delay; all timing is
  * derived from HAL_GetTick(). This keeps the CPU free and lets the demo
@@ -19,7 +21,8 @@
  * Layering:
  *   main.c                        -> chooses and runs the application
  *   blink_heartbeat               -> composition only (this module)
- *   blink_steady / heartbeat_*    -> one LED behaviour each
+ *   blink_steady / led_heartbeat  -> one LED behaviour each
+ *   pwm_led_software / _hardware  -> one LED behaviour each
  *   led_blink / led_pattern       -> reusable timing engines (drivers)
  *   led / led_pwm / led_pwm_timer -> LED state and PWM output stages (drivers)
  *   board.h                       -> which pins the LEDs are wired to

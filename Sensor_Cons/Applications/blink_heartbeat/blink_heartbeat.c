@@ -9,17 +9,17 @@
 #include "blink_heartbeat.h"
 
 #include "blink_steady.h"
-#include "heartbeat_fade_hardware.h"
-#include "heartbeat_fade_software.h"
-#include "heartbeat_onoff.h"
+#include "led_heartbeat.h"
+#include "pwm_led_hardware.h"
+#include "pwm_led_software.h"
 #include "sys.h"
 
 static bool BlinkHeartbeat_Init(void)
 {
     return (BlinkSteady_Init() &&
-           HeartbeatOnOff_Init() &&
-           HeartbeatFadeSoftware_Init() &&
-           HeartbeatFadeHardware_Init()) != 0;
+           LedHeartbeat_Init() &&
+           PwmLedSoftware_Init() &&
+           PwmLedHardware_Init()) != 0;
 }
 
 static void BlinkHeartbeat_Task(void)
@@ -27,9 +27,9 @@ static void BlinkHeartbeat_Task(void)
     uint32_t nowMs = HAL_GetTick();
 
     BlinkSteady_Task(nowMs);
-    HeartbeatOnOff_Task(nowMs);
-    HeartbeatFadeSoftware_Task(nowMs);
-    HeartbeatFadeHardware_Task(nowMs);
+    LedHeartbeat_Task(nowMs);
+    PwmLedSoftware_Task(nowMs);
+    PwmLedHardware_Task(nowMs);
 }
 
 void BlinkHeartbeat_Run(void)

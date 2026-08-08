@@ -1,108 +1,96 @@
-/* ili9341.c - Minimal ILI9341 driver adapted to repository style
- * - Uses Peripherals/SPI for bus access
- * - Keeps ST-like higher-level API
- * - Provides weak MSP hooks for pin setup
+/**
+ * @file    ili9341.c
+ * @brief   ILI9341 panel lifecycle and initialization sequence
  */
 
-#include "ili9341.h"
-#include "spi.h"
-#include "gpio.h"
+/* Includes ------------------------------------------------------------------*/
+#include "ili9341_core.h"
+#include "ili9341_io.h"
 #include "log.h"
 
-/* Helper: select/deselect and set data/command mode */
-static inline void ILI9341_Select(void)
+/* Private types -------------------------------------------------------------*/
+
+/** @brief One controller command, optional parameters, and its required delay. */
+typedef struct {
+    uint8_t command;
+    const uint8_t* data;
+    uint8_t dataCount;
+    uint16_t delayMs;
+} ILI9341_InitStep_t;
+
+/* Private constants ---------------------------------------------------------*/
+
+static const uint8_t s_powerB[] = {0x00, 0xC1, 0x30};
+static const uint8_t s_powerSequence[] = {0x64, 0x03, 0x12, 0x81};
+static const uint8_t s_dtca[] = {0x85, 0x00, 0x78};
+static const uint8_t s_powerA[] = {0x39, 0x2C, 0x00, 0x34, 0x02};
+static const uint8_t s_dtcB[] = {0x00, 0x00};
+static const uint8_t s_frameRate[] = {0x00, 0x1B};
+static const uint8_t s_displayFunction[] = {0x0A, 0xA2};
+static const uint8_t s_displayFunctionRgb[] = {0x0A, 0xA7, 0x27, 0x04};
+static const uint8_t s_columnAddress[] = {0x00, 0x00, 0x00, ILI9341_COL_END};
+static const uint8_t s_pageAddress[] = {0x00, 0x00, 0x01, ILI9341_PAGE_END};
+static const uint8_t s_interface[] = {0x01, 0x00, 0x06};
+static const uint8_t s_positiveGamma[] = {
+    0x0F, 0x29, 0x24, 0x0C, 0x0E, 0x09, 0x4E, 0x78,
+    0x3C, 0x09, 0x13, 0x05, 0x17, 0x11, 0x00
+};
+static const uint8_t s_negativeGamma[] = {
+    0x00, 0x16, 0x1B, 0x04, 0x11, 0x07, 0x31, 0x33,
+    0x42, 0x05, 0x0C, 0x0A, 0x28, 0x2F, 0x0F
+};
+
+/** @brief Ordered ST panel setup sequence and its controller-specific parameters. */
+static const ILI9341_InitStep_t s_initSequence[] = {
+    {ILI9341_SWRESET, NULL, 0U, ILI9341_INIT_DELAY_MS},
+    {ILI9341_POWER_ON_SEQUENCE, (const uint8_t[]){0xC3, 0x08, 0x50}, 3U, 0U},
+    {ILI9341_POWERB, s_powerB, sizeof(s_powerB), 0U},
+    {ILI9341_POWER_SEQ, s_powerSequence, sizeof(s_powerSequence), 0U},
+    {ILI9341_DTCA, s_dtca, sizeof(s_dtca), 0U},
+    {ILI9341_POWERA, s_powerA, sizeof(s_powerA), 0U},
+    {ILI9341_PRC, (const uint8_t[]){0x20}, 1U, 0U},
+    {ILI9341_DTCB, s_dtcB, sizeof(s_dtcB), 0U},
+    {ILI9341_FRC, s_frameRate, sizeof(s_frameRate), 0U},
+    {ILI9341_DFC, s_displayFunction, sizeof(s_displayFunction), 0U},
+    {ILI9341_POWER1, (const uint8_t[]){0x10}, 1U, 0U},
+    {ILI9341_POWER2, (const uint8_t[]){0x10}, 1U, 0U},
+    {ILI9341_VCOM1, (const uint8_t[]){0x45, 0x15}, 2U, 0U},
+    {ILI9341_VCOM2, (const uint8_t[]){0x90}, 1U, 0U},
+    {ILI9341_MAC, (const uint8_t[]){0xC8}, 1U, 0U},
+    {ILI9341_3GAMMA_EN, (const uint8_t[]){0x00}, 1U, 0U},
+    {ILI9341_RGB_INTERFACE, (const uint8_t[]){0xC2}, 1U, 0U},
+    {ILI9341_DFC, s_displayFunctionRgb, sizeof(s_displayFunctionRgb), 0U},
+    {ILI9341_COLUMN_ADDR, s_columnAddress, sizeof(s_columnAddress), 0U},
+    {ILI9341_PAGE_ADDR, s_pageAddress, sizeof(s_pageAddress), 0U},
+    {ILI9341_INTERFACE, s_interface, sizeof(s_interface), 0U},
+    {ILI9341_GRAM, NULL, 0U, ILI9341_INIT_DELAY_MS},
+    {ILI9341_GAMMA, (const uint8_t[]){0x01}, 1U, 0U},
+    {ILI9341_PGAMMA, s_positiveGamma, sizeof(s_positiveGamma), 0U},
+    {ILI9341_NGAMMA, s_negativeGamma, sizeof(s_negativeGamma), 0U},
+    {ILI9341_SLEEP_OUT, NULL, 0U, ILI9341_WAKE_DELAY_MS},
+    {ILI9341_DISPLAY_ON, NULL, 0U, 0U},
+    {ILI9341_GRAM, NULL, 0U, 0U},
+};
+
+/* Private functions ---------------------------------------------------------*/
+
+static void ILI9341_RunInitSequence(void)
 {
-    HAL_GPIO_WritePin(ILI9341_CS_PORT, ILI9341_CS_PIN, GPIO_PIN_RESET);
-}
-static inline void ILI9341_Deselect(void)
-{
-    HAL_GPIO_WritePin(ILI9341_CS_PORT, ILI9341_CS_PIN, GPIO_PIN_SET);
-}
-static inline void ILI9341_SetCmdMode(void)
-{
-    HAL_GPIO_WritePin(ILI9341_WRX_PORT, ILI9341_WRX_PIN, GPIO_PIN_RESET);
-}
-static inline void ILI9341_SetDataMode(void)
-{
-    HAL_GPIO_WritePin(ILI9341_WRX_PORT, ILI9341_WRX_PIN, GPIO_PIN_SET);
-}
+    for (uint32_t index = 0; index < (sizeof(s_initSequence) / sizeof(s_initSequence[0])); index++) {
+        const ILI9341_InitStep_t* step = &s_initSequence[index];
+        ili9341_WriteReg(step->command);
 
-/* Default weak MSP implementations: configure CS and WRX pins and call central SPI init.
-   Boards can override these by providing their own ILI9341_MspInit/DeInit. */
-__weak void ILI9341_MspInit(void)
-{
-    /* GPIO driver enables the port clocks */
+        for (uint8_t dataIndex = 0; dataIndex < step->dataCount; dataIndex++) {
+            ili9341_WriteData(step->data[dataIndex]);
+        }
 
-    GPIO_InitTypeDef gpio = {0};
-
-    /* WRX/DC pin (PD13) - Output Push-Pull, per ST BSP */
-    gpio.Pin = ILI9341_WRX_PIN;
-    gpio.Mode = GPIO_MODE_OUTPUT_PP;
-    gpio.Pull = GPIO_NOPULL;
-    gpio.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIO_Driver_Pin_Init(ILI9341_WRX_PORT, &gpio);
-
-    /* CS pin (PC2) - Output Push-Pull */
-    gpio.Pin = ILI9341_CS_PIN;
-    GPIO_Driver_Pin_Init(ILI9341_CS_PORT, &gpio);
-
-    /* ST BSP pattern: toggle CS low then high */
-    HAL_GPIO_WritePin(ILI9341_CS_PORT, ILI9341_CS_PIN, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(ILI9341_CS_PORT, ILI9341_CS_PIN, GPIO_PIN_SET);
-
-    /* Initialize central SPI driver */
-    SPI_Init();
-}
-
-__weak void ILI9341_MspDeInit(void)
-{
-    /* Default no-op; boards can implement to deinit pins or SPI if desired */
-}
-
-void ili9341_WriteReg(uint8_t LCD_Reg)
-{
-    ILI9341_SetCmdMode();
-    ILI9341_Select();
-    SPI_Transmit((uint8_t*)&LCD_Reg, 1, SPI_TIMEOUT_LONG);
-    ILI9341_Deselect();
-}
-
-void ili9341_WriteData(uint8_t RegValue)
-{
-    uint8_t byte = RegValue & ILI9341_BYTE_MASK;
-
-    ILI9341_SetDataMode();
-    ILI9341_Select();
-    SPI_Transmit(&byte, 1, SPI_TIMEOUT_LONG);
-    ILI9341_Deselect();
-}
-
-uint32_t ili9341_ReadData(uint16_t RegValue, uint8_t ReadSize)
-{
-    /* Send command then read ReadSize bytes (max 4) */
-    uint8_t cmd = (uint8_t)RegValue;
-    uint8_t responseBuffer[4] = {0};
-    uint8_t transmitBuffer[4] = {0};
-
-    if (ReadSize > (uint8_t)sizeof(responseBuffer)) {
-        ReadSize = (uint8_t)sizeof(responseBuffer);
+        if (step->delayMs > 0U) {
+            HAL_Delay(step->delayMs);
+        }
     }
-
-    ILI9341_SetCmdMode();
-    ILI9341_Select();
-    SPI_Transmit(&cmd, 1, SPI_TIMEOUT_LONG);
-
-    ILI9341_SetDataMode();
-    SPI_TransmitReceive(transmitBuffer, responseBuffer, ReadSize, SPI_TIMEOUT_LONG);
-
-    ILI9341_Deselect();
-
-    uint32_t value = 0;
-    for (uint8_t i = 0; i < ReadSize; ++i) {
-        value = (value << 8) | responseBuffer[i];
-    }
-    return value;
 }
+
+/* Exported functions --------------------------------------------------------*/
 
 uint16_t ili9341_GetLcdPixelWidth(void)
 {
@@ -116,7 +104,7 @@ uint16_t ili9341_GetLcdPixelHeight(void)
 
 uint16_t ili9341_ReadID(void)
 {
-    /* ST uses a read of 3 bytes for ID — we implement same behavior */
+    /* The controller returns three bytes for this ID command. */
     uint32_t devId = ili9341_ReadData(ILI9341_READ_ID4, ILI9341_READ_ID4_SIZE);
     return (uint16_t)(devId & ILI9341_WORD_MASK);
 }
@@ -137,157 +125,20 @@ void ili9341_SleepIn(void)
 {
     log_debug("ILI9341: Entering sleep mode");
     ili9341_WriteReg(ILI9341_SLEEP_IN);
-    HAL_Delay(5);  /* Small delay after sleep in */
+    HAL_Delay(ILI9341_SLEEP_DELAY_MS);
 }
 
 void ili9341_SleepOut(void)
 {
     log_debug("ILI9341: Exiting sleep mode");
     ili9341_WriteReg(ILI9341_SLEEP_OUT);
-    HAL_Delay(ILI9341_WAKE_DELAY_MS);  /* Wait for wake up */
+    HAL_Delay(ILI9341_WAKE_DELAY_MS);
 }
 
 void ili9341_Init(void)
 {
     log_debug("ILI9341: Initializing display");
-    /* Allow board to setup pins and SPI */
     ILI9341_MspInit();
-
-    /* Software Reset - CRITICAL for proper initialization */
-    ili9341_WriteReg(ILI9341_SWRESET);
-    /* Wait for reset to complete. Use the standard init delay to be safe */
-    HAL_Delay(ILI9341_INIT_DELAY_MS);
-
-    /* Follow ST sequence (trimmed) to configure display */
-    ili9341_WriteReg(0xCA);
-    ili9341_WriteData(0xC3);
-    ili9341_WriteData(0x08);
-    ili9341_WriteData(0x50);
-    ili9341_WriteReg(ILI9341_POWERB);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0xC1);
-    ili9341_WriteData(0x30);
-    ili9341_WriteReg(ILI9341_POWER_SEQ);
-    ili9341_WriteData(0x64);
-    ili9341_WriteData(0x03);
-    ili9341_WriteData(0x12);
-    ili9341_WriteData(0x81);
-    ili9341_WriteReg(ILI9341_DTCA);
-    ili9341_WriteData(0x85);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x78);
-    ili9341_WriteReg(ILI9341_POWERA);
-    ili9341_WriteData(0x39);
-    ili9341_WriteData(0x2C);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x34);
-    ili9341_WriteData(0x02);
-    ili9341_WriteReg(ILI9341_PRC);
-    ili9341_WriteData(0x20);
-    ili9341_WriteReg(ILI9341_DTCB);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x00);
-    ili9341_WriteReg(ILI9341_FRC);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x1B);
-    ili9341_WriteReg(ILI9341_DFC);
-    ili9341_WriteData(0x0A);
-    ili9341_WriteData(0xA2);
-    ili9341_WriteReg(ILI9341_POWER1);
-    ili9341_WriteData(0x10);
-    ili9341_WriteReg(ILI9341_POWER2);
-    ili9341_WriteData(0x10);
-    ili9341_WriteReg(ILI9341_VCOM1);
-    ili9341_WriteData(0x45);
-    ili9341_WriteData(0x15);
-    ili9341_WriteReg(ILI9341_VCOM2);
-    ili9341_WriteData(0x90);
-    ili9341_WriteReg(ILI9341_MAC);
-    ili9341_WriteData(0xC8);
-    ili9341_WriteReg(ILI9341_3GAMMA_EN);
-    ili9341_WriteData(0x00);
-    ili9341_WriteReg(ILI9341_RGB_INTERFACE);
-    ili9341_WriteData(0xC2);  /* Enable RGB interface: RCM=11, bypass memory, RGB through DE/HSYNC/VSYNC */
-    ili9341_WriteReg(ILI9341_DFC);
-    ili9341_WriteData(0x0A);
-    ili9341_WriteData(0xA7);
-    ili9341_WriteData(0x27);
-    ili9341_WriteData(0x04);
-
-    /* Column address */
-    ili9341_WriteReg(ILI9341_COLUMN_ADDR);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(ILI9341_COL_END);
-
-    /* Page address */
-    ili9341_WriteReg(ILI9341_PAGE_ADDR);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x01);
-    ili9341_WriteData(ILI9341_PAGE_END);
-
-    ili9341_WriteReg(ILI9341_INTERFACE);
-    ili9341_WriteData(0x01);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x06);
-
-    // /* in ili9341_Init(), after selecting RGB interface and before GRAM */
-    // ili9341_WriteReg(ILI9341_PIXEL_FORMAT);
-    // ili9341_WriteData(0x55); /* 0x55 = 16-bit/pixel (RGB565) on ILI9341 */
-
-    ili9341_WriteReg(ILI9341_GRAM);
-    HAL_Delay(ILI9341_INIT_DELAY_MS);
-
-    /* Gamma selection */
-    ili9341_WriteReg(ILI9341_GAMMA);
-    ili9341_WriteData(0x01);
-
-    /* Positive Gamma Correction (15 parameters) - CRITICAL for proper display */
-    ili9341_WriteReg(ILI9341_PGAMMA);
-    ili9341_WriteData(0x0F);
-    ili9341_WriteData(0x29);
-    ili9341_WriteData(0x24);
-    ili9341_WriteData(0x0C);
-    ili9341_WriteData(0x0E);
-    ili9341_WriteData(0x09);
-    ili9341_WriteData(0x4E);
-    ili9341_WriteData(0x78);
-    ili9341_WriteData(0x3C);
-    ili9341_WriteData(0x09);
-    ili9341_WriteData(0x13);
-    ili9341_WriteData(0x05);
-    ili9341_WriteData(0x17);
-    ili9341_WriteData(0x11);
-    ili9341_WriteData(0x00);
-
-    /* Negative Gamma Correction (15 parameters) - CRITICAL for proper display */
-    ili9341_WriteReg(ILI9341_NGAMMA);
-    ili9341_WriteData(0x00);
-    ili9341_WriteData(0x16);
-    ili9341_WriteData(0x1B);
-    ili9341_WriteData(0x04);
-    ili9341_WriteData(0x11);
-    ili9341_WriteData(0x07);
-    ili9341_WriteData(0x31);
-    ili9341_WriteData(0x33);
-    ili9341_WriteData(0x42);
-    ili9341_WriteData(0x05);
-    ili9341_WriteData(0x0C);
-    ili9341_WriteData(0x0A);
-    ili9341_WriteData(0x28);
-    ili9341_WriteData(0x2F);
-    ili9341_WriteData(0x0F);
-
-    /* Exit sleep mode */
-    ili9341_WriteReg(ILI9341_SLEEP_OUT);
-    HAL_Delay(ILI9341_WAKE_DELAY_MS);
-
-    /* Turn on display */
-    ili9341_WriteReg(ILI9341_DISPLAY_ON);
-
-    /* Start GRAM write mode */
-    ili9341_WriteReg(ILI9341_GRAM);
+    ILI9341_RunInitSequence();
     log_debug("ILI9341: Initialization complete");
 }

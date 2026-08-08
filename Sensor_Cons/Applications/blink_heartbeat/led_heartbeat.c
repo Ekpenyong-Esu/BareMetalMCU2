@@ -1,14 +1,14 @@
 /**
- * @file heartbeat_onoff.c
+ * @file led_heartbeat.c
  * @brief Behaviour: lub-dub heartbeat on the red on-board LED, each beat fully
  *        lit or fully dark.
- * @details The plainest of the three heartbeats. Compare with
- *          heartbeat_fade_software.c and heartbeat_fade_hardware.c, which beat
- *          the same rhythm with brightness.
+ * @details The only behaviour that beats a rhythm. For dimming, which needs an
+ *          uninterrupted ramp to be visible at all, see pwm_led_software.c and
+ *          pwm_led_hardware.c.
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "heartbeat_onoff.h"
+#include "led_heartbeat.h"
 
 #include "board.h"
 #include "heartbeat_rhythm.h"
@@ -19,7 +19,7 @@ static LedPattern_t s_pattern;
 
 /* Exported functions --------------------------------------------------------*/
 
-bool HeartbeatOnOff_Init(void)
+bool LedHeartbeat_Init(void)
 {
     const LedConfig_t config = {
         .port = BOARD_LED_RED_PORT,
@@ -34,7 +34,7 @@ bool HeartbeatOnOff_Init(void)
     return HeartbeatRhythm_Start(&s_pattern);
 }
 
-void HeartbeatOnOff_Task(uint32_t nowMs)
+void LedHeartbeat_Task(uint32_t nowMs)
 {
     LedPattern_Update(&s_pattern, nowMs);
     Led_SetState(&s_led, LedPattern_GetState(&s_pattern));
