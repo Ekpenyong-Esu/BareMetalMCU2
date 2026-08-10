@@ -39,9 +39,19 @@ HAL_StatusTypeDef TIM_OC_ConfigChannel(TIM_HandleTypeDef *htim,
 HAL_StatusTypeDef TIM_OC_Start(TIM_HandleTypeDef *htim, uint32_t channel);
 
 /**
+ * @brief  Start output compare with interrupt
+ */
+HAL_StatusTypeDef TIM_OC_Start_IT(TIM_HandleTypeDef *htim, uint32_t channel);
+
+/**
  * @brief  Stop output compare
  */
 HAL_StatusTypeDef TIM_OC_Stop(TIM_HandleTypeDef *htim, uint32_t channel);
+
+/**
+ * @brief  Stop output compare interrupt
+ */
+HAL_StatusTypeDef TIM_OC_Stop_IT(TIM_HandleTypeDef *htim, uint32_t channel);
 
 #ifdef __cplusplus
 }

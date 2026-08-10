@@ -67,6 +67,14 @@ HAL_StatusTypeDef TIM_IC_Stop(TIM_HandleTypeDef *htim, uint32_t channel)
     return HAL_TIM_IC_Stop(htim, channel);
 }
 
+HAL_StatusTypeDef TIM_IC_Stop_IT(TIM_HandleTypeDef *htim, uint32_t channel)
+{
+    if (htim == NULL) {
+        return HAL_ERROR;
+    }
+    return HAL_TIM_IC_Stop_IT(htim, channel);
+}
+
 uint32_t TIM_IC_GetCapture(TIM_HandleTypeDef *htim, uint32_t channel)
 {
     if (htim == NULL) {

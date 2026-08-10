@@ -61,9 +61,19 @@ HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim,
 HAL_StatusTypeDef TIM_PWM_Start(TIM_HandleTypeDef *htim, uint32_t channel);
 
 /**
+ * @brief  Start PWM output on channel with interrupt
+ */
+HAL_StatusTypeDef TIM_PWM_Start_IT(TIM_HandleTypeDef *htim, uint32_t channel);
+
+/**
  * @brief  Stop PWM output on channel
  */
 HAL_StatusTypeDef TIM_PWM_Stop(TIM_HandleTypeDef *htim, uint32_t channel);
+
+/**
+ * @brief  Stop PWM output interrupt on channel
+ */
+HAL_StatusTypeDef TIM_PWM_Stop_IT(TIM_HandleTypeDef *htim, uint32_t channel);
 
 /**
  * @brief  Set PWM duty cycle while running

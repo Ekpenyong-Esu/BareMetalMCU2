@@ -45,12 +45,28 @@ HAL_StatusTypeDef TIM_Encoder_Start(TIM_HandleTypeDef *htim)
     return HAL_TIM_Encoder_Start(htim, TIM_CHANNEL_ALL);
 }
 
+HAL_StatusTypeDef TIM_Encoder_Start_IT(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) {
+        return HAL_ERROR;
+    }
+    return HAL_TIM_Encoder_Start_IT(htim, TIM_CHANNEL_ALL);
+}
+
 HAL_StatusTypeDef TIM_Encoder_Stop(TIM_HandleTypeDef *htim)
 {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_Encoder_Stop(htim, TIM_CHANNEL_ALL);
+}
+
+HAL_StatusTypeDef TIM_Encoder_Stop_IT(TIM_HandleTypeDef *htim)
+{
+    if (htim == NULL) {
+        return HAL_ERROR;
+    }
+    return HAL_TIM_Encoder_Stop_IT(htim, TIM_CHANNEL_ALL);
 }
 
 int32_t TIM_Encoder_GetCount(TIM_HandleTypeDef *htim)

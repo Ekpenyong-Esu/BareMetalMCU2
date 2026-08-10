@@ -31,9 +31,19 @@ HAL_StatusTypeDef TIM_Encoder_Init(TIM_HandleTypeDef *htim,
 HAL_StatusTypeDef TIM_Encoder_Start(TIM_HandleTypeDef *htim);
 
 /**
+ * @brief  Start encoder counting with interrupt
+ */
+HAL_StatusTypeDef TIM_Encoder_Start_IT(TIM_HandleTypeDef *htim);
+
+/**
  * @brief  Stop encoder counting
  */
 HAL_StatusTypeDef TIM_Encoder_Stop(TIM_HandleTypeDef *htim);
+
+/**
+ * @brief  Stop encoder counting interrupt
+ */
+HAL_StatusTypeDef TIM_Encoder_Stop_IT(TIM_HandleTypeDef *htim);
 
 /**
  * @brief  Get encoder count (position)

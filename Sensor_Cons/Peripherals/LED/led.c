@@ -34,7 +34,7 @@ static void Led_GPIO_Init(const LedConfig_t* config)
  */
 static void Led_SetPhysical(LedHandle_t* handle, LedState_t state)
 {
-    GPIO_PinState pinState;
+    GPIO_PinState pinState = GPIO_PIN_RESET;
 
     /* Determine pin state based on active level and desired LED state */
     if (handle->config.activeLow) {

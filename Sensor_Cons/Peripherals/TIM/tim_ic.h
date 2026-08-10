@@ -49,6 +49,11 @@ HAL_StatusTypeDef TIM_IC_Start_IT(TIM_HandleTypeDef *htim, uint32_t channel);
 HAL_StatusTypeDef TIM_IC_Stop(TIM_HandleTypeDef *htim, uint32_t channel);
 
 /**
+ * @brief  Stop input capture interrupt
+ */
+HAL_StatusTypeDef TIM_IC_Stop_IT(TIM_HandleTypeDef *htim, uint32_t channel);
+
+/**
  * @brief  Get captured value
  */
 uint32_t TIM_IC_GetCapture(TIM_HandleTypeDef *htim, uint32_t channel);

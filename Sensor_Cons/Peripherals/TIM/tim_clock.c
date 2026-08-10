@@ -31,7 +31,7 @@ uint32_t TIM_Clock_GetHz(const TIM_TypeDef *instance)
                   (instance == TIM10) || (instance == TIM11)) != 0;
 
     uint32_t pclkHz = (int)onApb2 ? HAL_RCC_GetPCLK2Freq() : HAL_RCC_GetPCLK1Freq();
-    
+
     uint32_t ppre = (int)onApb2 ? ((RCC->CFGR & RCC_CFGR_PPRE2) >> RCC_CFGR_PPRE2_Pos)
                            : ((RCC->CFGR & RCC_CFGR_PPRE1) >> RCC_CFGR_PPRE1_Pos);
 
@@ -42,5 +42,5 @@ uint32_t TIM_Clock_GetHz(const TIM_TypeDef *instance)
 
 bool TIM_Clock_HasOutputChannels(const TIM_TypeDef *instance)
 {
-    return (instance != NULL) && (instance != TIM6) && (instance != TIM7);
+    return ((instance != NULL) && (instance != TIM6) && (instance != TIM7)) != 0;  // Timers 6 and 7 are basic timers with no output channels
 }

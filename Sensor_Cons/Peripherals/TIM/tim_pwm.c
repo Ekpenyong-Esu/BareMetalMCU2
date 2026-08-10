@@ -72,12 +72,28 @@ HAL_StatusTypeDef TIM_PWM_Start(TIM_HandleTypeDef *htim, uint32_t channel)
     return HAL_TIM_PWM_Start(htim, channel);
 }
 
+HAL_StatusTypeDef TIM_PWM_Start_IT(TIM_HandleTypeDef *htim, uint32_t channel)
+{
+    if (htim == NULL) {
+        return HAL_ERROR;
+    }
+    return HAL_TIM_PWM_Start_IT(htim, channel);
+}
+
 HAL_StatusTypeDef TIM_PWM_Stop(TIM_HandleTypeDef *htim, uint32_t channel)
 {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_PWM_Stop(htim, channel);
+}
+
+HAL_StatusTypeDef TIM_PWM_Stop_IT(TIM_HandleTypeDef *htim, uint32_t channel)
+{
+    if (htim == NULL) {
+        return HAL_ERROR;
+    }
+    return HAL_TIM_PWM_Stop_IT(htim, channel);
 }
 
 void TIM_PWM_SetDuty(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t pulse)
