@@ -14,7 +14,7 @@
 #include "pwm_led_hardware.h"
 
 #include "board.h"
-#include "led_pwm.h"
+#include "led_software_pwm.h"
 #include "led_pwm_timer.h"
 
 /* Private constants ---------------------------------------------------------*/

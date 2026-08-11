@@ -98,6 +98,22 @@ bool Led_InitCustom(LedHandle_t* handle, const LedConfig_t* config)
 }
 
 /**
+ * @brief   Set LED to specific state
+ * @param   handle Pointer to LED handle
+ * @param   state LED state to set
+ * @retval  true if successful, false otherwise
+ */
+bool Led_SetState(LedHandle_t* handle, LedState_t state)
+{
+    if (handle == NULL || !handle->initialized) {
+        return false;
+    }
+
+    Led_SetPhysical(handle, state);
+    return true;
+}
+
+/**
  * @brief   Turn LED on
  * @param   handle Pointer to LED handle
  * @retval  true if successful, false otherwise
@@ -129,22 +145,6 @@ bool Led_Toggle(LedHandle_t* handle)
     }
 
     Led_SetPhysical(handle, (handle->state == LED_ON) ? LED_OFF : LED_ON);
-    return true;
-}
-
-/**
- * @brief   Set LED to specific state
- * @param   handle Pointer to LED handle
- * @param   state LED state to set
- * @retval  true if successful, false otherwise
- */
-bool Led_SetState(LedHandle_t* handle, LedState_t state)
-{
-    if (handle == NULL || !handle->initialized) {
-        return false;
-    }
-
-    Led_SetPhysical(handle, state);
     return true;
 }
 

@@ -24,7 +24,7 @@
  *   blink_steady / led_heartbeat  -> one LED behaviour each
  *   pwm_led_software / _hardware  -> one LED behaviour each
  *   led_blink / led_pattern       -> reusable timing engines (drivers)
- *   led / led_pwm / led_pwm_timer -> LED state and PWM output stages (drivers)
+ *   led / led_software_pwm / led_pwm_timer -> LED state and PWM output stages (drivers)
  *   board.h                       -> which pins the LEDs are wired to
  */
 

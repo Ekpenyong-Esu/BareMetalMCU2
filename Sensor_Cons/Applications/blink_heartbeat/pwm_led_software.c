@@ -17,7 +17,7 @@
 #include "pwm_led_software.h"
 
 #include "board.h"
-#include "led_pwm.h"
+#include "led_software_pwm.h"
 #include "sys.h"
 
 /* Private constants ---------------------------------------------------------*/
@@ -41,8 +41,8 @@ bool PwmLedSoftware_Init(void)
         return false;
     }
 
-    return LedPwm_Init(&s_pwm, &s_led, LED_PWM_DEFAULT_PERIOD_US) &&
-           LedPwm_Start(&s_pwm, SYS_GetMicros());
+    return (LedPwm_Init(&s_pwm, &s_led, LED_PWM_DEFAULT_PERIOD_US) &&
+           LedPwm_Start(&s_pwm, SYS_GetMicros())) != 0;
 }
 
 void PwmLedSoftware_Task(uint32_t nowMs)

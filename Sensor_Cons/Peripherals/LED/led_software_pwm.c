@@ -1,10 +1,10 @@
 /**
- * @file led_pwm.c
+ * @file led_software_pwm.c
  * @brief Software PWM implementation for a GPIO-connected LED.
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "led_pwm.h"
+#include "led_software_pwm.h"
 
 /* Exported functions --------------------------------------------------------*/
 

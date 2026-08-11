@@ -4,7 +4,7 @@
  * @details Owns one responsibility: driving a GPIO-connected LED on or off.
  *          Timing-based behaviour lives in separate modules:
  *            - led_blink.h : fixed-rate blinking
- *            - led_pwm.h   : software PWM (brightness / fading)
+ *            - led_software_pwm.h : software PWM (brightness / fading)
  *          Board pin assignments live in board.h.
  * @version 3.0
  * @date 2026-07-31

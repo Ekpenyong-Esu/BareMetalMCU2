@@ -1,5 +1,5 @@
 /**
- * @file led_pwm.h
+ * @file led_software_pwm.h
  * @brief Software PWM (brightness control) for a GPIO-connected LED.
  * @details The on-board LEDs of the STM32F429I-DISC1 (PG13/PG14) have no timer
  *          alternate function, so hardware PWM is not available on them. This
@@ -11,8 +11,8 @@
  *          owns duty-cycle handling only - not the time source.
  */
 
-#ifndef LED_PWM_H
-#define LED_PWM_H
+#ifndef LED_SOFTWARE_PWM_H
+#define LED_SOFTWARE_PWM_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,4 +104,4 @@ uint8_t LedPwm_Waveform_Smooth(uint32_t elapsedMs, uint32_t periodMs);
 }
 #endif
 
-#endif /* LED_PWM_H */
+#endif /* LED_SOFTWARE_PWM_H */

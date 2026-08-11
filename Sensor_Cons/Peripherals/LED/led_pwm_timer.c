@@ -7,7 +7,7 @@
 #include "led_pwm_timer.h"
 
 #include "gpio.h"
-#include "led_pwm.h"
+#include "led_software_pwm.h"
 #include "tim_pwm.h"
 
 /* Private functions ---------------------------------------------------------*/

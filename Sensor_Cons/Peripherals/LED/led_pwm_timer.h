@@ -5,7 +5,7 @@
  *          compare value on a timer output. Once started the timer generates
  *          the waveform on its own, so there is nothing to poll.
  *
- *          This is the hardware counterpart of led_pwm.h, which bit-bangs the
+ *          This is the hardware counterpart of led_software_pwm.h, which bit-bangs the
  *          same brightness on pins that have no timer alternate function.
  *          Both take brightness in 0..LED_PWM_MAX_BRIGHTNESS, so a caller can
  *          swap one for the other without changing its own logic.
