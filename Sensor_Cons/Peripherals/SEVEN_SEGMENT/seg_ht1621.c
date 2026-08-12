@@ -139,7 +139,10 @@ static SegStatus_t Seg_Ht1621Init(SegDisplayHandle_t* handle)
 
     Seg_Ht1621SendCommand(handle, HT1621_CMD_SYS_EN);
     Seg_Ht1621SendCommand(handle, HT1621_CMD_RC_256K);
-    Seg_Ht1621SendCommand(handle, Seg_Ht1621BiasCommand(cfg->bias, cfg->commons));
+
+    uint8_t biasCmd = Seg_Ht1621BiasCommand(cfg->bias, cfg->commons);
+    Seg_Ht1621SendCommand(handle, biasCmd);
+
     Seg_Ht1621SendCommand(handle, HT1621_CMD_LCD_ON);
 
     for (uint8_t i = 0; i < HT1621_RAM_CELLS; i++) {

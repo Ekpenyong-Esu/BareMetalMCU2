@@ -80,10 +80,10 @@ static HAL_StatusTypeDef IR_DecodeNEC(IR_Handle_t *handle)
 {
     const uint16_t tolerance = handle->config.tolerance;
     uint32_t data = 0;
-    uint8_t address;
-    uint8_t addressInv;
-    uint8_t command;
-    uint8_t commandInv;
+    uint8_t address = 0U;
+    uint8_t addressInv = 0U;
+    uint8_t command = 0U;
+    uint8_t commandInv = 0U;
 
     /* The bit loop reads two entries per bit after the header, so the whole
        frame has to be present before any of it is examined. */
@@ -92,8 +92,11 @@ static HAL_StatusTypeDef IR_DecodeNEC(IR_Handle_t *handle)
         return HAL_ERROR;
     }
 
-    if (!IR_IsWithinTolerance(IR_EntryMicroseconds(handle, 0), IR_NEC_HEADER_MARK, tolerance) ||
-        !IR_IsWithinTolerance(IR_EntryMicroseconds(handle, 1), IR_NEC_HEADER_SPACE, tolerance))
+    uint32_t headerMark = IR_EntryMicroseconds(handle, 0);
+    uint32_t headerSpace = IR_EntryMicroseconds(handle, 1);
+
+    if (!IR_IsWithinTolerance(headerMark, IR_NEC_HEADER_MARK, tolerance) ||
+        !IR_IsWithinTolerance(headerSpace, IR_NEC_HEADER_SPACE, tolerance))
     {
         return HAL_ERROR;
     }

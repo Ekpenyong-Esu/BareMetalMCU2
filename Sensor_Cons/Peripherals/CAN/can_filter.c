@@ -108,5 +108,6 @@ HAL_StatusTypeDef CAN_ConfigFilter(const CAN_FilterConfig *filter_config)
        frame. Banks below the split belong to CAN1. */
     filter.SlaveStartFilterBank = CAN_MAX_FILTER_BANKS;
 
-    return HAL_CAN_ConfigFilter(CAN_GetHandle(), &filter);
+    CAN_HandleTypeDef *handle = CAN_GetHandle();
+    return HAL_CAN_ConfigFilter(handle, &filter);
 }

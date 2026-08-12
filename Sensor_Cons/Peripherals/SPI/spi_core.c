@@ -64,7 +64,8 @@ SPI_StatusTypeDef SPI_Init(void)
 
 SPI_StatusTypeDef SPI_Init_Custom(const SPI_ConfigTypeDef *config)
 {
-    SPI_StatusTypeDef status;
+    SPI_StatusTypeDef status = SPI_OK;
+    HAL_StatusTypeDef halStatus = HAL_OK;
 
     if (config == NULL) {
         return SPI_INVALID_PARAM;
@@ -83,7 +84,9 @@ SPI_StatusTypeDef SPI_Init_Custom(const SPI_ConfigTypeDef *config)
     s_hspi5.Init.CRCCalculation = config->CRCCalculation;
     s_hspi5.Init.CRCPolynomial = config->CRCPolynomial;
 
-    status = SPI_ConvertHALStatus(HAL_SPI_Init(&s_hspi5));
+    halStatus = HAL_SPI_Init(&s_hspi5);
+    status = SPI_ConvertHALStatus(halStatus);
+
     s_initialized = (status == SPI_OK);
 
     return status;
@@ -91,17 +94,21 @@ SPI_StatusTypeDef SPI_Init_Custom(const SPI_ConfigTypeDef *config)
 
 SPI_StatusTypeDef SPI_DeInit(void)
 {
+    HAL_StatusTypeDef halStatus = HAL_SPI_DeInit(&s_hspi5);
+
     s_initialized = false;
 
-    return SPI_ConvertHALStatus(HAL_SPI_DeInit(&s_hspi5));
+    return SPI_ConvertHALStatus(halStatus);
 }
 
 SPI_StatusTypeDef SPI_Reinit(void)
 {
-    SPI_StatusTypeDef status;
+    SPI_StatusTypeDef status = SPI_OK;
+    HAL_StatusTypeDef halStatus = HAL_ERROR;
 
     /* HAL_SPI_DeInit leaves the Init struct untouched, so it can be reused. */
-    status = SPI_ConvertHALStatus(HAL_SPI_Init(&s_hspi5));
+    halStatus = HAL_SPI_Init(&s_hspi5);
+    status = SPI_ConvertHALStatus(halStatus);
     s_initialized = (status == SPI_OK);
 
     return status;

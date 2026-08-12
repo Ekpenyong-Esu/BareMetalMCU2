@@ -84,11 +84,14 @@ static void APP_FadeToBlack(uint32_t msec, bool power_off_after)
         return;
     }
 
-    s_dim_overlay = lv_obj_create(lv_scr_act());
+    lv_obj_t *activeScreen = lv_scr_act();
+    lv_color_t blackColor = lv_color_black();
+
+    s_dim_overlay = lv_obj_create(activeScreen);
     lv_obj_remove_style_all(s_dim_overlay);
     lv_obj_set_size(s_dim_overlay, LV_HOR_RES, LV_VER_RES);
     lv_obj_clear_flag(s_dim_overlay, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_style_bg_color(s_dim_overlay, lv_color_black(), 0);
+    lv_obj_set_style_bg_color(s_dim_overlay, blackColor, 0);
     lv_obj_set_style_bg_opa(s_dim_overlay, LV_OPA_TRANSP, 0);
 
     lv_anim_init(&anim);

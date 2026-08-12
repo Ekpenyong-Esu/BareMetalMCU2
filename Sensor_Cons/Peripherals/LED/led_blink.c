@@ -10,7 +10,7 @@
 
 bool LedBlink_Init(LedBlink_t* blink, LedHandle_t* led)
 {
-    if (blink == NULL || led == NULL) {
+    if (blink == NULL || led == NULL ) {
         return false;
     }
 

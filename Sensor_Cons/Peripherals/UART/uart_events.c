@@ -80,7 +80,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         return;
     }
 
-    CompleteReception(handle, handle->ops->completedReceiveSize(handle, huart));
+    uint16_t receivedSize = handle->ops->completedReceiveSize(handle, huart);
+
+    CompleteReception(handle, receivedSize);
 }
 
 /**

@@ -61,7 +61,8 @@ I2C_StatusTypeDef I2C_Init(void)
 
 I2C_StatusTypeDef I2C_Init_Custom(const I2C_ConfigTypeDef *config)
 {
-    I2C_StatusTypeDef status;
+    I2C_StatusTypeDef status = I2C_OK;
+    HAL_StatusTypeDef halStatus = HAL_ERROR;
 
     if (config == NULL) {
         return I2C_INVALID_PARAM;
@@ -77,7 +78,8 @@ I2C_StatusTypeDef I2C_Init_Custom(const I2C_ConfigTypeDef *config)
     s_hi2c3.Init.GeneralCallMode = config->GeneralCallMode;
     s_hi2c3.Init.NoStretchMode = config->NoStretchMode;
 
-    status = I2C_ConvertHALStatus(HAL_I2C_Init(&s_hi2c3));
+    halStatus = HAL_I2C_Init(&s_hi2c3);
+    status = I2C_ConvertHALStatus(halStatus);
     s_initialized = (status == I2C_OK);
 
     return status;
@@ -85,17 +87,21 @@ I2C_StatusTypeDef I2C_Init_Custom(const I2C_ConfigTypeDef *config)
 
 I2C_StatusTypeDef I2C_DeInit(void)
 {
+    HAL_StatusTypeDef halStatus = HAL_I2C_DeInit(&s_hi2c3);
+
     s_initialized = false;
 
-    return I2C_ConvertHALStatus(HAL_I2C_DeInit(&s_hi2c3));
+    return I2C_ConvertHALStatus(halStatus);
 }
 
 I2C_StatusTypeDef I2C_Reinit(void)
 {
-    I2C_StatusTypeDef status;
+    I2C_StatusTypeDef status = I2C_OK;
+    HAL_StatusTypeDef halStatus = HAL_ERROR;
 
     /* HAL_I2C_DeInit leaves the Init struct untouched, so it can be reused. */
-    status = I2C_ConvertHALStatus(HAL_I2C_Init(&s_hi2c3));
+    halStatus = HAL_I2C_Init(&s_hi2c3);
+    status = I2C_ConvertHALStatus(halStatus);
     s_initialized = (status == I2C_OK);
 
     return status;

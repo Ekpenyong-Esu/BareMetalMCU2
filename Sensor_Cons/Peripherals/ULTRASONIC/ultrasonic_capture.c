@@ -107,8 +107,11 @@ void ULTRASONIC_CAPTURE_DelayMicroseconds(TIM_HandleTypeDef *htim, uint32_t micr
 
     start = TIM_GetCounter(htim);
 
-    while (ULTRASONIC_EchoWidth(start, TIM_GetCounter(htim), ULTRASONIC_ECHO_PERIOD) <
-           microseconds) {
+    while (1) {
+        uint32_t width = ULTRASONIC_EchoWidth(start, TIM_GetCounter(htim), ULTRASONIC_ECHO_PERIOD);
+        if (width >= microseconds) {
+            break;
+        }
         /* 1 tick == 1 us */
     }
 }

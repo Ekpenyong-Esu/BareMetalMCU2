@@ -27,7 +27,8 @@ HAL_StatusTypeDef Relay_Init(Relay_t *relay, GPIO_TypeDef *port, uint16_t pin, R
 
     /* Drive the inactive level before the pin becomes an output: ODR resets to
        0, so an active-low relay would otherwise pull in during Init. */
-    GPIO_Driver_WritePin(port, pin, relay_inactive_state(polarity));
+    GPIO_PinState initState = relay_inactive_state(polarity);
+    GPIO_Driver_WritePin(port, pin, initState);
 
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = pin;
@@ -43,25 +44,35 @@ HAL_StatusTypeDef Relay_Init(Relay_t *relay, GPIO_TypeDef *port, uint16_t pin, R
 
 void Relay_On(Relay_t *relay)
 {
+    GPIO_PinState activeState = GPIO_PIN_RESET;
+
     if (relay == NULL) {
         return;
     }
-    GPIO_Driver_WritePin(relay->port, relay->pin, relay_active_state(relay->polarity));
+    activeState = relay_active_state(relay->polarity);
+    GPIO_Driver_WritePin(relay->port, relay->pin, activeState);
 }
 
 void Relay_Off(Relay_t *relay)
 {
+    GPIO_PinState inactiveState = GPIO_PIN_RESET;
+
     if (relay == NULL) {
         return;
     }
-    GPIO_Driver_WritePin(relay->port, relay->pin, relay_inactive_state(relay->polarity));
+    inactiveState = relay_inactive_state(relay->polarity);
+    GPIO_Driver_WritePin(relay->port, relay->pin, inactiveState);
 }
 
 bool Relay_IsOn(const Relay_t *relay)
 {
+    GPIO_PinState activeState = GPIO_PIN_RESET;
+    GPIO_PinState state = GPIO_PIN_RESET;
+
     if (relay == NULL) {
         return false;
     }
-    GPIO_PinState state = GPIO_Driver_ReadPin(relay->port, relay->pin);
-    return (state == relay_active_state(relay->polarity));
+    activeState = relay_active_state(relay->polarity);
+    state = GPIO_Driver_ReadPin(relay->port, relay->pin);
+    return (state == activeState);
 }

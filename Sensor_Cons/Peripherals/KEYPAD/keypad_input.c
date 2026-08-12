@@ -25,8 +25,8 @@ char Keypad_GetKeyRaw(KeypadHandle_t *handle)
 
 char Keypad_GetKey(KeypadHandle_t *handle)
 {
-    char key;
-    uint32_t now;
+    char key = KEYPAD_NO_KEY;
+    uint32_t now = 0U;
 
     if (!Keypad_IsInitialized(handle)) {
         return KEYPAD_NO_KEY;

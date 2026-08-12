@@ -20,13 +20,14 @@ void SPI_RecoverOnError(void)
 
 SPI_StatusTypeDef SPI_Transmit(uint8_t *pData, uint16_t Size, uint32_t Timeout)
 {
-    HAL_StatusTypeDef halStatus;
+    HAL_StatusTypeDef halStatus = HAL_OK;
+    SPI_HandleTypeDef *handle = SPI_GetHandle();
 
     if (pData == NULL || Size == 0) {
         return SPI_INVALID_PARAM;
     }
 
-    halStatus = HAL_SPI_Transmit(SPI_GetHandle(), pData, Size, Timeout);
+    halStatus = HAL_SPI_Transmit(handle, pData, Size, Timeout);
     if (halStatus != HAL_OK) {
         SPI_RecoverOnError();
         return SPI_ConvertHALStatus(halStatus);
@@ -37,13 +38,14 @@ SPI_StatusTypeDef SPI_Transmit(uint8_t *pData, uint16_t Size, uint32_t Timeout)
 
 SPI_StatusTypeDef SPI_Receive(uint8_t *pData, uint16_t Size, uint32_t Timeout)
 {
-    HAL_StatusTypeDef halStatus;
+    HAL_StatusTypeDef halStatus = HAL_OK;
+    SPI_HandleTypeDef *handle = SPI_GetHandle();
 
     if (pData == NULL || Size == 0) {
         return SPI_INVALID_PARAM;
     }
 
-    halStatus = HAL_SPI_Receive(SPI_GetHandle(), pData, Size, Timeout);
+    halStatus = HAL_SPI_Receive(handle, pData, Size, Timeout);
     if (halStatus != HAL_OK) {
         SPI_RecoverOnError();
         return SPI_ConvertHALStatus(halStatus);
@@ -54,13 +56,14 @@ SPI_StatusTypeDef SPI_Receive(uint8_t *pData, uint16_t Size, uint32_t Timeout)
 
 SPI_StatusTypeDef SPI_TransmitReceive(uint8_t *pTxData, uint8_t *pRxData, uint16_t Size, uint32_t Timeout)
 {
-    HAL_StatusTypeDef halStatus;
+    HAL_StatusTypeDef halStatus = HAL_OK;
+    SPI_HandleTypeDef *handle = SPI_GetHandle();
 
     if (pTxData == NULL || pRxData == NULL || Size == 0) {
         return SPI_INVALID_PARAM;
     }
 
-    halStatus = HAL_SPI_TransmitReceive(SPI_GetHandle(), pTxData, pRxData, Size, Timeout);
+    halStatus = HAL_SPI_TransmitReceive(handle, pTxData, pRxData, Size, Timeout);
     if (halStatus != HAL_OK) {
         SPI_RecoverOnError();
         return SPI_ConvertHALStatus(halStatus);
@@ -71,7 +74,9 @@ SPI_StatusTypeDef SPI_TransmitReceive(uint8_t *pTxData, uint8_t *pRxData, uint16
 
 uint32_t SPI_GetError(void)
 {
-    return HAL_SPI_GetError(SPI_GetHandle());
+    SPI_HandleTypeDef *handle = SPI_GetHandle();
+
+    return HAL_SPI_GetError(handle);
 }
 
 const char *SPI_GetStatusString(SPI_StatusTypeDef status)

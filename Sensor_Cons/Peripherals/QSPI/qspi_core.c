@@ -76,7 +76,9 @@ static QSPI_StatusTypeDef QSPI_AutoDetectMemory(QSPI_HandleStructTypeDef *hqspi)
     hqspi->MemInfo.BlockSize = QSPI_BLOCK_SIZE;
     hqspi->MemInfo.FlashSize = QSPI_FLASH_SIZE_BYTES;
 
-    strncpy(hqspi->MemInfo.DeviceName, QSPI_VendorName(jedecId[0]),
+    const char *vendorName = QSPI_VendorName(jedecId[0]);
+
+    strncpy(hqspi->MemInfo.DeviceName, vendorName,
             QSPI_DEVICE_NAME_MAX_LENGTH - 1U);
     hqspi->MemInfo.DeviceName[QSPI_DEVICE_NAME_MAX_LENGTH - 1U] = '\0';
 

@@ -53,6 +53,8 @@ static uint8_t MEMS_CommandByte(uint8_t addr, uint8_t length, bool read)
 MEMS_StatusTypeDef MEMS_ReadRegisters(MEMS_HandleTypeDef *hmems, uint8_t start_addr,
                                       uint8_t *data, uint8_t length)
 {
+    uint8_t command = 0U;
+
     if (hmems == NULL || data == NULL || length == 0U) {
         return MEMS_INVALID_PARAM;
     }
@@ -60,12 +62,15 @@ MEMS_StatusTypeDef MEMS_ReadRegisters(MEMS_HandleTypeDef *hmems, uint8_t start_a
         return MEMS_NOT_INITIALIZED;
     }
 
-    return MEMS_Transfer(hmems, MEMS_CommandByte(start_addr, length, true), data, NULL, length);
+    command = MEMS_CommandByte(start_addr, length, true);
+    return MEMS_Transfer(hmems, command, data, NULL, length);
 }
 
 MEMS_StatusTypeDef MEMS_WriteRegisters(MEMS_HandleTypeDef *hmems, uint8_t start_addr,
                                        const uint8_t *data, uint8_t length)
 {
+    uint8_t command = 0U;
+
     if (hmems == NULL || data == NULL || length == 0U) {
         return MEMS_INVALID_PARAM;
     }
@@ -73,7 +78,8 @@ MEMS_StatusTypeDef MEMS_WriteRegisters(MEMS_HandleTypeDef *hmems, uint8_t start_
         return MEMS_NOT_INITIALIZED;
     }
 
-    return MEMS_Transfer(hmems, MEMS_CommandByte(start_addr, length, false), NULL, data, length);
+    command = MEMS_CommandByte(start_addr, length, false);
+    return MEMS_Transfer(hmems, command, NULL, data, length);
 }
 
 MEMS_StatusTypeDef MEMS_ReadRegister(MEMS_HandleTypeDef *hmems, uint8_t addr, uint8_t *data)

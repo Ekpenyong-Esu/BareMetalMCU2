@@ -74,7 +74,8 @@ HAL_StatusTypeDef DMA2D_Init(const DMA2D_Config *config)
 
     result = HAL_DMA2D_Init(&s_device.hal);
     if (result != HAL_OK) {
-        log_error("HAL_DMA2D_Init failed: %s", DMA2D_GetErrorString(result));
+        const char *errStr = DMA2D_GetErrorString(result);
+        log_error("HAL_DMA2D_Init failed: %s", errStr);
         DMA2D_UpdateStatus(result);
         return result;
     }
@@ -115,14 +116,15 @@ HAL_StatusTypeDef DMA2D_DeInit(void)
     if (DMA2D_IsBusy()) {
         HAL_StatusTypeDef aborted = HAL_DMA2D_Abort(&s_device.hal);
         if (aborted != HAL_OK) {
-            log_warning("Failed to abort ongoing DMA2D transfer: %s",
-                        DMA2D_GetErrorString(aborted));
+            const char *errStr = DMA2D_GetErrorString(aborted);
+            log_warning("Failed to abort ongoing DMA2D transfer: %s", errStr);
         }
     }
 
     HAL_StatusTypeDef result = HAL_DMA2D_DeInit(&s_device.hal);
     if (result != HAL_OK) {
-        log_error("HAL_DMA2D_DeInit failed: %s", DMA2D_GetErrorString(result));
+        const char *errStr = DMA2D_GetErrorString(result);
+        log_error("HAL_DMA2D_DeInit failed: %s", errStr);
         DMA2D_UpdateStatus(result);
         return result;
     }
@@ -169,7 +171,8 @@ HAL_StatusTypeDef DMA2D_ConfigLayer(uint32_t layer, const DMA2D_LayerConfig *lay
 
     result = HAL_DMA2D_ConfigLayer(&s_device.hal, layer);
     if (result != HAL_OK) {
-        log_error("HAL_DMA2D_ConfigLayer failed: %s", DMA2D_GetErrorString(result));
+        const char *errStr = DMA2D_GetErrorString(result);
+        log_error("HAL_DMA2D_ConfigLayer failed: %s", errStr);
         DMA2D_UpdateStatus(result);
         return result;
     }
@@ -189,7 +192,8 @@ HAL_StatusTypeDef DMA2D_PollForTransfer(uint32_t timeout)
 
     HAL_StatusTypeDef result = HAL_DMA2D_PollForTransfer(&s_device.hal, timeout);
     if (result != HAL_OK) {
-        log_error("DMA2D poll failed: %s", DMA2D_GetErrorString(result));
+        const char *errStr = DMA2D_GetErrorString(result);
+        log_error("DMA2D poll failed: %s", errStr);
     }
 
     DMA2D_UpdateStatus(result);

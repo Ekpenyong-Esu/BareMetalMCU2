@@ -40,9 +40,13 @@ static void MEMS_InitCsPin(GPIO_TypeDef *port, uint16_t pin)
 MEMS_StatusTypeDef MEMS_HW_InitGPIO(MEMS_HandleTypeDef *hmems)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_TypeDef *csPort = NULL;
+    uint16_t csPin = 0U;
 
     /* GPIO driver enables the port clock for each configured port */
-    MEMS_InitCsPin(MEMS_CsPort(hmems), MEMS_CsPin(hmems));
+    csPort = MEMS_CsPort(hmems);
+    csPin = MEMS_CsPin(hmems);
+    MEMS_InitCsPin(csPort, csPin);
 
     GPIO_InitStruct.Pin = MEMS_SPI_SCK_PIN | MEMS_SPI_MISO_PIN | MEMS_SPI_MOSI_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -79,10 +83,16 @@ void MEMS_SetCS(MEMS_HandleTypeDef *hmems, GPIO_TypeDef *csPort, uint16_t csPin)
 
 void MEMS_CS_High(MEMS_HandleTypeDef *hmems)
 {
-    HAL_GPIO_WritePin(MEMS_CsPort(hmems), MEMS_CsPin(hmems), GPIO_PIN_SET);
+    GPIO_TypeDef *port = MEMS_CsPort(hmems);
+    uint16_t pin = MEMS_CsPin(hmems);
+
+    HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
 }
 
 void MEMS_CS_Low(MEMS_HandleTypeDef *hmems)
 {
-    HAL_GPIO_WritePin(MEMS_CsPort(hmems), MEMS_CsPin(hmems), GPIO_PIN_RESET);
+    GPIO_TypeDef *port = MEMS_CsPort(hmems);
+    uint16_t pin = MEMS_CsPin(hmems);
+
+    HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
 }

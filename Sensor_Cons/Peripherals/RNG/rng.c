@@ -40,8 +40,10 @@ RNG_StatusTypeDef RNG_Init(void)
     s_initialized = true;
 
     RNG_StatusTypeDef status = RNG_GetErrorStatus();
+    
     if (status != RNG_OK) {
-        log_error("RNG: %s at startup", RNG_GetStatusString(status));
+        const char *statusStr = RNG_GetStatusString(status);
+        log_error("RNG: %s at startup", statusStr);
         (void)RNG_DeInit();
         return status;
     }

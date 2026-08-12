@@ -31,6 +31,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
+#include "led_pwm_types.h"
 #include <stdbool.h>
 #include <stdint.h>
 

@@ -95,9 +95,11 @@ EEPROM_StatusTypeDef EEPROM_IO_Write(const EEPROM_HandleTypeDef* handle,
     {
         const uint16_t offset = (uint16_t)(address + done);
         const uint16_t chunk = EEPROM_IO_ChunkLength(offset, (uint16_t)(length - done), blockBits);
+        uint16_t devAddr = EEPROM_IO_DeviceAddress(handle, offset, blockBits);
+        uint16_t memAddr = EEPROM_IO_MemAddress(offset, blockBits);
 
-        if (I2C_Mem_Write(EEPROM_IO_DeviceAddress(handle, offset, blockBits),
-                          EEPROM_IO_MemAddress(offset, blockBits),
+        if (I2C_Mem_Write(devAddr,
+                          memAddr,
                           handle->config.addressSize,
                           (uint8_t*)(uintptr_t)(data + done),
                           chunk,
@@ -124,11 +126,14 @@ EEPROM_StatusTypeDef EEPROM_IO_Read(const EEPROM_HandleTypeDef* handle,
     {
         const uint16_t offset = (uint16_t)(address + done);
         const uint16_t chunk = EEPROM_IO_ChunkLength(offset, (uint16_t)(length - done), blockBits);
+        uint16_t devAddr = EEPROM_IO_DeviceAddress(handle, offset, blockBits);
+        uint16_t memAddr = EEPROM_IO_MemAddress(offset, blockBits);
+        uint8_t *readPos = (uint8_t *)(uintptr_t)(data + done);
 
-        if (I2C_Mem_Read(EEPROM_IO_DeviceAddress(handle, offset, blockBits),
-                         EEPROM_IO_MemAddress(offset, blockBits),
+        if (I2C_Mem_Read(devAddr,
+                         memAddr,
                          handle->config.addressSize,
-                         data + done,
+                         readPos,
                          chunk,
                          EEPROM_TIMEOUT_DEFAULT) != I2C_OK)
         {

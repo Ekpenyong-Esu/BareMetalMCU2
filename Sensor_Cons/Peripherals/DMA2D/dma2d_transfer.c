@@ -109,15 +109,18 @@ static HAL_StatusTypeDef DMA2D_FinishTransfer(DMA2D_WaitMode wait,
                                               const char *context)
 {
     if (result != HAL_OK) {
-        log_error("DMA2D %s start failed: %s", context, DMA2D_GetErrorString(result));
+        const char *errStr = DMA2D_GetErrorString(result);
+        log_error("DMA2D %s start failed: %s", context, errStr);
         DMA2D_UpdateStatus(result);
         return result;
     }
 
     if (wait == DMA2D_WAIT_POLLING) {
-        result = HAL_DMA2D_PollForTransfer(&DMA2D_GetDevice()->hal, DMA2D_DEFAULT_TIMEOUT);
+        DMA2D_Device *device = DMA2D_GetDevice();
+        result = HAL_DMA2D_PollForTransfer(&device->hal, DMA2D_DEFAULT_TIMEOUT);
         if (result != HAL_OK) {
-            log_error("DMA2D %s poll failed: %s", context, DMA2D_GetErrorString(result));
+            const char *pollErr = DMA2D_GetErrorString(result);
+            log_error("DMA2D %s poll failed: %s", context, pollErr);
             DMA2D_UpdateStatus(result);
             return result;
         }
@@ -133,7 +136,8 @@ static HAL_StatusTypeDef DMA2D_FinishTransfer(DMA2D_WaitMode wait,
 static HAL_StatusTypeDef DMA2D_Transfer(DMA2D_WaitMode wait, const uint32_t *pSrc,
                                         uint32_t *pDst, uint32_t width, uint32_t height)
 {
-    HAL_StatusTypeDef result = DMA2D_ValidateTransfer(DMA2D_GetDevice()->hal.Init.Mode,
+    uint32_t halMode = DMA2D_GetDevice()->hal.Init.Mode;
+    HAL_StatusTypeDef result = DMA2D_ValidateTransfer(halMode,
                                                       pSrc, pDst, width, height);
     if (result != HAL_OK) {
         DMA2D_UpdateStatus(result);

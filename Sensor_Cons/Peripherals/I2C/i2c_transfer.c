@@ -21,7 +21,9 @@
  */
 static I2C_StatusTypeDef I2C_HandleFailure(HAL_StatusTypeDef halStatus)
 {
-    if ((HAL_I2C_GetError(I2C_GetHandle()) & HAL_I2C_ERROR_AF) != 0U) {
+    I2C_HandleTypeDef *handle = I2C_GetHandle();
+
+    if ((HAL_I2C_GetError(handle) & HAL_I2C_ERROR_AF) != 0U) {
         return I2C_NACK;
     }
 
@@ -78,13 +80,14 @@ void I2C_RecoverOnError(void)
 
 I2C_StatusTypeDef I2C_Master_Transmit(uint16_t DevAddress, uint8_t *pData, uint16_t Size, uint32_t Timeout)
 {
-    HAL_StatusTypeDef halStatus;
+    HAL_StatusTypeDef halStatus = HAL_OK;
+    I2C_HandleTypeDef *handle = I2C_GetHandle();
 
     if (pData == NULL || Size == 0) {
         return I2C_INVALID_PARAM;
     }
 
-    halStatus = HAL_I2C_Master_Transmit(I2C_GetHandle(), DevAddress, pData, Size, Timeout);
+    halStatus = HAL_I2C_Master_Transmit(handle, DevAddress, pData, Size, Timeout);
     if (halStatus != HAL_OK) {
         return I2C_HandleFailure(halStatus);
     }
@@ -94,13 +97,14 @@ I2C_StatusTypeDef I2C_Master_Transmit(uint16_t DevAddress, uint8_t *pData, uint1
 
 I2C_StatusTypeDef I2C_Master_Receive(uint16_t DevAddress, uint8_t *pData, uint16_t Size, uint32_t Timeout)
 {
-    HAL_StatusTypeDef halStatus;
+    HAL_StatusTypeDef halStatus = HAL_OK;
+    I2C_HandleTypeDef *handle = I2C_GetHandle();
 
     if (pData == NULL || Size == 0) {
         return I2C_INVALID_PARAM;
     }
 
-    halStatus = HAL_I2C_Master_Receive(I2C_GetHandle(), DevAddress, pData, Size, Timeout);
+    halStatus = HAL_I2C_Master_Receive(handle, DevAddress, pData, Size, Timeout);
     if (halStatus != HAL_OK) {
         return I2C_HandleFailure(halStatus);
     }
@@ -113,18 +117,19 @@ I2C_StatusTypeDef I2C_Master_TransmitReceive(uint16_t DevAddress,
                                              uint8_t *pRxData, uint16_t RxSize,
                                              uint32_t Timeout)
 {
-    HAL_StatusTypeDef halStatus;
+    HAL_StatusTypeDef halStatus = HAL_OK;
+    I2C_HandleTypeDef *handle = I2C_GetHandle();
 
     if (pTxData == NULL || pRxData == NULL || TxSize == 0 || RxSize == 0) {
         return I2C_INVALID_PARAM;
     }
 
-    halStatus = HAL_I2C_Master_Transmit(I2C_GetHandle(), DevAddress, pTxData, TxSize, Timeout);
+    halStatus = HAL_I2C_Master_Transmit(handle, DevAddress, pTxData, TxSize, Timeout);
     if (halStatus != HAL_OK) {
         return I2C_HandleFailure(halStatus);
     }
 
-    halStatus = HAL_I2C_Master_Receive(I2C_GetHandle(), DevAddress, pRxData, RxSize, Timeout);
+    halStatus = HAL_I2C_Master_Receive(handle, DevAddress, pRxData, RxSize, Timeout);
     if (halStatus != HAL_OK) {
         return I2C_HandleFailure(halStatus);
     }
@@ -136,13 +141,14 @@ I2C_StatusTypeDef I2C_Mem_Write(uint16_t DevAddress, uint16_t MemAddress,
                                uint16_t MemAddSize, uint8_t *pData,
                                uint16_t Size, uint32_t Timeout)
 {
-    HAL_StatusTypeDef halStatus;
+    HAL_StatusTypeDef halStatus = HAL_OK;
+    I2C_HandleTypeDef *handle = I2C_GetHandle();
 
     if (pData == NULL || Size == 0) {
         return I2C_INVALID_PARAM;
     }
 
-    halStatus = HAL_I2C_Mem_Write(I2C_GetHandle(), DevAddress, MemAddress,
+    halStatus = HAL_I2C_Mem_Write(handle, DevAddress, MemAddress,
                                   MemAddSize, pData, Size, Timeout);
     if (halStatus != HAL_OK) {
         return I2C_HandleFailure(halStatus);
@@ -155,13 +161,14 @@ I2C_StatusTypeDef I2C_Mem_Read(uint16_t DevAddress, uint16_t MemAddress,
                               uint16_t MemAddSize, uint8_t *pData,
                               uint16_t Size, uint32_t Timeout)
 {
-    HAL_StatusTypeDef halStatus;
+    HAL_StatusTypeDef halStatus = HAL_OK;
+    I2C_HandleTypeDef *handle = I2C_GetHandle();
 
     if (pData == NULL || Size == 0) {
         return I2C_INVALID_PARAM;
     }
 
-    halStatus = HAL_I2C_Mem_Read(I2C_GetHandle(), DevAddress, MemAddress,
+    halStatus = HAL_I2C_Mem_Read(handle, DevAddress, MemAddress,
                                  MemAddSize, pData, Size, Timeout);
     if (halStatus != HAL_OK) {
         return I2C_HandleFailure(halStatus);
@@ -172,11 +179,12 @@ I2C_StatusTypeDef I2C_Mem_Read(uint16_t DevAddress, uint16_t MemAddress,
 
 I2C_StatusTypeDef I2C_IsDeviceReady(uint16_t DevAddress, uint32_t Trials, uint32_t Timeout)
 {
-    HAL_StatusTypeDef halStatus = HAL_I2C_IsDeviceReady(I2C_GetHandle(), DevAddress,
+    I2C_HandleTypeDef *handle = I2C_GetHandle();
+    HAL_StatusTypeDef halStatus = HAL_I2C_IsDeviceReady(handle, DevAddress,
                                                         Trials, Timeout);
 
     if (halStatus != HAL_OK &&
-        (HAL_I2C_GetError(I2C_GetHandle()) & HAL_I2C_ERROR_AF) != 0U) {
+        (HAL_I2C_GetError(handle) & HAL_I2C_ERROR_AF) != 0U) {
         return I2C_NACK;
     }
 
@@ -186,6 +194,7 @@ I2C_StatusTypeDef I2C_IsDeviceReady(uint16_t DevAddress, uint32_t Trials, uint32
 uint8_t I2C_ScanBus(uint8_t *pDevices, uint8_t MaxDevices, uint32_t Timeout)
 {
     uint8_t deviceCount = 0;
+    I2C_HandleTypeDef *handle = I2C_GetHandle();
 
     if (pDevices == NULL || MaxDevices == 0) {
         return 0;
@@ -194,7 +203,7 @@ uint8_t I2C_ScanBus(uint8_t *pDevices, uint8_t MaxDevices, uint32_t Timeout)
     for (uint8_t addr = I2C_ADDR_MIN; addr <= I2C_ADDR_MAX && deviceCount < MaxDevices; addr++) {
         uint16_t devAddr = (uint16_t)addr << 1;
 
-        if (HAL_I2C_IsDeviceReady(I2C_GetHandle(), devAddr, 1, Timeout) == HAL_OK) {
+        if (HAL_I2C_IsDeviceReady(handle, devAddr, 1, Timeout) == HAL_OK) {
             pDevices[deviceCount++] = addr;
         }
     }
@@ -204,7 +213,9 @@ uint8_t I2C_ScanBus(uint8_t *pDevices, uint8_t MaxDevices, uint32_t Timeout)
 
 uint32_t I2C_GetError(void)
 {
-    return HAL_I2C_GetError(I2C_GetHandle());
+    I2C_HandleTypeDef *handle = I2C_GetHandle();
+
+    return HAL_I2C_GetError(handle);
 }
 
 const char *I2C_GetStatusString(I2C_StatusTypeDef status)

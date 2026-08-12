@@ -20,9 +20,9 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "led.h"
+#include "led_pwm_types.h"
 
 /* Exported constants --------------------------------------------------------*/
-#define LED_PWM_MAX_BRIGHTNESS      100u    /**< Brightness is a percentage */
 #define LED_PWM_DEFAULT_PERIOD_US   5000u   /**< 200 Hz: above the flicker threshold */
 
 /* Exported types ------------------------------------------------------------*/

@@ -15,6 +15,7 @@
 RTC_StatusTypeDef RTC_SetAlarm(const RTC_Alarm_t* sAlarm)
 {
     RTC_AlarmTypeDef hal_alarm = {0};
+    RTC_HandleTypeDef *handle = NULL;
 
     if (sAlarm == NULL)
     {
@@ -31,7 +32,8 @@ RTC_StatusTypeDef RTC_SetAlarm(const RTC_Alarm_t* sAlarm)
     hal_alarm.AlarmDateWeekDay = sAlarm->AlarmDateWeekDay;
     hal_alarm.Alarm = sAlarm->Alarm;
 
-    if (HAL_RTC_SetAlarm_IT(RTC_GetHandle(), &hal_alarm, RTC_FORMAT_BIN) != HAL_OK)
+    handle = RTC_GetHandle();
+    if (HAL_RTC_SetAlarm_IT(handle, &hal_alarm, RTC_FORMAT_BIN) != HAL_OK)
     {
         return RTC_STATUS_ERROR;
     }
@@ -42,6 +44,7 @@ RTC_StatusTypeDef RTC_SetAlarm(const RTC_Alarm_t* sAlarm)
 RTC_StatusTypeDef RTC_GetAlarm(RTC_Alarm_t* sAlarm, uint32_t Alarm)
 {
     RTC_AlarmTypeDef hal_alarm = {0};
+    RTC_HandleTypeDef *handle = NULL;
 
     if (sAlarm == NULL)
     {
@@ -50,7 +53,8 @@ RTC_StatusTypeDef RTC_GetAlarm(RTC_Alarm_t* sAlarm, uint32_t Alarm)
 
     hal_alarm.Alarm = Alarm;
 
-    if (HAL_RTC_GetAlarm(RTC_GetHandle(), &hal_alarm, Alarm, RTC_FORMAT_BIN) != HAL_OK)
+    handle = RTC_GetHandle();
+    if (HAL_RTC_GetAlarm(handle, &hal_alarm, Alarm, RTC_FORMAT_BIN) != HAL_OK)
     {
         return RTC_STATUS_ERROR;
     }
@@ -70,7 +74,10 @@ RTC_StatusTypeDef RTC_GetAlarm(RTC_Alarm_t* sAlarm, uint32_t Alarm)
 
 RTC_StatusTypeDef RTC_DisableAlarm(uint32_t Alarm)
 {
-    if (HAL_RTC_DeactivateAlarm(RTC_GetHandle(), Alarm) != HAL_OK)
+    RTC_HandleTypeDef *handle = NULL;
+    handle = RTC_GetHandle();
+
+    if (HAL_RTC_DeactivateAlarm(handle, Alarm) != HAL_OK)
     {
         return RTC_STATUS_ERROR;
     }
@@ -86,7 +93,8 @@ __weak void RTC_AlarmCallback(uint32_t Alarm)
 
 void RTC_ISR_Dispatch(void)
 {
-    HAL_RTC_AlarmIRQHandler(RTC_GetHandle());
+    RTC_HandleTypeDef *handle = RTC_GetHandle();
+    HAL_RTC_AlarmIRQHandler(handle);
 }
 
 /* HAL callbacks -------------------------------------------------------------*/

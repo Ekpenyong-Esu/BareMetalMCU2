@@ -99,43 +99,51 @@ HAL_StatusTypeDef CAN_Receive(CAN_Frame *frame, uint32_t timeout)
 
 bool CAN_IsTransmitMailboxAvailable(void)
 {
-    return (HAL_CAN_GetTxMailboxesFreeLevel(CAN_GetHandle()) > 0);
+    CAN_HandleTypeDef *handle = CAN_GetHandle();
+
+    return (HAL_CAN_GetTxMailboxesFreeLevel(handle) > 0);
 }
 
 bool CAN_IsReceivePending(uint8_t fifo_number)
 {
-    uint32_t fifo;
+    uint32_t fifo = 0U;
+    CAN_HandleTypeDef *handle = NULL;
 
     if (fifo_number > 1U) {
         return false;
     }
 
+    handle = CAN_GetHandle();
     fifo = (fifo_number == 0U) ? CAN_RX_FIFO0 : CAN_RX_FIFO1;
-    return (HAL_CAN_GetRxFifoFillLevel(CAN_GetHandle(), fifo) > 0);
+    return (HAL_CAN_GetRxFifoFillLevel(handle, fifo) > 0);
 }
 
 uint8_t CAN_GetReceivePendingCount(uint8_t fifo_number)
 {
-    uint32_t fifo;
+    uint32_t fifo = 0U;
+    CAN_HandleTypeDef *handle = NULL;
 
     if (fifo_number > 1U) {
         return 0;
     }
 
+    handle = CAN_GetHandle();
     fifo = (fifo_number == 0U) ? CAN_RX_FIFO0 : CAN_RX_FIFO1;
-    return HAL_CAN_GetRxFifoFillLevel(CAN_GetHandle(), fifo);
+    return HAL_CAN_GetRxFifoFillLevel(handle, fifo);
 }
 
 HAL_StatusTypeDef CAN_AbortTransmit(uint8_t mailbox_number)
 {
-    uint32_t mailbox;
+    uint32_t mailbox = 0U;
+    CAN_HandleTypeDef *handle = NULL;
 
     if (mailbox_number >= CAN_MAX_MAILBOXES) {
         return HAL_ERROR;
     }
 
+    handle = CAN_GetHandle();
     mailbox = (mailbox_number == 0U) ? CAN_TX_MAILBOX0 :
               (mailbox_number == 1U) ? CAN_TX_MAILBOX1 : CAN_TX_MAILBOX2;
 
-    return HAL_CAN_AbortTxRequest(CAN_GetHandle(), mailbox);
+    return HAL_CAN_AbortTxRequest(handle, mailbox);
 }

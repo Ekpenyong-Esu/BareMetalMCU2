@@ -42,6 +42,8 @@ bool PwmLedHardware_Init(void)
 
 void PwmLedHardware_Task(uint32_t nowMs)
 {
+    uint8_t brightness = LedPwm_Waveform_Smooth(nowMs, FADE_PERIOD_MS);
+
     /* The waveform wraps on its own period, so no start time has to be kept. */
-    LedPwmTimer_SetBrightness(&s_pwm, LedPwm_Waveform_Smooth(nowMs, FADE_PERIOD_MS));
+    LedPwmTimer_SetBrightness(&s_pwm, brightness);
 }

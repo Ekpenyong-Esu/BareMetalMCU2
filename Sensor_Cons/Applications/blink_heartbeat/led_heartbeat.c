@@ -36,6 +36,8 @@ bool LedHeartbeat_Init(void)
 
 void LedHeartbeat_Task(uint32_t nowMs)
 {
+
     LedPattern_Update(&s_pattern, nowMs);
-    Led_SetState(&s_led, LedPattern_GetState(&s_pattern));
+    LedState_t state = LedPattern_GetState(&s_pattern);
+    Led_SetState(&s_led, state);
 }

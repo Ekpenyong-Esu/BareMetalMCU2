@@ -31,6 +31,8 @@ static LedPwm_t    s_pwm;
 
 bool PwmLedSoftware_Init(void)
 {
+    uint32_t nowUs = 0;
+
     const LedConfig_t config = {
         .port = BOARD_LED_GREEN_PORT,
         .pin = BOARD_LED_GREEN_PIN,
@@ -41,13 +43,20 @@ bool PwmLedSoftware_Init(void)
         return false;
     }
 
-    return (LedPwm_Init(&s_pwm, &s_led, LED_PWM_DEFAULT_PERIOD_US) &&
-           LedPwm_Start(&s_pwm, SYS_GetMicros())) != 0;
+    if (!LedPwm_Init(&s_pwm, &s_led, LED_PWM_DEFAULT_PERIOD_US)) {
+        return false;
+    }
+
+    nowUs = SYS_GetMicros();
+    return LedPwm_Start(&s_pwm, nowUs);
 }
 
 void PwmLedSoftware_Task(uint32_t nowMs)
 {
+    uint8_t brightness = LedPwm_Waveform_Smooth(nowMs, FADE_PERIOD_MS);
+    uint32_t nowUs = SYS_GetMicros();
+
     /* The waveform wraps on its own period, so no start time has to be kept. */
-    LedPwm_SetBrightness(&s_pwm, LedPwm_Waveform_Smooth(nowMs, FADE_PERIOD_MS));
-    LedPwm_Update(&s_pwm, SYS_GetMicros());
+    LedPwm_SetBrightness(&s_pwm, brightness);
+    LedPwm_Update(&s_pwm, nowUs);
 }

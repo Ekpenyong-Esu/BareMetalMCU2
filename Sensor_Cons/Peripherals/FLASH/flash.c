@@ -18,17 +18,23 @@
 
 FLASH_StatusTypeDef FLASH_Unlock(void)
 {
-    return FLASH_ConvertHALStatus(HAL_FLASH_Unlock());
+    HAL_StatusTypeDef halStatus = HAL_FLASH_Unlock();
+
+    return FLASH_ConvertHALStatus(halStatus);
 }
 
 FLASH_StatusTypeDef FLASH_Lock(void)
 {
-    return FLASH_ConvertHALStatus(HAL_FLASH_Lock());
+    HAL_StatusTypeDef halStatus = HAL_FLASH_Lock();
+
+    return FLASH_ConvertHALStatus(halStatus);
 }
 
 FLASH_StatusTypeDef FLASH_WaitForOperation(uint32_t timeout)
 {
-    return FLASH_ConvertHALStatus(FLASH_WaitForLastOperation(timeout));
+    HAL_StatusTypeDef halStatus = FLASH_WaitForLastOperation(timeout);
+
+    return FLASH_ConvertHALStatus(halStatus);
 }
 
 FLASH_StatusTypeDef FLASH_ConvertHALStatus(HAL_StatusTypeDef halStatus)

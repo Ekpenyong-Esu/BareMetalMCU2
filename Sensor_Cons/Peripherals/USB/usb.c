@@ -29,7 +29,9 @@ USB_StatusTypeDef USB_Host_Init(void)
 
 USB_StatusTypeDef USB_Host_DeInit(void)
 {
-    return USB_ConvertHostStatus(USBH_DeInit(&hUsbHostHS));
+    USBH_StatusTypeDef hostStatus = USBH_DeInit(&hUsbHostHS);
+
+    return USB_ConvertHostStatus(hostStatus);
 }
 
 USB_StatusTypeDef USB_Init(const USB_ConfigTypeDef *config)
@@ -86,20 +88,26 @@ bool USB_IsInitialized(void)
 
 USB_StatusTypeDef USB_Start(void)
 {
+    USBH_StatusTypeDef hostStatus = USBH_OK;
+
     if (!s_initialized) {
         return USB_STATUS_NOT_READY;
     }
 
-    return USB_ConvertHostStatus(USBH_Start(&hUsbHostHS));
+    hostStatus = USBH_Start(&hUsbHostHS);
+    return USB_ConvertHostStatus(hostStatus);
 }
 
 USB_StatusTypeDef USB_Stop(void)
 {
+    USBH_StatusTypeDef hostStatus = USBH_OK;
+
     if (!s_initialized) {
         return USB_STATUS_NOT_READY;
     }
 
-    return USB_ConvertHostStatus(USBH_Stop(&hUsbHostHS));
+    hostStatus = USBH_Stop(&hUsbHostHS);
+    return USB_ConvertHostStatus(hostStatus);
 }
 
 USB_StatusTypeDef USB_SetOperationMode(USB_OperationModeTypeDef mode)

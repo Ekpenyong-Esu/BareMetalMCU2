@@ -77,8 +77,8 @@ bool LedPwm_Update(LedPwm_t* pwm, uint32_t nowUs)
     }
 
     /* Multiply before dividing: periodUs is not necessarily a multiple of 100. */
-    uint32_t onTimeUs = (pwm->periodUs * pwm->brightness) / LED_PWM_MAX_BRIGHTNESS;
-    LedState_t wanted = (elapsedUs < onTimeUs) ? LED_ON : LED_OFF;
+    uint32_t onTimeUs = (pwm->periodUs * pwm->brightness) / LED_PWM_MAX_BRIGHTNESS; // convert brightness into microseconds and scaling it using the periodUs. This gives us the time in microseconds that the LED should be on for the current cycle.
+    LedState_t wanted = (elapsedUs < onTimeUs) ? LED_ON : LED_OFF; // If the scaled period is less than the current elapsed time keep the led on
 
     if (Led_GetState(pwm->led) != wanted) {
         Led_SetState(pwm->led, wanted);

@@ -20,7 +20,8 @@ static volatile bool s_txBusy = false;
 
 USB_StatusTypeDef USB_Host_CDC_Transmit(const uint8_t *data, uint16_t length)
 {
-    USB_StatusTypeDef status;
+    USB_StatusTypeDef status = USB_STATUS_OK;
+    USBH_StatusTypeDef hostStatus = USBH_OK;
 
     if (data == NULL || length == 0U || length > USB_HOST_TX_BUFFER_SIZE) {
         return USB_STATUS_ERROR;
@@ -37,7 +38,8 @@ USB_StatusTypeDef USB_Host_CDC_Transmit(const uint8_t *data, uint16_t length)
 
     memcpy(s_txBuffer, data, length);
 
-    status = USB_ConvertHostStatus(USBH_CDC_Transmit(&hUsbHostHS, s_txBuffer, length));
+    hostStatus = USBH_CDC_Transmit(&hUsbHostHS, s_txBuffer, length);
+    status = USB_ConvertHostStatus(hostStatus);
     if (status == USB_STATUS_OK) {
         s_txBusy = true;
     }
@@ -47,7 +49,8 @@ USB_StatusTypeDef USB_Host_CDC_Transmit(const uint8_t *data, uint16_t length)
 
 USB_StatusTypeDef USB_Host_CDC_Receive(uint8_t *data, uint16_t length)
 {
-    USB_StatusTypeDef status;
+    USB_StatusTypeDef status = USB_STATUS_OK;
+    USBH_StatusTypeDef hostStatus  = USBH_OK;
 
     if (data == NULL || length == 0U) {
         return USB_STATUS_ERROR;
@@ -57,7 +60,8 @@ USB_StatusTypeDef USB_Host_CDC_Receive(uint8_t *data, uint16_t length)
         return USB_STATUS_NOT_READY;
     }
 
-    status = USB_ConvertHostStatus(USBH_CDC_Receive(&hUsbHostHS, data, length));
+    hostStatus = USBH_CDC_Receive(&hUsbHostHS, data, length);
+    status = USB_ConvertHostStatus(hostStatus);
     if (status == USB_STATUS_OK) {
         s_rxBuffer = data;
         s_rxLength = length;
@@ -73,6 +77,8 @@ bool USB_Host_CDC_IsTransmitBusy(void)
 
 USB_StatusTypeDef USB_Host_CDC_SetLineCoding(const CDC_LineCodingTypeDef *linecoding)
 {
+    USBH_StatusTypeDef hostStatus = USBH_OK;
+
     if (linecoding == NULL) {
         return USB_STATUS_ERROR;
     }
@@ -84,11 +90,14 @@ USB_StatusTypeDef USB_Host_CDC_SetLineCoding(const CDC_LineCodingTypeDef *lineco
     /* USBH_CDC_SetLineCoding stores this pointer and applies it later. */
     s_lineCoding = *linecoding;
 
-    return USB_ConvertHostStatus(USBH_CDC_SetLineCoding(&hUsbHostHS, &s_lineCoding));
+    hostStatus = USBH_CDC_SetLineCoding(&hUsbHostHS, &s_lineCoding);
+    return USB_ConvertHostStatus(hostStatus);
 }
 
 USB_StatusTypeDef USB_Host_CDC_GetLineCoding(CDC_LineCodingTypeDef *linecoding)
 {
+    USBH_StatusTypeDef hostStatus = USBH_OK;
+
     if (linecoding == NULL) {
         return USB_STATUS_ERROR;
     }
@@ -97,7 +106,8 @@ USB_StatusTypeDef USB_Host_CDC_GetLineCoding(CDC_LineCodingTypeDef *linecoding)
         return USB_STATUS_NOT_READY;
     }
 
-    return USB_ConvertHostStatus(USBH_CDC_GetLineCoding(&hUsbHostHS, linecoding));
+    hostStatus = USBH_CDC_GetLineCoding(&hUsbHostHS, linecoding);
+    return USB_ConvertHostStatus(hostStatus);
 }
 
 uint16_t USB_Host_CDC_GetLastReceivedDataSize(void)
