@@ -30,8 +30,11 @@ bool BlinkSteady_Init(void)
         return false;
     }
 
-    return (LedBlink_Init(&s_blink, &s_led) &&
-           LedBlink_Start(&s_blink, BLINK_PERIOD_MS, 0u)) != 0;
+    if (!LedBlink_Init(&s_blink, &s_led)) {
+        return false;
+    }
+
+    return LedBlink_Start(&s_blink, BLINK_PERIOD_MS, 0u);
 }
 
 void BlinkSteady_Task(uint32_t nowMs)

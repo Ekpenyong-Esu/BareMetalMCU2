@@ -9,15 +9,16 @@
 
 #include "main.h"
 #include "sys.h"
-#include "blink_heartbeat.h"
+#include "blink_heartbeat_freertos.h"
 
 /**
- * @brief  Program entry point: bring up the system, then run Application 1.
+ * @brief  Program entry point: bring up the system, then run Application 2
+ *         (Blink & Heartbeat on FreeRTOS).
  */
 int main(void)
 {
     SYS_Init();                 /* HAL init, system clock, SysTick */
-    BlinkHeartbeat_Run();       /* Runs its own super-loop; never returns */
+    BlinkHeartbeatFreeRTOS_Run(); /* Starts FreeRTOS scheduler; never returns */
 }
 
 #ifdef USE_FULL_ASSERT

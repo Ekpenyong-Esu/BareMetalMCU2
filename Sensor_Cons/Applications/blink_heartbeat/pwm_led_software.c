@@ -31,8 +31,6 @@ static LedPwm_t    s_pwm;
 
 bool PwmLedSoftware_Init(void)
 {
-    uint32_t nowUs = 0;
-
     const LedConfig_t config = {
         .port = BOARD_LED_GREEN_PORT,
         .pin = BOARD_LED_GREEN_PIN,
@@ -47,7 +45,7 @@ bool PwmLedSoftware_Init(void)
         return false;
     }
 
-    nowUs = SYS_GetMicros();
+    uint32_t nowUs = SYS_GetMicros();
     return LedPwm_Start(&s_pwm, nowUs);
 }
 
