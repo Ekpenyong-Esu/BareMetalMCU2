@@ -9,16 +9,16 @@
 
 #include "main.h"
 #include "sys.h"
-#include "blink_heartbeat_freertos_event_driven.h"
+#include "blink_heartbeat_freertos_queues.h"
 
 /**
  * @brief  Program entry point: bring up the system, then run Application 2
- *         (Blink & Heartbeat on FreeRTOS, event-driven).
+ *         (Blink & Heartbeat on FreeRTOS, producer/consumer via queue).
  */
 int main(void)
 {
     SYS_Init();                 /* HAL init, system clock, SysTick */
-    BlinkHeartbeatFreeRTOSEventDriven_Run(); /* Starts FreeRTOS scheduler; never returns */
+    BlinkHeartbeatFreeRTOSQueues_Run(); /* Starts FreeRTOS scheduler; never returns */
 }
 
 #ifdef USE_FULL_ASSERT
