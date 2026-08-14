@@ -9,16 +9,16 @@
 
 #include "main.h"
 #include "sys.h"
-#include "blink_heartbeat_freertos_event_groups.h"
+#include "blink_heartbeat_freertos_isr_offloading.h"
 
 /**
- * @brief  Program entry point: bring up the system, then run Application 4
- *         (Blink & Heartbeat on FreeRTOS, event groups).
+ * @brief  Program entry point: bring up the system, then run Application 5
+ *         (Blink & Heartbeat on FreeRTOS, ISR offloading).
  */
 int main(void)
 {
     SYS_Init();                 /* HAL init, system clock, SysTick */
-    BlinkHeartbeatFreeRTOSEventGroups_Run(); /* Starts FreeRTOS scheduler; never returns */
+    BlinkHeartbeatFreeRTOSIsrOffloading_Run(); /* Starts FreeRTOS scheduler; never returns */
 }
 
 #ifdef USE_FULL_ASSERT
