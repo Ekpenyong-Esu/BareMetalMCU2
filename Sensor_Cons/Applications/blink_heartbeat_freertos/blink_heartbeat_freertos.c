@@ -10,12 +10,10 @@
  *   - pwm_led_hardware : 5 ms  (timer PWM just needs the target handed over)
  *   - blink_steady     : 10 ms (plain on/off blink)
  *
- * HAL_GetTick() keeps running on TIM6, so the behaviours' ms-based timing is
- * unchanged; FreeRTOS owns SysTick. All four tasks share one task body
- * (BehaviourTaskEntry); the only thing that differs per task is which
- * behaviour it ticks and how often, so that is passed in as task parameters.
- * Tasks are created with the raw FreeRTOS API (xTaskCreate / vTaskDelayUntil /
- * vTaskStartScheduler) - no CMSIS-RTOS wrapper.
+ * FreeRTOS owns SysTick (1 kHz tick); the tasks read xTaskGetTickCount() for
+ * their ms-based timing. Each task is self-contained and ticks one behaviour
+ * at a fixed cadence. Tasks are created with the raw FreeRTOS API
+ * (xTaskCreate / vTaskDelayUntil / vTaskStartScheduler) - no CMSIS-RTOS wrapper.
  *
  * Layering:
  *   main.c                          -> chooses and runs the application
@@ -38,7 +36,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Task cadence (ms) ---------------------------------------------------------*/
+/* Task cadence (ms) This is how often the task wakes up ---------------------------------------------------------*/
 #define TASK_PERIOD_PWM_SW_MS     1u   /* finest the 1 kHz tick allows */
 #define TASK_PERIOD_HEARTBEAT_MS  5u
 #define TASK_PERIOD_PWM_HW_MS     5u
@@ -53,44 +51,72 @@
 /* Task stack size in words (1 word = 4 bytes on Cortex-M4) */
 #define TASK_STACK_SIZE_WORDS   256u
 
-/* Task parameters -----------------------------------------------------------*/
-typedef struct {
-    void (*behaviour)(uint32_t nowMs);  /* behaviour to tick */
-    uint32_t periodMs;                  /* cadence in milliseconds */
-} TaskParams;
-
-/* One task per behaviour, each with its own cadence. */
-static TaskParams s_ledHeartbeatParams = { LedHeartbeat_Task,   TASK_PERIOD_HEARTBEAT_MS };
-static TaskParams s_blinkSteadyParams  = { BlinkSteady_Task,    TASK_PERIOD_STEADY_MS };
-static TaskParams s_pwmSwParams        = { PwmLedSoftware_Task, TASK_PERIOD_PWM_SW_MS };
-static TaskParams s_pwmHwParams        = { PwmLedHardware_Task, TASK_PERIOD_PWM_HW_MS };
+/* Task entry points ---------------------------------------------------------*/
+static void LedHeartbeat_TaskEntry(void *arg);
+static void BlinkSteady_TaskEntry(void *arg);
+static void PwmLedSoftware_TaskEntry(void *arg);
+static void PwmLedHardware_TaskEntry(void *arg);
 
 /* -------------------------------------------------------------------------- */
 /**
- * @brief  Shared task body: tick one behaviour at a fixed cadence.
- * @param  arg Pointer to a TaskParams describing the behaviour and its period.
+ * @brief  Red LED lub-dub rhythm task.
  */
-static void BehaviourTaskEntry(void *arg)
+static void LedHeartbeat_TaskEntry(void *arg)
 {
-    TaskParams *params = (TaskParams *)arg;
     TickType_t lastWake = xTaskGetTickCount();
-    TickType_t periodTicks = pdMS_TO_TICKS(params->periodMs);
+    (void)arg;
 
     for (;;) {
-        uint32_t nowMs = HAL_GetTick();
-        params->behaviour(nowMs);
-        vTaskDelayUntil(&lastWake, periodTicks);
+        uint32_t nowMs = xTaskGetTickCount();
+        LedHeartbeat_Task(nowMs);
+        vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(TASK_PERIOD_HEARTBEAT_MS));
     }
 }
 
-/* -------------------------------------------------------------------------- */
 /**
- * @brief  Create one behaviour task; traps a failed allocation.
+ * @brief  External LED fixed-rate blink task.
  */
-static void CreateTask(TaskFunction_t taskFn, const char *name, TaskParams *params, UBaseType_t priority)
+static void BlinkSteady_TaskEntry(void *arg)
 {
-    if (xTaskCreate(taskFn, name, TASK_STACK_SIZE_WORDS, params, priority, NULL) != pdPASS) {
-        Error_Handler();
+    TickType_t lastWake = xTaskGetTickCount();
+    (void)arg;
+
+    for (;;) {
+        uint32_t nowMs = xTaskGetTickCount();
+        BlinkSteady_Task(nowMs);
+        vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(TASK_PERIOD_STEADY_MS));
+    }
+}
+
+/**
+ * @brief  Green LED software-PWM breathe task.
+ * @note   Runs at the fastest cadence the 1 kHz tick allows; the software PWM
+ *         carrier is bit-banged, so a slower task would show as flicker.
+ */
+static void PwmLedSoftware_TaskEntry(void *arg)
+{
+    TickType_t lastWake = xTaskGetTickCount();
+    (void)arg;
+
+    for (;;) {
+        uint32_t nowMs = xTaskGetTickCount();
+        PwmLedSoftware_Task(nowMs);
+        vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(TASK_PERIOD_PWM_SW_MS));
+    }
+}
+
+/**
+ * @brief  External LED timer-PWM breathe task.
+ */
+static void PwmLedHardware_TaskEntry(void *arg)
+{
+    TickType_t lastWake = xTaskGetTickCount();
+    (void)arg;
+
+    for (;;) {
+        uint32_t nowMs = xTaskGetTickCount();
+        PwmLedHardware_Task(nowMs);
+        vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(TASK_PERIOD_PWM_HW_MS));
     }
 }
 
@@ -111,10 +137,18 @@ void BlinkHeartbeatFreeRTOS_Run(void)
     }
 
     /* One task per behaviour. Stacks come from the FreeRTOS heap (heap_4). */
-    CreateTask(BehaviourTaskEntry, "led_hb",   &s_ledHeartbeatParams, TASK_PRIO_HEARTBEAT);
-    CreateTask(BehaviourTaskEntry, "blink_st", &s_blinkSteadyParams,  TASK_PRIO_STEADY);
-    CreateTask(BehaviourTaskEntry, "pwm_sw",   &s_pwmSwParams,        TASK_PRIO_PWM_SW);
-    CreateTask(BehaviourTaskEntry, "pwm_hw",   &s_pwmHwParams,        TASK_PRIO_PWM_HW);
+    if (xTaskCreate(LedHeartbeat_TaskEntry,   "led_hb",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_HEARTBEAT, NULL) != pdPASS) {
+        Error_Handler();
+    }
+    if (xTaskCreate(BlinkSteady_TaskEntry,    "blink_st", TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_STEADY,    NULL) != pdPASS) {
+        Error_Handler();
+    }
+    if (xTaskCreate(PwmLedSoftware_TaskEntry, "pwm_sw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_SW,    NULL) != pdPASS) {
+        Error_Handler();
+    }
+    if (xTaskCreate(PwmLedHardware_TaskEntry, "pwm_hw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_HW,    NULL) != pdPASS) {
+        Error_Handler();
+    }
 
     /* Hand control to the scheduler; only returns on a fatal error. */
     vTaskStartScheduler();

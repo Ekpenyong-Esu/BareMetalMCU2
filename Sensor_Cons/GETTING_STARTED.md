@@ -21,7 +21,8 @@ This project implements a complete sensor monitoring and control system on the S
 - VS Code (recommended) or any IDE
 - Git
 
-
+usbipd.exe list 2>&1
+usbipd bind --busid 1-12
 usbipd.exe attach --wsl --auto-attach --busid 2-12 2>&1
 
 ---
