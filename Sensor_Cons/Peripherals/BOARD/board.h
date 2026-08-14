@@ -21,8 +21,6 @@ extern "C" {
 #define BOARD_LED_GREEN_PIN     GPIO_PIN_13
 #define BOARD_LED_RED_PORT      GPIOG
 #define BOARD_LED_RED_PIN       GPIO_PIN_14
-#define BOARD_LED_BLUE_PORT     GPIOG
-#define BOARD_LED_BLUE_PIN      GPIO_PIN_7
 #define BOARD_LED_ACTIVE_LOW    false
 
 /* External LED on the extension header --------------------------------------*/

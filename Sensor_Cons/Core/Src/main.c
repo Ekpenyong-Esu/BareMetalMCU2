@@ -9,16 +9,16 @@
 
 #include "main.h"
 #include "sys.h"
-#include "blink_heartbeat_freertos_semaphores.h"
+#include "blink_heartbeat_freertos_notifications.h"
 
 /**
- * @brief  Program entry point: bring up the system, then run Application 2
- *         (Blink & Heartbeat on FreeRTOS, mutex + binary semaphore).
+ * @brief  Program entry point: bring up the system, then run Application 3
+ *         (Blink & Heartbeat on FreeRTOS, task notifications).
  */
 int main(void)
 {
     SYS_Init();                 /* HAL init, system clock, SysTick */
-    BlinkHeartbeatFreeRTOSSemaphores_Run(); /* Starts FreeRTOS scheduler; never returns */
+    BlinkHeartbeatFreeRTOSNotifications_Run(); /* Starts FreeRTOS scheduler; never returns */
 }
 
 #ifdef USE_FULL_ASSERT
