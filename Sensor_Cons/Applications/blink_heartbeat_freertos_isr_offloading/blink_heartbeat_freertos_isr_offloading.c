@@ -165,8 +165,11 @@ static bool Timer7_Start(void)
     }
 
     /* ISR priority must be at or below configMAX_SYSCALL_INTERRUPT_PRIORITY
-     * (5) so xTaskNotifyFromISR() is allowed. 6 is the lowest "safe" priority. */
+     * (5) so xTaskNotifyFromISR() is allowed. 6 is the lowest "safe" priority.
+     * Note: HAL_TIM_Base_Start_IT() (via TIM_Start_IT) enables the timer's
+     * update interrupt but NOT the NVIC line, so we enable it here. */
     HAL_NVIC_SetPriority(TIM7_IRQn, TIM7_IRQ_PRIORITY, 0u);
+    HAL_NVIC_EnableIRQ(TIM7_IRQn);
 
     return (TIM_Start_IT(&s_timer7) == HAL_OK);
 }
