@@ -271,8 +271,8 @@ endif()
 # Add your custom application .c files that aren't in Peripherals/
 # Example: target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/my_app.c)
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Application 3: Blink & Heartbeat on FreeRTOS (task notifications)
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat_freertos_notifications/blink_heartbeat_freertos_notifications.c
+    # Application 4: Blink & Heartbeat on FreeRTOS (event groups)
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat_freertos_event_groups/blink_heartbeat_freertos_event_groups.c
     # Shared LED behaviour modules (reused by the FreeRTOS app)
     ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/blink_steady.c
     ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/heartbeat_rhythm.c
@@ -284,7 +284,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 # Make application headers available to the build
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat_freertos_notifications
+    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat_freertos_event_groups
 )
 
 # ------------------------------------------------------------------------------
