@@ -1,0 +1,29 @@
+---
+title: Button Event Counter - FreeRTOS Event Groups
+---
+sequenceDiagram
+    autonumber
+    participant BTN as Button Task (producer)
+    participant EG as Event Group
+    participant CNT as Counter Task (consumer)
+    participant LED as LEDs
+
+    loop every 10 ms
+        BTN->>BTN: PressDetector_Update()
+        alt press edge
+            BTN->>EG: xEventGroupSetBits(PRESS_BIT)
+        else long-press
+            BTN->>EG: xEventGroupSetBits(LONG_PRESS_BIT)
+        end
+    end
+
+    loop forever
+        CNT->>EG: xEventGroupWaitBits(any, timeout 10 ms)
+        alt PRESS_BIT set
+            CNT->>CNT: press -> increment
+        end
+        alt LONG_PRESS_BIT set
+            CNT->>CNT: long-press -> reset
+        end
+        CNT->>LED: CounterDisplay_Show(pressed, count)
+    end
