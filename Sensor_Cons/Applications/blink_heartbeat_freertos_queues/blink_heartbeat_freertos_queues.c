@@ -115,7 +115,7 @@ static void PwmLedHardware_Producer(void *arg)
 static void LedConsumer_TaskEntry(void *arg)
 {
     (void)arg;
-    BehaviourId_t message;
+    BehaviourId_t message = BEHAVIOUR_HEARTBEAT;  /* initial value, never used */
 
     for (;;) {
         xQueueReceive(s_eventQueue, &message, portMAX_DELAY);

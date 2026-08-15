@@ -1,0 +1,20 @@
+---
+title: Producer / Consumer (Queues)
+---
+flowchart LR
+    subgraph Producers
+        A["LedHeartbeat_Producer<br/>every 5 ms"]
+        B["BlinkSteady_Producer<br/>every 10 ms"]
+        C["PwmLedSoftware_Producer<br/>every 1 ms"]
+        D["PwmLedHardware_Producer<br/>every 5 ms"]
+    end
+    Q[("s_eventQueue<br/>depth 4")]
+    E["LedConsumer_TaskEntry<br/>blocks on receive"]
+    F["switch on BehaviourId<br/>runs matching LED step"]
+
+    A -->|"xQueueSend id"| Q
+    B -->|"xQueueSend id"| Q
+    C -->|"xQueueSend id"| Q
+    D -->|"xQueueSend id"| Q
+    Q -->|"xQueueReceive"| E
+    E --> F
