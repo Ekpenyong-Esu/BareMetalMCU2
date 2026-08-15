@@ -9,7 +9,7 @@
 
 #include "main.h"
 #include "sys.h"
-#include "button_event_counter.h"
+#include "button_event_counter_freertos_software_timers.h"
 
 /**
  * @brief  Program entry point: bring up the system, then run Application 2.
@@ -17,7 +17,7 @@
 int main(void)
 {
     SYS_Init();                     /* HAL init, system clock, SysTick */
-    ButtonEventCounter_Run();       /* Runs its own super-loop; never returns */
+    ButtonEventCounterFreeRTOSSoftwareTimers_Run();  /* Starts scheduler; never returns */
 }
 
 #ifdef USE_FULL_ASSERT

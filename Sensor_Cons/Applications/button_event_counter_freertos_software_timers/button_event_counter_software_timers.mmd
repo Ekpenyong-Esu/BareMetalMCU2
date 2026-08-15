@@ -1,0 +1,32 @@
+---
+title: Button Event Counter - FreeRTOS Software Timers
+---
+sequenceDiagram
+    autonumber
+    participant BTN as Button Task
+    participant TMR as Long-Press Timer
+    participant Q as Event Queue
+    participant CNT as Counter Task
+    participant LED as LEDs
+
+    loop every 10 ms
+        BTN->>BTN: PressDetector_Update()
+        alt press edge
+            BTN->>Q: xQueueSend(EVENT_PRESS)
+            BTN->>TMR: xTimerStart(1000 ms)
+        else release
+            BTN->>TMR: xTimerStop()
+        end
+    end
+
+    alt timer fires while button held
+        TMR->>Q: xQueueSend(EVENT_LONG_PRESS)
+    end
+
+    loop forever
+        CNT->>Q: xQueueReceive(timeout 10 ms)
+        alt event received
+            CNT->>CNT: press -> increment / long-press -> reset
+        end
+        CNT->>LED: CounterDisplay_Show(pressed, count)
+    end
