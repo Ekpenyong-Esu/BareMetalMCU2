@@ -28,6 +28,7 @@
 
 #include "blink_steady.h"
 #include "led_heartbeat.h"
+#include "log.h"
 #include "pwm_led_hardware.h"
 #include "pwm_led_software.h"
 #include "sys.h"
@@ -136,72 +137,103 @@ void BlinkHeartbeatFreeRTOSEventGroups_Run(void)
 {
     /* Start every behaviour before the scheduler runs. */
     if (!BlinkSteady_Init()) {
+        log_error("EVENT_GROUPS: BlinkSteady_Init failed");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: BlinkSteady_Init OK");
     if (!LedHeartbeat_Init()) {
+        log_error("EVENT_GROUPS: LedHeartbeat_Init failed");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: LedHeartbeat_Init OK");
     if (!PwmLedSoftware_Init()) {
+        log_error("EVENT_GROUPS: PwmLedSoftware_Init failed");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: PwmLedSoftware_Init OK");
     if (!PwmLedHardware_Init()) {
+        log_error("EVENT_GROUPS: PwmLedHardware_Init failed");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: PwmLedHardware_Init OK");
 
     /* The shared event group: one flag per behaviour. */
     s_eventGroup = xEventGroupCreate();
     if (s_eventGroup == NULL) {
+        log_error("EVENT_GROUPS: xEventGroupCreate failed");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: event group created");
 
     /* One software timer per behaviour; each sets its flag when it fires. */
     TimerHandle_t heartbeatTimer = xTimerCreate("hb_timer", pdMS_TO_TICKS(TIMER_PERIOD_HEARTBEAT_MS), pdTRUE, NULL, LedHeartbeatTimer_Callback);
     if (heartbeatTimer == NULL) {
+        log_error("EVENT_GROUPS: failed to create hb_timer");
         Error_Handler();
     }
     if (xTimerStart(heartbeatTimer, 0u) != pdPASS) {
+        log_error("EVENT_GROUPS: failed to start hb_timer");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: started hb_timer");
 
     TimerHandle_t steadyTimer = xTimerCreate("steady_timer", pdMS_TO_TICKS(TIMER_PERIOD_STEADY_MS), pdTRUE, NULL, BlinkSteadyTimer_Callback);
     if (steadyTimer == NULL) {
+        log_error("EVENT_GROUPS: failed to create steady_timer");
         Error_Handler();
     }
     if (xTimerStart(steadyTimer, 0u) != pdPASS) {
+        log_error("EVENT_GROUPS: failed to start steady_timer");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: started steady_timer");
 
     TimerHandle_t pwmSwTimer = xTimerCreate("pwm_sw_timer", pdMS_TO_TICKS(TIMER_PERIOD_PWM_SW_MS), pdTRUE, NULL, PwmLedSoftwareTimer_Callback);
     if (pwmSwTimer == NULL) {
+        log_error("EVENT_GROUPS: failed to create pwm_sw_timer");
         Error_Handler();
     }
     if (xTimerStart(pwmSwTimer, 0u) != pdPASS) {
+        log_error("EVENT_GROUPS: failed to start pwm_sw_timer");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: started pwm_sw_timer");
 
     TimerHandle_t pwmHwTimer = xTimerCreate("pwm_hw_timer", pdMS_TO_TICKS(TIMER_PERIOD_PWM_HW_MS), pdTRUE, NULL, PwmLedHardwareTimer_Callback);
     if (pwmHwTimer == NULL) {
+        log_error("EVENT_GROUPS: failed to create pwm_hw_timer");
         Error_Handler();
     }
     if (xTimerStart(pwmHwTimer, 0u) != pdPASS) {
+        log_error("EVENT_GROUPS: failed to start pwm_hw_timer");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: started pwm_hw_timer");
 
     /* One task per behaviour; each blocks on its own event flag. */
     if (xTaskCreate(LedHeartbeat_TaskEntry,   "led_hb",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_HEARTBEAT, NULL) != pdPASS) {
+        log_error("EVENT_GROUPS: failed to create led_hb");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: created led_hb");
     if (xTaskCreate(BlinkSteady_TaskEntry,    "blink_st", TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_STEADY,    NULL) != pdPASS) {
+        log_error("EVENT_GROUPS: failed to create blink_st");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: created blink_st");
     if (xTaskCreate(PwmLedSoftware_TaskEntry, "pwm_sw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_SW,    NULL) != pdPASS) {
+        log_error("EVENT_GROUPS: failed to create pwm_sw");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: created pwm_sw");
     if (xTaskCreate(PwmLedHardware_TaskEntry, "pwm_hw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_HW,    NULL) != pdPASS) {
+        log_error("EVENT_GROUPS: failed to create pwm_hw");
         Error_Handler();
     }
+    log_debug("EVENT_GROUPS: created pwm_hw");
 
     /* Hand control to the scheduler; only returns on a fatal error. */
+    log_debug("EVENT_GROUPS: starting scheduler");
     vTaskStartScheduler();
 
     Error_Handler();
