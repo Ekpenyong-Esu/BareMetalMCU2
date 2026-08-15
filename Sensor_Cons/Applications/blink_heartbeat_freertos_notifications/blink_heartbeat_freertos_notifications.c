@@ -163,39 +163,58 @@ void BlinkHeartbeatFreeRTOSNotifications_Run(void)
 {
     /* Start every behaviour before the scheduler runs. */
     if (!BlinkSteady_Init()) {
+        log_error("NOTIFICATIONS: BlinkSteady_Init failed");
         Error_Handler();
     }
+    log_debug("NOTIFICATIONS: BlinkSteady_Init OK");
     if (!LedHeartbeat_Init()) {
+        log_error("NOTIFICATIONS: LedHeartbeat_Init failed");
         Error_Handler();
     }
+    log_debug("NOTIFICATIONS: LedHeartbeat_Init OK");
     if (!PwmLedSoftware_Init()) {
+        log_error("NOTIFICATIONS: PwmLedSoftware_Init failed");
         Error_Handler();
     }
+    log_debug("NOTIFICATIONS: PwmLedSoftware_Init OK");
     if (!PwmLedHardware_Init()) {
+        log_error("NOTIFICATIONS: PwmLedHardware_Init failed");
         Error_Handler();
     }
+    log_debug("NOTIFICATIONS: PwmLedHardware_Init OK");
 
     /* The monitor that receives the notification bits. Create it first so its
      * handle is available to every behaviour task below. */
     if (xTaskCreate(LedMonitor_TaskEntry, "led_monitor", TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_MONITOR, &s_monitorTask) != pdPASS) {
+        log_error("NOTIFICATIONS: failed to create led_monitor");
         Error_Handler();
     }
+    log_debug("NOTIFICATIONS: created led_monitor");
 
     /* One task per behaviour; each notifies the monitor after stepping. */
     if (xTaskCreate(LedHeartbeat_TaskEntry,   "led_hb",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_HEARTBEAT, NULL) != pdPASS) {
+        log_error("NOTIFICATIONS: failed to create led_hb");
         Error_Handler();
     }
+    log_debug("NOTIFICATIONS: created led_hb");
     if (xTaskCreate(BlinkSteady_TaskEntry,    "blink_st", TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_STEADY,    NULL) != pdPASS) {
+        log_error("NOTIFICATIONS: failed to create blink_st");
         Error_Handler();
     }
+    log_debug("NOTIFICATIONS: created blink_st");
     if (xTaskCreate(PwmLedSoftware_TaskEntry, "pwm_sw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_SW,    NULL) != pdPASS) {
+        log_error("NOTIFICATIONS: failed to create pwm_sw");
         Error_Handler();
     }
+    log_debug("NOTIFICATIONS: created pwm_sw");
     if (xTaskCreate(PwmLedHardware_TaskEntry, "pwm_hw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_HW,    NULL) != pdPASS) {
+        log_error("NOTIFICATIONS: failed to create pwm_hw");
         Error_Handler();
     }
+    log_debug("NOTIFICATIONS: created pwm_hw");
 
     /* Hand control to the scheduler; only returns on a fatal error. */
+    log_debug("NOTIFICATIONS: starting scheduler");
     vTaskStartScheduler();
 
     Error_Handler();
