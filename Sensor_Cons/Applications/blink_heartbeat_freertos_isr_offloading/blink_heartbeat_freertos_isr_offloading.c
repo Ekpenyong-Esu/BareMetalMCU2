@@ -75,6 +75,29 @@ static TaskHandle_t s_pwmHwTask;
 static volatile uint32_t s_isrMs;         /* milliseconds counted in the ISR */
 
 /* The ISR: deferred interrupt handling --------------------------------------*/
+
+static bool Timer7_Start(void)
+{
+    /* TIM7 is a basic timer on APB1. APB1 = 42 MHz, so the timer clock is
+     * doubled to 84 MHz (same math as HAL_InitTick uses for TIM6). */
+    if (!TIM_Clock_Enable(TIM7)) {
+        return false;
+    }
+
+    if (TIM_Init(&s_timer7, TIM7, TIM7_PRESCALER, TIM7_PERIOD) != HAL_OK) {
+        return false;
+    }
+
+    /* ISR priority must be at or below configMAX_SYSCALL_INTERRUPT_PRIORITY
+     * (5) so xTaskNotifyFromISR() is allowed. 6 is the lowest "safe" priority.
+     * Note: HAL_TIM_Base_Start_IT() (via TIM_Start_IT) enables the timer's
+     * update interrupt but NOT the NVIC line, so we enable it here. */
+    HAL_NVIC_SetPriority(TIM7_IRQn, TIM7_IRQ_PRIORITY, 0u);
+    HAL_NVIC_EnableIRQ(TIM7_IRQn);
+
+    return (TIM_Start_IT(&s_timer7) == HAL_OK);
+}
+
 /**
  * @brief  TIM7 update interrupt. This is the ISR, so it must stay short.
  * @note   Fires 1000x/second. It only counts time and wakes behaviour tasks;
@@ -152,27 +175,7 @@ static void PwmLedHardware_TaskEntry(void *arg)
 }
 
 /* ------------------------------------------------------------------------- */
-static bool Timer7_Start(void)
-{
-    /* TIM7 is a basic timer on APB1. APB1 = 42 MHz, so the timer clock is
-     * doubled to 84 MHz (same math as HAL_InitTick uses for TIM6). */
-    if (!TIM_Clock_Enable(TIM7)) {
-        return false;
-    }
 
-    if (TIM_Init(&s_timer7, TIM7, TIM7_PRESCALER, TIM7_PERIOD) != HAL_OK) {
-        return false;
-    }
-
-    /* ISR priority must be at or below configMAX_SYSCALL_INTERRUPT_PRIORITY
-     * (5) so xTaskNotifyFromISR() is allowed. 6 is the lowest "safe" priority.
-     * Note: HAL_TIM_Base_Start_IT() (via TIM_Start_IT) enables the timer's
-     * update interrupt but NOT the NVIC line, so we enable it here. */
-    HAL_NVIC_SetPriority(TIM7_IRQn, TIM7_IRQ_PRIORITY, 0u);
-    HAL_NVIC_EnableIRQ(TIM7_IRQn);
-
-    return (TIM_Start_IT(&s_timer7) == HAL_OK);
-}
 
 void BlinkHeartbeatFreeRTOSIsrOffloading_Run(void)
 {
