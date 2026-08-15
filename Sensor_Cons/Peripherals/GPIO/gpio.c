@@ -117,7 +117,7 @@ void GPIO_Driver_WritePort(GPIO_TypeDef *GPIOx, uint16_t PortValue)
 
 HAL_StatusTypeDef GPIO_Driver_EnableIRQ(uint16_t GPIO_Pin, uint32_t PreemptPriority, uint32_t SubPriority)
 {
-    IRQn_Type irqn;
+    IRQn_Type irqn = 0;
 
     if (GPIO_GetIRQn(GPIO_Pin, &irqn) != HAL_OK) {
         return HAL_ERROR;
@@ -131,7 +131,7 @@ HAL_StatusTypeDef GPIO_Driver_EnableIRQ(uint16_t GPIO_Pin, uint32_t PreemptPrior
 
 HAL_StatusTypeDef GPIO_Driver_DisableIRQ(uint16_t GPIO_Pin)
 {
-    IRQn_Type irqn;
+    IRQn_Type irqn = 0;
 
     if (GPIO_GetIRQn(GPIO_Pin, &irqn) != HAL_OK) {
         return HAL_ERROR;

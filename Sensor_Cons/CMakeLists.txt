@@ -271,18 +271,16 @@ endif()
 # Add your custom application .c files that aren't in Peripherals/
 # Example: target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/my_app.c)
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Application 1: Blink & Heartbeat
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/blink_heartbeat.c
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/blink_steady.c
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/heartbeat_rhythm.c
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/led_heartbeat.c
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/pwm_led_hardware.c
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat/pwm_led_software.c
+    # Application 1: Button Event Counter
+    ${CMAKE_SOURCE_DIR}/Applications/button_event_counter/button_event_counter.c
+    ${CMAKE_SOURCE_DIR}/Applications/button_event_counter/press_detector.c
+    ${CMAKE_SOURCE_DIR}/Applications/button_event_counter/press_counter.c
+    ${CMAKE_SOURCE_DIR}/Applications/button_event_counter/counter_display.c
 )
 
 # Make application headers available to the build
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    ${CMAKE_SOURCE_DIR}/Applications/blink_heartbeat
+    ${CMAKE_SOURCE_DIR}/Applications/button_event_counter
 )
 
 # ------------------------------------------------------------------------------
