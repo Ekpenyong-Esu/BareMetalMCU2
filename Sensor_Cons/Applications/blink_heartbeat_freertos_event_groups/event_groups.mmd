@@ -1,0 +1,26 @@
+---
+title: Event-Driven / Blocking (Event Groups)
+---
+flowchart LR
+    subgraph Timers["4 software timers"]
+        T1["hb_timer<br/>every 5 ms"]
+        T2["steady_timer<br/>every 10 ms"]
+        T3["pwm_sw_timer<br/>every 1 ms"]
+        T4["pwm_hw_timer<br/>every 5 ms"]
+    end
+    EG["s_eventGroup<br/>one flag per behaviour"]
+    subgraph Tasks["4 behaviour tasks"]
+        A["LedHeartbeat_TaskEntry"]
+        B["BlinkSteady_TaskEntry"]
+        C["PwmLedSoftware_TaskEntry"]
+        D["PwmLedHardware_TaskEntry"]
+    end
+
+    T1 -->|"set bit 0"| EG
+    T2 -->|"set bit 1"| EG
+    T3 -->|"set bit 2"| EG
+    T4 -->|"set bit 3"| EG
+    EG -->|"wait bit 0"| A
+    EG -->|"wait bit 1"| B
+    EG -->|"wait bit 2"| C
+    EG -->|"wait bit 3"| D
