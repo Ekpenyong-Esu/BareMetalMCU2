@@ -24,6 +24,7 @@
 
 #include "blink_steady.h"
 #include "led_heartbeat.h"
+#include "log.h"
 #include "pwm_led_hardware.h"
 #include "pwm_led_software.h"
 #include "sys.h"
@@ -143,44 +144,74 @@ void BlinkHeartbeatFreeRTOSQueues_Run(void)
 {
     /* Start every behaviour before the scheduler runs. */
     if (!BlinkSteady_Init()) {
+        log_error("QUEUES: BlinkSteady_Init failed");
         Error_Handler();
     }
+    log_debug("QUEUES: BlinkSteady_Init OK");
+
     if (!LedHeartbeat_Init()) {
+        log_error("QUEUES: LedHeartbeat_Init failed");
         Error_Handler();
     }
+    log_debug("QUEUES: LedHeartbeat_Init OK");
+
     if (!PwmLedSoftware_Init()) {
+        log_error("QUEUES: PwmLedSoftware_Init failed");
         Error_Handler();
     }
+    log_debug("QUEUES: PwmLedSoftware_Init OK");
+
     if (!PwmLedHardware_Init()) {
+        log_error("QUEUES: PwmLedHardware_Init failed");
         Error_Handler();
     }
+    log_debug("QUEUES: PwmLedHardware_Init OK");
 
     /* The single queue that connects the producers to the consumer. */
     s_eventQueue = xQueueCreate(EVENT_QUEUE_LENGTH, sizeof(BehaviourId_t));
     if (s_eventQueue == NULL) {
+        log_error("QUEUES: xQueueCreate failed");
         Error_Handler();
     }
+    log_debug("QUEUES: event queue created (depth %u)", EVENT_QUEUE_LENGTH);
 
     /* One producer task per behaviour. */
     if (xTaskCreate(LedHeartbeat_Producer,   "led_hb_p",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_HEARTBEAT, NULL) != pdPASS) {
+        log_error("QUEUES: failed to create led_hb_p");
         Error_Handler();
     }
+    log_debug("QUEUES: created led_hb_p");
+
+
     if (xTaskCreate(BlinkSteady_Producer,    "blink_st_p", TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_STEADY,    NULL) != pdPASS) {
+        log_error("QUEUES: failed to create blink_st_p");
         Error_Handler();
     }
+    log_debug("QUEUES: created blink_st_p");
+
+
     if (xTaskCreate(PwmLedSoftware_Producer, "pwm_sw_p",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_SW,    NULL) != pdPASS) {
+        log_error("QUEUES: failed to create pwm_sw_p");
         Error_Handler();
     }
+    log_debug("QUEUES: created pwm_sw_p");
+
+
     if (xTaskCreate(PwmLedHardware_Producer, "pwm_hw_p",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_HW,    NULL) != pdPASS) {
+        log_error("QUEUES: failed to create pwm_hw_p");
         Error_Handler();
     }
+    log_debug("QUEUES: created pwm_hw_p");
 
     /* The single consumer that does all the LED work. */
     if (xTaskCreate(LedConsumer_TaskEntry, "led_consumer", TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_CONSUMER, NULL) != pdPASS) {
+        log_error("QUEUES: failed to create led_consumer");
         Error_Handler();
     }
+    log_debug("QUEUES: created led_consumer");
 
     /* Hand control to the scheduler; only returns on a fatal error. */
+    log_debug("QUEUES: starting scheduler");
     vTaskStartScheduler();
 
     Error_Handler();
