@@ -1,0 +1,26 @@
+---
+title: Button Event Counter - FreeRTOS Queues
+---
+sequenceDiagram
+    autonumber
+    participant BTN as Button Task (producer)
+    participant Q as Event Queue
+    participant CNT as Counter Task (consumer)
+    participant LED as LEDs
+
+    loop every 10 ms
+        BTN->>BTN: PressDetector_Update()
+        alt press edge
+            BTN->>Q: xQueueSend(EVENT_PRESS)
+        else long-press
+            BTN->>Q: xQueueSend(EVENT_LONG_PRESS)
+        end
+    end
+
+    loop forever
+        CNT->>Q: xQueueReceive(timeout 10 ms)
+        alt event received
+            CNT->>CNT: press -> increment / long-press -> reset
+        end
+        CNT->>LED: CounterDisplay_Show(pressed, count)
+    end

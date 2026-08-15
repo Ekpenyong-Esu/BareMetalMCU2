@@ -9,15 +9,16 @@
 
 #include "main.h"
 #include "sys.h"
-#include "button_event_counter.h"
+#include "button_event_counter_freertos_queues.h"
 
 /**
- * @brief  Program entry point: bring up the system, then run Application 2.
+ * @brief  Program entry point: bring up the system, then run Application 2
+ *         (Button Event Counter on FreeRTOS, producer/consumer via queue).
  */
 int main(void)
 {
     SYS_Init();                     /* HAL init, system clock, SysTick */
-    ButtonEventCounter_Run();       /* Runs its own super-loop; never returns */
+    ButtonEventCounterFreeRTOSQueues_Run(); /* Starts FreeRTOS scheduler; never returns */
 }
 
 #ifdef USE_FULL_ASSERT
