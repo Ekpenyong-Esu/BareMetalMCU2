@@ -12,6 +12,29 @@ Every listed driver lives in `Peripherals/<NAME>/` and ships with a header
 
 ---
 
+## Contents
+
+- [1. Single-Peripheral Applications](#1-single-peripheral-applications)
+- [2. Sensor Applications](#2-sensor-applications)
+- [3. Display & UI Applications](#3-display--ui-applications)
+- [4. Communication Applications](#4-communication-applications)
+- [5. Memory & Storage Applications](#5-memory--storage-applications)
+- [6. Combined / Project-Level Applications](#6-combined--project-level-applications)
+- [Suggested Learning Path](#suggested-learning-path)
+
+## At a Glance
+
+| Section | Apps | What you learn |
+|---------|:----:|----------------|
+| [1. Single-Peripheral](#1-single-peripheral-applications) | 20 | One driver per app — the basics |
+| [2. Sensor](#2-sensor-applications) | 6 | Read a sensor and act on the value |
+| [3. Display & UI](#3-display--ui-applications) | 7 | Render anything to a screen |
+| [4. Communication](#4-communication-applications) | 6 | Move data between chips or hosts |
+| [5. Memory & Storage](#5-memory--storage-applications) | 3 | Persist and move data |
+| [6. Combined / Project](#6-combined--project-level-applications) | 8 | Multi-peripheral, product-like projects |
+
+---
+
 ## 1. Single-Peripheral Applications
 
 Small apps that exercise exactly one driver. Great starting points.
@@ -116,14 +139,16 @@ Multi-peripheral projects that behave like real products.
 
 ## Suggested Learning Path
 
-1. **Basics:** `GPIO` → `LED` → `BUTTON` → `TIM` → `UART`
-2. **Analog:** `ADC` → `DAC` → `BUZZER`/`SERVO`
-3. **Buses:** `I2C` → `SPI` → sensors (`ACCEL`, `MEMS`, displays)
-4. **Display/UI:** `ILI9341`/`LTDC` → `TOUCHSCREEN` → `LVGL`
-5. **Storage:** `FLASH` → `EEPROM` → `FMC`/`QSPI`
-6. **Systems:** `RTC` → `IWDG`/`WWDG` → `LOW_POWER` → `DMA`
-7. **Networking:** `CAN` → `USB` → `ETH`
-8. **Capstone:** pick one project from Section 6.
+| Step | Focus | Drivers |
+|:----:|-------|---------|
+| 1 | Basics | `GPIO` → `LED` → `BUTTON` → `TIM` → `UART` |
+| 2 | Analog | `ADC` → `DAC` → `BUZZER`/`SERVO` |
+| 3 | Buses | `I2C` → `SPI` → sensors (`ACCEL`, `MEMS`, displays) |
+| 4 | Display/UI | `ILI9341`/`LTDC` → `TOUCHSCREEN` → `LVGL` |
+| 5 | Storage | `FLASH` → `EEPROM` → `FMC`/`QSPI` |
+| 6 | Systems | `RTC` → `IWDG`/`WWDG` → `LOW_POWER` → `DMA` |
+| 7 | Networking | `CAN` → `USB` → `ETH` |
+| 8 | Capstone | pick one project from Section 6 |
 
 ---
 
