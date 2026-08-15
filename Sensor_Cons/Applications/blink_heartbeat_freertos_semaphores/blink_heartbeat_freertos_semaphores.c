@@ -27,6 +27,7 @@
 #include "board.h"
 #include "led.h"
 #include "led_heartbeat.h"
+#include "log.h"
 #include "pwm_led_hardware.h"
 #include "pwm_led_software.h"
 #include "sys.h"
@@ -171,17 +172,25 @@ void BlinkHeartbeatFreeRTOSSemaphores_Run(void)
 {
     /* Start every behaviour before the scheduler runs. */
     if (!BlinkSteady_Init()) {
+        log_error("SEMAPHORES: BlinkSteady_Init failed");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: BlinkSteady_Init OK");
     if (!LedHeartbeat_Init()) {
+        log_error("SEMAPHORES: LedHeartbeat_Init failed");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: LedHeartbeat_Init OK");
     if (!PwmLedSoftware_Init()) {
+        log_error("SEMAPHORES: PwmLedSoftware_Init failed");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: PwmLedSoftware_Init OK");
     if (!PwmLedHardware_Init()) {
+        log_error("SEMAPHORES: PwmLedHardware_Init failed");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: PwmLedHardware_Init OK");
 
     /* Status LED for the monitor task (on-board blue LED, LD6). */
     const LedConfig_t monitorConfig = {
@@ -190,39 +199,56 @@ void BlinkHeartbeatFreeRTOSSemaphores_Run(void)
         .activeLow = BOARD_LED_ACTIVE_LOW
     };
     if (!Led_InitCustom(&s_monitorLed, &monitorConfig)) {
+        log_error("SEMAPHORES: Led_InitCustom failed");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: monitor LED initialized");
 
     /* Synchronisation objects. */
     s_activityMutex = xSemaphoreCreateMutex();
     if (s_activityMutex == NULL) {
+        log_error("SEMAPHORES: xSemaphoreCreateMutex failed");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: activity mutex created");
     s_activityChanged = xSemaphoreCreateBinary();
     if (s_activityChanged == NULL) {
+        log_error("SEMAPHORES: xSemaphoreCreateBinary failed");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: activity-changed semaphore created");
 
     /* One task per behaviour. */
     if (xTaskCreate(LedHeartbeat_TaskEntry,   "led_hb",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_HEARTBEAT, NULL) != pdPASS) {
+        log_error("SEMAPHORES: failed to create led_hb");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: created led_hb");
     if (xTaskCreate(BlinkSteady_TaskEntry,    "blink_st", TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_STEADY,    NULL) != pdPASS) {
+        log_error("SEMAPHORES: failed to create blink_st");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: created blink_st");
     if (xTaskCreate(PwmLedSoftware_TaskEntry, "pwm_sw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_SW,    NULL) != pdPASS) {
+        log_error("SEMAPHORES: failed to create pwm_sw");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: created pwm_sw");
     if (xTaskCreate(PwmLedHardware_TaskEntry, "pwm_hw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_HW,    NULL) != pdPASS) {
+        log_error("SEMAPHORES: failed to create pwm_hw");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: created pwm_hw");
 
     /* The monitor that reads the shared state. */
     if (xTaskCreate(LedMonitor_TaskEntry, "led_monitor", TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_MONITOR, NULL) != pdPASS) {
+        log_error("SEMAPHORES: failed to create led_monitor");
         Error_Handler();
     }
+    log_debug("SEMAPHORES: created led_monitor");
 
     /* Hand control to the scheduler; only returns on a fatal error. */
+    log_debug("SEMAPHORES: starting scheduler");
     vTaskStartScheduler();
 
     Error_Handler();
