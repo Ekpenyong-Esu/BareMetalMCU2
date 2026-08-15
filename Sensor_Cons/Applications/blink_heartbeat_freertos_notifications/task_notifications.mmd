@@ -1,0 +1,18 @@
+---
+title: Task Notifications
+---
+flowchart LR
+    subgraph BehaviourTasks["4 behaviour tasks"]
+        A["LedHeartbeat_TaskEntry<br/>every 5 ms"]
+        B["BlinkSteady_TaskEntry<br/>every 10 ms"]
+        C["PwmLedSoftware_TaskEntry<br/>every 1 ms"]
+        D["PwmLedHardware_TaskEntry<br/>every 5 ms"]
+    end
+    MON["LedMonitor_TaskEntry<br/>blocks on xTaskNotifyWait"]
+    H["health check<br/>prints ALIVE / DEAD"]
+
+    A -->|"xTaskNotify bit 0"| MON
+    B -->|"xTaskNotify bit 1"| MON
+    C -->|"xTaskNotify bit 2"| MON
+    D -->|"xTaskNotify bit 3"| MON
+    MON --> H
