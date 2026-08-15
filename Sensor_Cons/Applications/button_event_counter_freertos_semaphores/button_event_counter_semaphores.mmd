@@ -1,0 +1,31 @@
+---
+title: Button Event Counter - FreeRTOS Semaphores
+---
+sequenceDiagram
+    autonumber
+    participant BTN as Button Task (producer)
+    participant PS as Press Semaphore
+    participant LS as Long-Press Semaphore
+    participant CNT as Counter Task (consumer)
+    participant LED as LEDs
+
+    loop every 10 ms
+        BTN->>BTN: PressDetector_Update()
+        alt press edge
+            BTN->>PS: xSemaphoreGive()
+        else long-press
+            BTN->>LS: xSemaphoreGive()
+        end
+    end
+
+    loop forever
+        CNT->>PS: xSemaphoreTake(timeout 10 ms)
+        alt taken
+            CNT->>CNT: press -> increment
+        end
+        CNT->>LS: xSemaphoreTake(timeout 0)
+        alt taken
+            CNT->>CNT: long-press -> reset
+        end
+        CNT->>LED: CounterDisplay_Show(pressed, count)
+    end

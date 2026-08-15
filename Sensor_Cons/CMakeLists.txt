@@ -271,8 +271,8 @@ endif()
 # Add your custom application .c files that aren't in Peripherals/
 # Example: target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/my_app.c)
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Application 1: Button Event Counter
-    ${CMAKE_SOURCE_DIR}/Applications/button_event_counter/button_event_counter.c
+    # Application 2: Button Event Counter on FreeRTOS (semaphores)
+    ${CMAKE_SOURCE_DIR}/Applications/button_event_counter_freertos_semaphores/button_event_counter_freertos_semaphores.c
     ${CMAKE_SOURCE_DIR}/Applications/button_event_counter/press_detector.c
     ${CMAKE_SOURCE_DIR}/Applications/button_event_counter/press_counter.c
     ${CMAKE_SOURCE_DIR}/Applications/button_event_counter/counter_display.c
@@ -281,6 +281,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 # Make application headers available to the build
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Applications/button_event_counter
+    ${CMAKE_SOURCE_DIR}/Applications/button_event_counter_freertos_semaphores
 )
 
 # ------------------------------------------------------------------------------
