@@ -33,6 +33,7 @@
 
 #include "blink_steady.h"
 #include "led_heartbeat.h"
+#include "log.h"
 #include "pwm_led_hardware.h"
 #include "pwm_led_software.h"
 #include "sys.h"
@@ -181,38 +182,57 @@ void BlinkHeartbeatFreeRTOSIsrOffloading_Run(void)
 {
     /* Start every behaviour before the scheduler runs. */
     if (!BlinkSteady_Init()) {
+        log_error("ISR_OFFLOADING: BlinkSteady_Init failed");
         Error_Handler();
     }
+    log_debug("ISR_OFFLOADING: BlinkSteady_Init OK");
     if (!LedHeartbeat_Init()) {
+        log_error("ISR_OFFLOADING: LedHeartbeat_Init failed");
         Error_Handler();
     }
+    log_debug("ISR_OFFLOADING: LedHeartbeat_Init OK");
     if (!PwmLedSoftware_Init()) {
+        log_error("ISR_OFFLOADING: PwmLedSoftware_Init failed");
         Error_Handler();
     }
+    log_debug("ISR_OFFLOADING: PwmLedSoftware_Init OK");
     if (!PwmLedHardware_Init()) {
+        log_error("ISR_OFFLOADING: PwmLedHardware_Init failed");
         Error_Handler();
     }
+    log_debug("ISR_OFFLOADING: PwmLedHardware_Init OK");
 
     /* One task per behaviour; the ISR wakes each at its cadence. */
     if (xTaskCreate(LedHeartbeat_TaskEntry,   "led_hb",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_HEARTBEAT, &s_heartbeatTask) != pdPASS) {
+        log_error("ISR_OFFLOADING: failed to create led_hb");
         Error_Handler();
     }
+    log_debug("ISR_OFFLOADING: created led_hb");
     if (xTaskCreate(BlinkSteady_TaskEntry,    "blink_st", TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_STEADY,    &s_steadyTask) != pdPASS) {
+        log_error("ISR_OFFLOADING: failed to create blink_st");
         Error_Handler();
     }
+    log_debug("ISR_OFFLOADING: created blink_st");
     if (xTaskCreate(PwmLedSoftware_TaskEntry, "pwm_sw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_SW,    &s_pwmSwTask) != pdPASS) {
+        log_error("ISR_OFFLOADING: failed to create pwm_sw");
         Error_Handler();
     }
+    log_debug("ISR_OFFLOADING: created pwm_sw");
     if (xTaskCreate(PwmLedHardware_TaskEntry, "pwm_hw",   TASK_STACK_SIZE_WORDS, NULL, TASK_PRIO_PWM_HW,    &s_pwmHwTask) != pdPASS) {
+        log_error("ISR_OFFLOADING: failed to create pwm_hw");
         Error_Handler();
     }
+    log_debug("ISR_OFFLOADING: created pwm_hw");
 
     /* Start the 1 kHz hardware timer that drives everything. */
     if (!Timer7_Start()) {
+        log_error("ISR_OFFLOADING: Timer7_Start failed");
         Error_Handler();
     }
+    log_debug("ISR_OFFLOADING: TIM7 started at 1 kHz");
 
     /* Hand control to the scheduler; only returns on a fatal error. */
+    log_debug("ISR_OFFLOADING: starting scheduler");
     vTaskStartScheduler();
 
     Error_Handler();
