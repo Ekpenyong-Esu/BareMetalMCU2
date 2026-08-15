@@ -1,0 +1,23 @@
+---
+title: Synchronization (Semaphores / Mutexes)
+---
+flowchart LR
+    subgraph BehaviourTasks["4 behaviour tasks"]
+        A["LedHeartbeat_TaskEntry<br/>every 5 ms"]
+        B["BlinkSteady_TaskEntry<br/>every 10 ms"]
+        C["PwmLedSoftware_TaskEntry<br/>every 1 ms"]
+        D["PwmLedHardware_TaskEntry<br/>every 5 ms"]
+    end
+    M["s_activityMutex<br/>protects s_activity"]
+    S["s_activityChanged<br/>binary semaphore"]
+    MON["LedMonitor_TaskEntry<br/>blocks on semaphore"]
+    H["health check +<br/>toggle blue LED"]
+
+    A -->|"step LED,<br/>record activity"| M
+    B -->|"step LED,<br/>record activity"| M
+    C -->|"step LED,<br/>record activity"| M
+    D -->|"step LED,<br/>record activity"| M
+    M -->|"give"| S
+    S -->|"take"| MON
+    MON -->|"read under mutex"| M
+    MON --> H
