@@ -31,6 +31,7 @@
 #include "pwm_led_hardware.h"
 #include "pwm_led_software.h"
 #include "sys.h"
+#include "log.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -149,9 +150,9 @@ static void LedMonitor_TaskEntry(void *arg)
         if (heartbeatAlive != heartbeatWasAlive) {
             heartbeatWasAlive = heartbeatAlive;
             if (heartbeatAlive) {
-                printf("Heartbeat ALIVE\r\n");
+                log_debug("Heartbeat ALIVE\r\n");
             } else {
-                printf("Heartbeat DEAD\r\n");
+                log_debug("Heartbeat DEAD\r\n");
             }
         }
     }
