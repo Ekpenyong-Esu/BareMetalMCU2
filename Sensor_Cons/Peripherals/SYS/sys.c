@@ -56,12 +56,12 @@ void SYS_Init(void)
 
   /* Nothing may be logged before this point: SWO derives its bit rate from the
      core clock, so output sent on the 16 MHz HSI decodes as garbage. */
-  log_debug("SYS: Initializing system");
+  log_debug("SYS: Initializing system Clock to %lu Hz", SystemCoreClock);
 
   /* Microsecond time base (needs the final core clock) */
   SYS_MicrosInit();
 
-  log_debug("SYS: System initialized successfully");
+  log_debug("SYS: System initialized successfully ");
 }
 
 /**
