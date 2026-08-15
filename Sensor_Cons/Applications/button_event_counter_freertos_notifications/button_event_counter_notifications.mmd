@@ -1,0 +1,25 @@
+---
+title: Button Event Counter - FreeRTOS Notifications
+---
+sequenceDiagram
+    autonumber
+    participant BTN as Button Task (producer)
+    participant CNT as Counter Task (consumer)
+    participant LED as LEDs
+
+    loop every 10 ms
+        BTN->>BTN: PressDetector_Update()
+        alt press edge
+            BTN->>CNT: xTaskNotify(NOTIFY_PRESS)
+        else long-press
+            BTN->>CNT: xTaskNotify(NOTIFY_LONG_PRESS)
+        end
+    end
+
+    loop forever
+        CNT->>CNT: xTaskNotifyWait(timeout 10 ms)
+        alt notification received
+            CNT->>CNT: press -> increment / long-press -> reset
+        end
+        CNT->>LED: CounterDisplay_Show(pressed, count)
+    end
