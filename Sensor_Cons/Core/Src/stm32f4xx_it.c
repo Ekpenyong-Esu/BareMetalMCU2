@@ -32,6 +32,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "SEGGER_SYSVIEW.h"
+#include "button_event_counter_freertos_isr_offloading.h"
 
 /* USER CODE END Includes */
 /**
@@ -249,12 +250,14 @@ void EXTI15_10_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles EXTI line0 interrupt.
+  * @brief This function handles EXTI line0 interrupt (the user button).
+  * @note  EXTI0 is exclusively the user button, so it is forwarded straight
+  *        to the button application's ISR (deferred interrupt handling).
   */
 void EXTI0_IRQHandler(void)
 {
   SEGGER_SYSVIEW_RecordEnterISR();
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+  ButtonCounter_EXTI_IRQHandler();
   SEGGER_SYSVIEW_RecordExitISR();
 }
 

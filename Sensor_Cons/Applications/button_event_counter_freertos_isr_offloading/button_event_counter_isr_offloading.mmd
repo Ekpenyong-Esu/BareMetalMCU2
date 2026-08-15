@@ -1,0 +1,36 @@
+---
+title: Button Event Counter - FreeRTOS ISR Offloading
+---
+sequenceDiagram
+    autonumber
+    participant HW as Button (EXTI0)
+    participant ISR as EXTI0 ISR
+    participant BTN as Button Task
+    participant Q as Event Queue
+    participant CNT as Counter Task
+    participant LED as LEDs
+
+    HW->>ISR: button edge (press / release)
+    ISR->>ISR: clear EXTI flag
+    ISR->>BTN: xTaskNotifyFromISR()
+    ISR-->>HW: return (ISR stays short)
+
+    BTN->>BTN: debounce (sample for debounce window)
+    alt press confirmed
+        BTN->>Q: xQueueSend(EVENT_PRESS)
+    end
+
+    loop while button held
+        BTN->>BTN: PressDetector_Update()
+        alt long-press
+            BTN->>Q: xQueueSend(EVENT_LONG_PRESS)
+        end
+    end
+
+    loop forever
+        CNT->>Q: xQueueReceive(timeout 10 ms)
+        alt event received
+            CNT->>CNT: press -> increment / long-press -> reset
+        end
+        CNT->>LED: CounterDisplay_Show(pressed, count)
+    end
