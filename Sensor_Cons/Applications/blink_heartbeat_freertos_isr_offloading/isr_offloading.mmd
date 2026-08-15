@@ -1,0 +1,18 @@
+---
+title: ISR Offloading (Deferred Interrupt Handling)
+---
+flowchart LR
+    TIM["TIM7<br/>1 kHz hardware timer"]
+    ISR["TIM7_IRQHandler<br/>counts ms,<br/>never touches LEDs"]
+    subgraph Tasks["4 behaviour tasks"]
+        A["LedHeartbeat_TaskEntry<br/>every 5 ms"]
+        B["BlinkSteady_TaskEntry<br/>every 10 ms"]
+        C["PwmLedSoftware_TaskEntry<br/>every 1 ms"]
+        D["PwmLedHardware_TaskEntry<br/>every 5 ms"]
+    end
+
+    TIM -->|"interrupt"| ISR
+    ISR -->|"xTaskNotifyFromISR<br/>every tick"| C
+    ISR -->|"xTaskNotifyFromISR<br/>every 5 ms"| A
+    ISR -->|"xTaskNotifyFromISR<br/>every 5 ms"| D
+    ISR -->|"xTaskNotifyFromISR<br/>every 10 ms"| B
