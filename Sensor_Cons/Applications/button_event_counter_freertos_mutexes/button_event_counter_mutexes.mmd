@@ -1,0 +1,30 @@
+---
+title: Button Event Counter - FreeRTOS Mutexes
+---
+sequenceDiagram
+    autonumber
+    participant BTN as Button Task
+    participant M as Counter Mutex
+    participant CNT as Press Counter
+    participant DSP as Display Task
+    participant LED as LEDs
+
+    loop every 10 ms
+        BTN->>BTN: PressDetector_Update()
+        alt press edge
+            BTN->>M: xSemaphoreTake()
+            M->>CNT: PressCounter_Increment()
+            BTN->>M: xSemaphoreGive()
+        else long-press
+            BTN->>M: xSemaphoreTake()
+            M->>CNT: PressCounter_Reset()
+            BTN->>M: xSemaphoreGive()
+        end
+    end
+
+    loop every 10 ms
+        DSP->>M: xSemaphoreTake()
+        M->>CNT: PressCounter_GetCount()
+        DSP->>M: xSemaphoreGive()
+        DSP->>LED: CounterDisplay_Show(pressed, count)
+    end
