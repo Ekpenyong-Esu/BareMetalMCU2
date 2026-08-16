@@ -1,0 +1,21 @@
+---
+title: Button Event Counter - Mutexes (Shared Counter)
+---
+flowchart LR
+    subgraph Producer["Button Task"]
+        A["PressDetector_Update<br/>every 10 ms"]
+        A1["Increment / Reset"]
+    end
+    M["s_counterMutex"]
+    CNT["PressCounter<br/>shared"]
+    subgraph Consumer["Display Task"]
+        B["GetCount"]
+        C["CounterDisplay_Show"]
+    end
+
+    A --> A1
+    A1 -->|"xSemaphoreTake / Give"| M
+    M -->|"write"| CNT
+    B -->|"xSemaphoreTake / Give"| M
+    M -->|"read"| CNT
+    B --> C
