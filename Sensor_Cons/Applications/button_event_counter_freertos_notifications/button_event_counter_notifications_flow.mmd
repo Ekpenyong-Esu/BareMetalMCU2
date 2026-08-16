@@ -1,0 +1,15 @@
+---
+title: Button Event Counter - Task Notifications
+---
+flowchart LR
+    subgraph Producer["Button Task"]
+        A["PressDetector_Update<br/>every 10 ms"]
+    end
+    subgraph Consumer["Counter Task"]
+        B["xTaskNotifyWait<br/>10 ms timeout"]
+        C["PressCounter + CounterDisplay_Show"]
+    end
+
+    A -->|"xTaskNotify(NOTIFY_PRESS)"| B
+    A -->|"xTaskNotify(NOTIFY_LONG_PRESS)"| B
+    B --> C
