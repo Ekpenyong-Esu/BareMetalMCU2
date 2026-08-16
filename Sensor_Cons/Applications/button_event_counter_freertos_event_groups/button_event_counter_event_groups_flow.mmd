@@ -1,0 +1,17 @@
+---
+title: Button Event Counter - Event Groups
+---
+flowchart LR
+    subgraph Producer["Button Task"]
+        A["PressDetector_Update<br/>every 10 ms"]
+    end
+    EG["s_eventGroup<br/>one bit per event"]
+    subgraph Consumer["Counter Task"]
+        B["xEventGroupWaitBits<br/>10 ms timeout"]
+        C["PressCounter + CounterDisplay_Show"]
+    end
+
+    A -->|"set EVENT_PRESS_BIT"| EG
+    A -->|"set EVENT_LONG_PRESS_BIT"| EG
+    EG -->|"wait bits"| B
+    B --> C
