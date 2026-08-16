@@ -1,0 +1,19 @@
+---
+title: Button Event Counter - Semaphores (Binary)
+---
+flowchart LR
+    subgraph Producer["Button Task"]
+        A["PressDetector_Update<br/>every 10 ms"]
+    end
+    SP["s_pressSemaphore"]
+    SL["s_longPressSemaphore"]
+    subgraph Consumer["Counter Task"]
+        B["xSemaphoreTake<br/>10 ms timeout"]
+        C["PressCounter + CounterDisplay_Show"]
+    end
+
+    A -->|"xSemaphoreGive"| SP
+    A -->|"xSemaphoreGive"| SL
+    SP -->|"xSemaphoreTake"| B
+    SL -->|"xSemaphoreTake"| B
+    B --> C
