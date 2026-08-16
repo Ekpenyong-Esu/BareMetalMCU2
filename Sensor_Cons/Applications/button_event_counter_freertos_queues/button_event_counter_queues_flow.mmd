@@ -1,0 +1,17 @@
+---
+title: Button Event Counter - Queues (Producer / Consumer)
+---
+flowchart LR
+    subgraph Producer["Button Task"]
+        A["PressDetector_Update<br/>every 10 ms"]
+    end
+    Q[("s_eventQueue<br/>depth 4")]
+    subgraph Consumer["Counter Task"]
+        B["xQueueReceive<br/>10 ms timeout"]
+        C["PressCounter + CounterDisplay_Show"]
+    end
+
+    A -->|"xQueueSend(EVENT_PRESS)"| Q
+    A -->|"xQueueSend(EVENT_LONG_PRESS)"| Q
+    Q -->|"xQueueReceive"| B
+    B --> C
