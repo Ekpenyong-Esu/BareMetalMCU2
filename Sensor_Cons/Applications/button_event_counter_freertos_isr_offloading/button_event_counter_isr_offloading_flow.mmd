@@ -1,0 +1,21 @@
+---
+title: Button Event Counter - ISR Offloading
+---
+flowchart LR
+    ISR["EXTI0 ISR<br/>ButtonCounter_EXTI_IRQHandler"]
+    subgraph Producer["Button Task"]
+        A["xTaskNotifyWait<br/>blocking"]
+        B["debounce + edges<br/>xQueueSend"]
+    end
+    Q[("s_eventQueue<br/>depth 4")]
+    subgraph Consumer["Counter Task"]
+        C["xQueueReceive<br/>10 ms timeout"]
+        D["PressCounter + CounterDisplay_Show"]
+    end
+
+    ISR -->|"xTaskNotifyFromISR"| A
+    A --> B
+    B -->|"xQueueSend(EVENT_PRESS)"| Q
+    B -->|"xQueueSend(EVENT_LONG_PRESS)"| Q
+    Q -->|"xQueueReceive"| C
+    C --> D
