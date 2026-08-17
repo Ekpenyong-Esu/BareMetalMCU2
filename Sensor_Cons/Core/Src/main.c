@@ -9,7 +9,7 @@
 
 #include "main.h"
 #include "sys.h"
-#include "button_event_counter_freertos_mutexes.h"
+#include "button_event_counter_freertos_mutexes.h"§                                                                                                                                                                                                                                                                                
 
 /**
  * @brief  Program entry point: bring up the system, then run Application 2.
