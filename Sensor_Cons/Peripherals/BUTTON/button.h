@@ -56,7 +56,9 @@ typedef struct {
 
 /* Exported constants --------------------------------------------------------*/
 #define BUTTON_DEBOUNCE_DEFAULT     50      /**< Default debounce time (ms) */
-#define BUTTON_IRQ_PRIORITY         2       /**< NVIC pre-emption priority of the button EXTI line */
+/* Must stay >= configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY (5) or an EXTI ISR
+   calling a FreeRTOS *FromISR function trips configASSERT and hangs. */
+#define BUTTON_IRQ_PRIORITY         5       /**< NVIC pre-emption priority of the button EXTI line */
 
 /* Exported functions --------------------------------------------------------*/
 

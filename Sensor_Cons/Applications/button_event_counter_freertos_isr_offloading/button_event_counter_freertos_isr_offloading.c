@@ -102,20 +102,24 @@ static void ButtonTask(void *arg)
         /* 1. Block until the ISR reports a button edge. */
         xTaskNotifyWait(0u, 0u, NULL, portMAX_DELAY);
 
-        /* 2. Debounce: sample for the debounce window so the driver can
-              confirm the edge before we act on it. */
+        /* 2. Debounce: keep sampling until the driver confirms the edge. The
+              driver only latches once the level has been stable for a full
+              debounce window, and bouncing restarts that window, so sampling
+              for exactly BUTTON_DEBOUNCE_DEFAULT would always stop one tick
+              too early and lose the press. */
         const TickType_t settleEnd =
-            xTaskGetTickCount() + pdMS_TO_TICKS(BUTTON_DEBOUNCE_DEFAULT);
+            xTaskGetTickCount() + pdMS_TO_TICKS(2u * BUTTON_DEBOUNCE_DEFAULT);
         do {
             PressDetector_Update(&s_pressDetector);
+
+            /* 3. Report the press edge as soon as it is confirmed. */
+            if (PressDetector_WasPressed(&s_pressDetector)) {
+                ButtonEvent_t event = EVENT_PRESS;
+                xQueueSend(s_eventQueue, &event, 0u);
+                break;
+            }
             vTaskDelay(pdMS_TO_TICKS(1u));
         } while (xTaskGetTickCount() < settleEnd);
-
-        /* 3. Report the press edge (if the press was confirmed). */
-        if (PressDetector_WasPressed(&s_pressDetector)) {
-            ButtonEvent_t event = EVENT_PRESS;
-            xQueueSend(s_eventQueue, &event, 0u);
-        }
 
         /* 4. While the button is held, keep sampling so a long-press can
               be detected. */
