@@ -9,6 +9,7 @@
 #include "log.h"
 #include <string.h>
 
+// Open a link in blocking mode (all interrupts left disabled).
 UART_Status_t UART_Blocking_Init(UART_Handle_t* handle, const UART_Config_t* config)
 {
     if (handle == NULL || config == NULL || config->instance == NULL || handle->huart == NULL) {
@@ -78,6 +79,7 @@ static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, ui
     return true;
 }
 
+// Send data, waiting for it to leave the peripheral.
 UART_Status_t UART_Blocking_Transmit(UART_Handle_t* handle, const uint8_t* data, uint16_t size, uint32_t timeout)
 {
     if (!IsReadyForTransfer(handle, data, size)) {
@@ -92,6 +94,7 @@ UART_Status_t UART_Blocking_Transmit(UART_Handle_t* handle, const uint8_t* data,
     return UART_OK;
 }
 
+// Receive data, waiting for it to arrive; returns early on an idle line.
 UART_Status_t UART_Blocking_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size,
                                     uint16_t* received, uint32_t timeout)
 {

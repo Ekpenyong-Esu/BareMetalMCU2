@@ -271,8 +271,8 @@ endif()
 # Add your custom application .c files that aren't in Peripherals/
 # Example: target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/my_app.c)
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Application: the UART interrupt example
-    ${CMAKE_SOURCE_DIR}/Applications/uart_app/uart_interrupt_app.c
+    # Application: the UART DMA example
+    ${CMAKE_SOURCE_DIR}/Applications/uart_app/uart_dma_app.c
 )
 
 # Make application headers available to the build

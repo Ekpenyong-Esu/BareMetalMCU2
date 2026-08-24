@@ -31,6 +31,7 @@ static uint16_t ReadRing(UART_Handle_t* handle, uint8_t* data, uint16_t size)
     return (uint16_t)read;
 }
 
+// Open a link in interrupt mode and start listening immediately.
 UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* config,
                                   uint8_t* rxBuffer, uint16_t rxBufferSize)
 {
@@ -123,6 +124,7 @@ static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, ui
     return true;
 }
 
+// Take whatever has been received so far, up to size bytes; returns at once.
 UART_Status_t UART_Interrupt_Read(UART_Handle_t* handle, uint8_t* data, uint16_t size,
                                   uint16_t* received)
 {
@@ -142,6 +144,7 @@ UART_Status_t UART_Interrupt_Read(UART_Handle_t* handle, uint8_t* data, uint16_t
     return UART_OK;
 }
 
+// Start sending and return; the ISR moves the bytes out.
 UART_Status_t UART_Interrupt_Write(UART_Handle_t* handle, const uint8_t* data, uint16_t size)
 {
     if (!IsReadyForTransfer(handle, data, size)) {
@@ -164,6 +167,7 @@ UART_Status_t UART_Interrupt_Write(UART_Handle_t* handle, const uint8_t* data, u
     return UART_OK;
 }
 
+// True once the last Write() has finished leaving the peripheral.
 bool UART_Interrupt_IsTxDone(const UART_Handle_t* handle)
 {
     if (handle == NULL) {
@@ -173,6 +177,7 @@ bool UART_Interrupt_IsTxDone(const UART_Handle_t* handle)
     return handle->txComplete;
 }
 
+// Re-arm reception after a completed transfer.
 void UART_Interrupt_Rearm(UART_Handle_t* handle)
 {
     StartReceive(handle);

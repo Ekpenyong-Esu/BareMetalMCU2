@@ -16,11 +16,13 @@
  * the driver publishes the link it is currently serving. */
 static UART_Handle_t *s_activeHandle = NULL;
 
+// Publish the link that Init() is bringing up, so the MSP/ISR can find it.
 void UART_SetActiveHandle(UART_Handle_t *handle)
 {
     s_activeHandle = handle;
 }
 
+// Return the link most recently published, or NULL if none is open.
 UART_Handle_t *UART_GetActiveHandle(void)
 {
     return s_activeHandle;

@@ -56,8 +56,13 @@ bool RingBuffer_GetBytes(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t count
  */
 uint32_t RingBuffer_Read(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t maxCount);
 
+/** Number of bytes currently queued. */
 uint32_t RingBuffer_Available(const RingBuffer_t *ringBuffer);
+
+/** True when the ring has reached its capacity. */
 bool RingBuffer_IsFull(const RingBuffer_t *ringBuffer);
+
+/** True when no bytes are queued. */
 bool RingBuffer_IsEmpty(const RingBuffer_t *ringBuffer);
 
 #ifdef __cplusplus

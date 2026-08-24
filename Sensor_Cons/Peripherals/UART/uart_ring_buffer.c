@@ -6,6 +6,7 @@
 #include "uart_ring_buffer.h"
 #include <string.h>
 
+// Reset the queue: empty it and clear the backing storage.
 void RingBuffer_Init(RingBuffer_t *ringBuffer)
 {
     ringBuffer->head = 0;
@@ -14,6 +15,7 @@ void RingBuffer_Init(RingBuffer_t *ringBuffer)
     memset(ringBuffer->buffer, 0, sizeof(ringBuffer->buffer));
 }
 
+// Append a single byte at the tail; fails if the ring is full.
 bool RingBuffer_Put(RingBuffer_t *ringBuffer, uint8_t data)
 {
     if (ringBuffer == NULL || RingBuffer_IsFull(ringBuffer)) {
@@ -26,6 +28,7 @@ bool RingBuffer_Put(RingBuffer_t *ringBuffer, uint8_t data)
     return true;
 }
 
+// Pop the oldest byte from the head; fails if the ring is empty.
 bool RingBuffer_Get(RingBuffer_t *ringBuffer, uint8_t *data)
 {
     if (ringBuffer == NULL || data == NULL || RingBuffer_IsEmpty(ringBuffer)) {
@@ -38,6 +41,7 @@ bool RingBuffer_Get(RingBuffer_t *ringBuffer, uint8_t *data)
     return true;
 }
 
+// Append as many bytes as fit, stopping once the ring reaches capacity.
 uint32_t RingBuffer_PutBytes(RingBuffer_t *ringBuffer, const uint8_t *data, uint32_t count)
 {
     if (ringBuffer == NULL || data == NULL) {
@@ -52,6 +56,7 @@ uint32_t RingBuffer_PutBytes(RingBuffer_t *ringBuffer, const uint8_t *data, uint
     return stored;
 }
 
+// Copy a whole packet out, all-or-nothing; a short packet is left intact.
 bool RingBuffer_GetBytes(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t count)
 {
     if (ringBuffer == NULL || data == NULL || count == 0) {
@@ -69,6 +74,7 @@ bool RingBuffer_GetBytes(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t count
     return true;
 }
 
+// Drain up to maxCount bytes (stream read; never refuses a short copy).
 uint32_t RingBuffer_Read(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t maxCount)
 {
     if (ringBuffer == NULL || data == NULL) {
@@ -83,16 +89,19 @@ uint32_t RingBuffer_Read(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t maxCo
     return read;
 }
 
+// Number of bytes currently queued.
 uint32_t RingBuffer_Available(const RingBuffer_t *ringBuffer)
 {
     return ringBuffer->count;
 }
 
+// True when the ring has reached its capacity.
 bool RingBuffer_IsFull(const RingBuffer_t *ringBuffer)
 {
     return ringBuffer->count >= RING_BUFFER_SIZE;
 }
 
+// True when no bytes are queued.
 bool RingBuffer_IsEmpty(const RingBuffer_t *ringBuffer)
 {
     return ringBuffer->count == 0;

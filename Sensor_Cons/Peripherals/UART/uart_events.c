@@ -33,6 +33,7 @@ static void RestartReceive(UART_Handle_t *handle)
     }
 }
 
+// Park a received chunk into the ring, then re-arm reception for the next one.
 static void CompleteReception(UART_Handle_t *handle, uint16_t size)
 {
     if (size > 0) {
@@ -121,8 +122,12 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     HAL_UART_AbortReceive(huart);
     huart->ErrorCode = HAL_UART_ERROR_NONE;
 
-    if (handle->config.mode == UART_MODE_INTERRUPT) {
-        UART_Interrupt_Recover(handle);
+    /* Both async modes lose an in-flight send here, so each has to release its
+       TX flag; interrupt mode also needs the peripheral rebuilt. */
+    switch (handle->config.mode) {
+        case UART_MODE_INTERRUPT: UART_Interrupt_Recover(handle); break;
+        case UART_MODE_DMA:       UART_DMA_Recover(handle); break;
+        default:                  break;
     }
 
     RestartReceive(handle);

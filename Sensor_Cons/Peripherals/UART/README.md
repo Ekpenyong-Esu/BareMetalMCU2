@@ -61,9 +61,17 @@ dispatch table to look one up in.
    - Also exports `UART_Interrupt_Rearm()`/`UART_Interrupt_Recover()`, called
      only by `uart_events.c` after a completed transfer or a line fault
 
-8. **DMA Mode** (`uart_dma.h`: `UART_DMA_Init/Transmit/Receive`)
-   - Buffer transfers offloaded to a DMA stream, minimal CPU overhead
-   - Also exports `UART_DMA_Rearm()`, called only by `uart_events.c`
+8. **DMA Mode** (`uart_dma.h`: `UART_DMA_Init/Read/Write`)
+   - Deliberately the same call set and the same non-blocking behaviour as
+     interrupt mode. What differs is the engine: a DMA stream moves the bytes,
+     so the CPU takes one interrupt per *transfer* instead of one per *byte*.
+   - Buffers must live in DMA-reachable RAM. On the F429 that means ordinary
+     SRAM — CCMRAM is not reachable by DMA2, and a stack buffer is gone before
+     the stream is done with it, so the examples use `static`.
+   - No cache maintenance: the Cortex-M4 here has no data cache for DMA to go
+     stale against. That changes on M7 parts.
+   - Also exports `UART_DMA_Rearm()`/`UART_DMA_Recover()`, called only by
+     `uart_events.c` after a completed transfer or a line fault
    - Optimal for high-throughput applications
 
 ### Data Management
@@ -82,7 +90,7 @@ uart_ring_buffer.h      (no UART dependency)
         ├── uart.h              shared utilities (DeInit, active handle)
         ├── uart_blocking.h     UART_Blocking_Init/Transmit/Receive
         ├── uart_interrupt.h    UART_Interrupt_Init/Read/Write/IsTxDone/Rearm/Recover
-        └── uart_dma.h          UART_DMA_Init/Transmit/Receive/Rearm
+        └── uart_dma.h          UART_DMA_Init/Read/Write/IsTxDone/Rearm/Recover
 ```
 
 `uart_ring_buffer.h` sits at the bottom and depends on nothing. `uart.h` is a
@@ -149,9 +157,16 @@ if (UART_Interrupt_IsTxDone(&uartHandle)) {          // last send has landed
 }                                                    // driver's until IsTxDone
 ```
 
+DMA mode is the same call set again with `UART_DMA_` in front, and the same
+non-blocking behaviour — swapping one for the other is a find-and-replace. The
+only extra rule is that its buffers must sit in DMA-reachable SRAM.
+
 The driver has no dispatch table, so each mode is just a different set of
-functions. `Applications/uart_app/uart_interrupt_app.c` shows the non-blocking
-super-loop, and `main()` calls its single `UartInterruptApp_Run()`.
+functions. `Applications/uart_app/` carries the example for whichever mode the
+current branch is about — here `uart_dma_app.c`, which `main()` calls through
+its single `UartDmaApp_Run()`. The interrupt-mode example lives on the
+`feature/uart-interrupt` branch; the two are worth diffing, because they are
+near-identical, which is exactly what the two modes are meant to show.
 
 ### 3. Ring Buffer Usage
 
