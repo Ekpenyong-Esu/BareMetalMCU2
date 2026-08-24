@@ -2,10 +2,18 @@
  * @file uart_interrupt_app.c
  * @brief The UART application: interrupt-mode echo example
  *
- * Sets up USART1 in interrupt mode (115200 8N1) and echoes back whatever the
+ * Sets up USART1 in interrupt mode (115200 8N1) and echoes back each line the
  * user types. The loop below never waits on the UART: reception runs in the
  * background and every call returns straight away, so real work can sit
  * alongside the echo instead of behind it.
+ *
+ * Bytes that arrive while a reply is going out are not lost -- they collect in
+ * the driver's ring buffer. That is the difference from blocking mode, where
+ * the app has to stay silent mid-message to avoid missing anything.
+ *
+ * The driver hands over a byte stream with no idea where a message ends, so
+ * deciding that is this file's job: bytes are accumulated until a newline
+ * arrives, then the whole line goes back at once.
  */
 
 #include "uart_interrupt_app.h"
@@ -16,8 +24,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define UART_INTERRUPT_APP_RX_SIZE  64 /* landing area the ISR receives into */
-#define UART_INTERRUPT_APP_TX_SIZE  96 /* holds the prefix, the echo and the newline */
+#define UART_INTERRUPT_APP_RX_SIZE    256 /* landing area the ISR receives into */
+#define UART_INTERRUPT_APP_LINE_SIZE  256 /* longest line echoed back in one piece */
+#define UART_INTERRUPT_APP_TX_SIZE    288 /* holds the prefix, the echo and the newline */
 
 static const char kGreeting[] = "UART ready (interrupt mode). Type something and press enter.\r\n";
 
@@ -27,6 +36,10 @@ static UART_HandleTypeDef s_halHandle;
 static UART_Handle_t s_uart;
 static uint8_t s_rxLanding[UART_INTERRUPT_APP_RX_SIZE];
 static uint8_t s_txLine[UART_INTERRUPT_APP_TX_SIZE];
+
+/* The line being typed, still incomplete until a newline shows up. */
+static uint8_t s_line[UART_INTERRUPT_APP_LINE_SIZE];
+static uint16_t s_lineLength;
 
 /* One reply, one Write(): the driver sends a single buffer at a time, so the
  * whole line is assembled before any of it goes out. The %.*s precision bounds
@@ -64,8 +77,6 @@ void UartInterruptApp_Run(void)
     /* kGreeting is const and lives forever, so the ISR can send it at leisure. */
     UART_Interrupt_Write(&s_uart, (const uint8_t *)kGreeting, (uint16_t)(sizeof(kGreeting) - 1));
 
-    uint8_t rxData[UART_INTERRUPT_APP_RX_SIZE];
-
     for (;;) {
         /* Other work belongs here. Bytes keep arriving either way. */
 
@@ -73,9 +84,13 @@ void UartInterruptApp_Run(void)
             continue; /* previous reply still going out; leave s_txLine alone */
         }
 
+        /* One byte per pass. The ring absorbs the burst, so taking them singly
+         * costs nothing and keeps the terminator handling free of bookkeeping
+         * about bytes left over after a newline. */
+        uint8_t byte = 0;
         uint16_t received = 0;
 
-        if (UART_Interrupt_Read(&s_uart, rxData, sizeof(rxData), &received) != UART_OK) {
+        if (UART_Interrupt_Read(&s_uart, &byte, sizeof(byte), &received) != UART_OK) {
             continue;
         }
 
@@ -83,8 +98,20 @@ void UartInterruptApp_Run(void)
             continue; /* quiet line, not an error */
         }
 
-        /* Echo exactly the bytes that arrived. rxData is not a string, so the
-         * length has to come from the driver rather than from strlen(). */
-        UART_Interrupt_Write(&s_uart, s_txLine, BuildReply(rxData, received));
+        if (byte == '\n') {
+            UART_Interrupt_Write(&s_uart, s_txLine, BuildReply(s_line, s_lineLength));
+            s_lineLength = 0;
+            continue;
+        }
+
+        if (byte == '\r') {
+            continue; /* CRLF terminators: the newline is what ends the line */
+        }
+
+        /* A line longer than the buffer keeps its first LINE_SIZE bytes; the
+         * overflow is dropped rather than splitting the reply in two. */
+        if (s_lineLength < sizeof(s_line)) {
+            s_line[s_lineLength++] = byte;
+        }
     }
 }
