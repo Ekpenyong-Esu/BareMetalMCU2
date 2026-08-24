@@ -2,22 +2,26 @@
 /**
  ******************************************************************************
  * @file           : main.c
- * @brief          : Application 1 - Blink & Heartbeat (STM32F429I-DISC1)
+ * @brief          : UART showcase (STM32F429I-DISC1)
  ******************************************************************************
  */
 /* USER CODE END Header */
 
 #include "main.h"
 #include "sys.h"
-#include "blink_heartbeat.h"
+#include "uart_blocking_app.h"
 
 /**
- * @brief  Program entry point: bring up the system, then run Application 1.
+ * @brief  Program entry point: bring up the system, then run the UART app.
  */
 int main(void)
 {
-    SYS_Init();                 /* HAL init, system clock, SysTick */
-    BlinkHeartbeat_Run();       /* Runs its own super-loop; never returns */
+    SYS_Init();              /* HAL init, system clock, SysTick */
+    UartBlockingApp_Run();   /* Echoes whatever is typed over USART1, forever */
+
+    /* Only reached if the UART failed to open. main() must never return. */
+    for (;;) {
+    }
 }
 
 #ifdef USE_FULL_ASSERT

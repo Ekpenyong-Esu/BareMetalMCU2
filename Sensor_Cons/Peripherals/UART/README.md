@@ -8,24 +8,29 @@ This UART module provides a flexible, modular implementation for UART communicat
 ### Core Components
 
 There is no aggregator header: each module is included directly, so a file
-declares exactly what it depends on. Application code normally needs only
-`uart_core.h`.
+declares exactly what it depends on. There is also no mode dispatch: each
+transfer mode is an independent, directly-callable API, the same shape as
+`tim_pwm.h`/`tim_ic.h` in the TIM driver.
 
 1. **Types** (`uart_types.h`)
-   - Shared vocabulary only: `UART_Status_t`, `UART_Mode_t`, `UART_Config_t`, `UART_Handle_t`, `UART_ModeOps_t`
+   - Shared vocabulary only: `UART_Status_t`, `UART_Mode_t`, `UART_Config_t`, `UART_Handle_t`
    - No behaviour, so every module can include it without a dependency cycle
 
-2. **Core** (`uart_core.h`, `uart.c`)
-   - Opens and closes a link, routes transfers to the configured mode
-   - Publishes the link currently being served via `UART_GetActiveHandle()`
+2. **Shared utilities** (`uart.h`, `uart.c`)
+   - `UART_DeInit()`, `UART_GetActiveHandle()`/`UART_SetActiveHandle()`, `UART_WaitForFlag()`
+   - The UART equivalent of `tim_clock.h`: genuinely mode-agnostic helpers that
+     each mode module depends on one-way. Holds no Init/Transmit/Receive of its
+     own and never includes a mode header.
 
-4. **Events** (`uart_events.c`)
+3. **Events** (`uart_events.c`)
    - The HAL callbacks (`TxCplt`, `RxCplt`, `RxEvent`, `Error`)
-   - All interrupt-context work lives here, and none of it branches on the mode
+   - The one place that has to know which mode is active, since HAL exposes a
+     single callback per event regardless of mode; it is a plain switch on
+     `handle->config.mode`, not a vtable
    - Exports no header: the callbacks are declared by the HAL, and the completion
      flags are fields on `UART_Handle_t`
 
-5. **Configuration** (`uart_config.h`)
+4. **Configuration** (`uart_config.h`)
    - Tunables only: default settings, buffer sizes, timeouts, DMA stream selection
 
 ### Board Wiring (outside this driver)
@@ -40,22 +45,22 @@ Both resolve the link through `UART_GetActiveHandle()` rather than a global.
 
 ### Transfer Modes
 
-Each mode exports exactly one symbol: a `UART_ModeOps_t` table. `UART_Init()` is
-the only place that maps a `UART_Mode_t` onto one, so no other function switches
-on the mode. A mode leaves an entry `NULL` when it has nothing to do — blocking
-mode never runs in interrupt context, so it fills in only `init`, `transmit` and
-`receive`.
+Each mode is a standalone module with its own `Init`/`Transmit`/`Receive`
+functions, called directly by name — there is no shared `UART_Init()` and no
+dispatch table to look one up in.
 
-6. **Blocking Mode** (`UART_BlockingOps`)
+6. **Blocking Mode** (`uart_blocking.h`: `UART_Blocking_Init/Transmit/Receive`)
    - Synchronous transfers with every interrupt source disabled
    - Suitable for simple, low-throughput applications
 
-7. **Interrupt Mode** (`UART_InterruptOps`)
+7. **Interrupt Mode** (`uart_interrupt.h`: `UART_Interrupt_Init/Transmit/Receive`)
    - Interrupt-driven transfers, completed by the callbacks in `uart_events.c`
-   - Rebuilds the peripheral in `recoverFromError` after a line fault
+   - Also exports `UART_Interrupt_Rearm()`/`UART_Interrupt_Recover()`, called
+     only by `uart_events.c` after a completed transfer or a line fault
 
-8. **DMA Mode** (`UART_DmaOps`)
+8. **DMA Mode** (`uart_dma.h`: `UART_DMA_Init/Transmit/Receive`)
    - Buffer transfers offloaded to a DMA stream, minimal CPU overhead
+   - Also exports `UART_DMA_Rearm()`, called only by `uart_events.c`
    - Optimal for high-throughput applications
 
 ### Data Management
@@ -71,15 +76,21 @@ mode never runs in interrupt context, so it fills in only `init`, `transmit` and
 ```
 uart_ring_buffer.h      (no UART dependency)
   └── uart_types.h
-        ├── uart_core.h        lifecycle + transfers
-        ├── uart_blocking.h    UART_BlockingOps
-        ├── uart_interrupt.h   UART_InterruptOps
-        └── uart_dma.h         UART_DmaOps
+        ├── uart.h              shared utilities (DeInit, active handle, wait-for-flag)
+        ├── uart_blocking.h     UART_Blocking_Init/Transmit/Receive
+        ├── uart_interrupt.h    UART_Interrupt_Init/Transmit/Receive/Rearm/Recover
+        └── uart_dma.h          UART_DMA_Init/Transmit/Receive/Rearm
 ```
 
-`uart_ring_buffer.h` sits at the bottom and depends on nothing. Only `uart.c`
-includes the three mode headers, so nothing else can reach past `uart_core.h`
-into a specific mode.
+`uart_ring_buffer.h` sits at the bottom and depends on nothing. `uart.h` is a
+pure utility module, the UART equivalent of `tim_clock.h`: each mode `.c` file
+depends on it one-way (for `UART_DeInit`/`UART_SetActiveHandle`/
+`UART_WaitForFlag`), and `uart.c` never includes a mode header back. No file
+switches on `UART_Mode_t` except `uart_events.c` (choosing how to react to a
+HAL callback) — the driver itself has no dispatch table. `Applications/
+uart_app/uart_blocking_app.c` is the one example: it owns its own HAL handle
+and calls `UART_Blocking_Init`/`Transmit`/`Receive` directly.
+
 
 ## Usage
 
@@ -93,12 +104,12 @@ UART_Config_t config = {
     .wordLength = UART_WORDLENGTH_8B,
     .stopBits = UART_STOPBITS_1,
     .parity = UART_PARITY_NONE,
-    .mode = UART_MODE_TX_RX
+    .mode = UART_MODE_BLOCKING,   // just a record of which Init was used
 };
 
-// Initialize UART
-UART_Handle_t uartHandle;
-UART_Init(&uartHandle, &config);
+// Open a link in whichever mode you want, by calling that mode's Init directly
+UART_Handle_t uartHandle = { .huart = &huart1 };
+UART_Blocking_Init(&uartHandle, &config);
 ```
 
 ### 2. Data Transfer
@@ -106,22 +117,32 @@ UART_Init(&uartHandle, &config);
 ```c
 // Transmit data
 uint8_t data[] = "Hello World!";
-UART_Transmit(&uartHandle, data, strlen((char*)data), 1000);
+UART_Blocking_Transmit(&uartHandle, data, strlen((char*)data), 1000);
 
-// Receive data
+// Receive data. `received` says how many bytes actually arrived; the read
+// returns early once the line goes idle, so it is usually less than the
+// buffer size. Bytes past it are untouched, so never call strlen() on rxBuffer.
 uint8_t rxBuffer[32];
-UART_Receive(&uartHandle, rxBuffer, sizeof(rxBuffer), 1000);
+uint16_t received = 0;
+UART_Blocking_Receive(&uartHandle, rxBuffer, sizeof(rxBuffer), &received, 1000);
 ```
+
+Switching mode means calling a different Init/Transmit/Receive set — e.g.
+`UART_Interrupt_Init`/`UART_Interrupt_Transmit`/`UART_Interrupt_Receive`, or
+`UART_DMA_Init`/`UART_DMA_Transmit`/`UART_DMA_Receive`. The driver itself has
+no dispatch table; `Applications/uart_app/uart_blocking_app.c` shows blocking
+mode, the simplest to read, and `main()` calls its single
+`UartBlockingApp_Run()`.
 
 ### 3. Ring Buffer Usage
 
 ```c
-// Initialize ring buffer
-UART_RingBuffer_Init();
-
-// Receive data using ring buffer
+// The ring buffer is embedded in the handle; interrupt/DMA reception lands
+// bytes there and they are drained with the container API.
 uint8_t data[32];
-UART_RingBuffer_Receive(&uartHandle, data, sizeof(data));
+if (RingBuffer_GetBytes(&uartHandle.rxRing, data, sizeof(data))) {
+    // A full packet was copied; otherwise the buffer is left untouched.
+}
 ```
 
 ## Configuration Options
@@ -130,17 +151,14 @@ Key configuration parameters in `uart_config.h`:
 
 ```c
 /* Default UART configuration */
-#define UART_DEFAULT_BAUDRATE     115200
-#define UART_DEFAULT_WORDLENGTH   UART_WORDLENGTH_8B
-#define UART_DEFAULT_STOPBITS     UART_STOPBITS_1
-#define UART_DEFAULT_PARITY       UART_PARITY_NONE
 #define UART_DEFAULT_MODE         UART_MODE_TX_RX
 
-/* Buffer sizes */
-#define RING_BUFFER_SIZE         512
-#define RX_BUFFER_SIZE          512
-#define TX_BUFFER_SIZE          512
+/* Default timeout value in milliseconds */
+#define UART_TIMEOUT             5000
 ```
+
+`RING_BUFFER_SIZE` lives in `uart_ring_buffer.h` (the ring buffer is a
+standalone container, so its capacity is not a UART tunable).
 
 ## Integration with Main Application
 
@@ -148,7 +166,7 @@ The UART module is integrated into the main application through the following st
 
 1. Include required headers in `main.c`:
    ```c
-   #include "uart_core.h"
+   #include "uart.h"
    ```
 
 2. Initialize UART in the system initialization:
@@ -157,13 +175,13 @@ The UART module is integrated into the main application through the following st
    SYS_Init();
    ```
 
-3. Open a link and transfer using the mode it was configured with:
+3. Open a link and transfer using the mode you called Init with:
    ```c
    UART_Handle_t uart = { .huart = &huart1, .rxBuffer = rxBuf, .rxSize = sizeof(rxBuf) };
-   UART_Config_t config = { .instance = USART1, .baudRate = UART_DEFAULT_BAUDRATE, .mode = UART_MODE_DMA };
+   UART_Config_t config = { .instance = USART1, .baudRate = 115200, .mode = UART_MODE_DMA };
 
-   UART_Init(&uart, &config);
-   UART_Transmit(&uart, data, len, UART_TIMEOUT);
+   UART_DMA_Init(&uart, &config);
+   UART_DMA_Transmit(&uart, data, len, UART_TIMEOUT);
    ```
 
 ## Error Handling

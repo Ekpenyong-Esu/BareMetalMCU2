@@ -20,7 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_it.h"
-#include "uart_core.h"
+#include "uart.h"
 #include "rtc.h"
 #include "mic_events.h"
 #include "audio_core.h"

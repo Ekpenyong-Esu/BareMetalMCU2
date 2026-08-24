@@ -4,11 +4,13 @@
  *
  * Everything here runs in interrupt context. The vectors themselves live in
  * Core/Src/stm32f4xx_it.c; HAL_UART_IRQHandler() dispatches into the callbacks
- * below. Nothing here knows which transfer mode is active — the handle's ops
- * table answers that.
+ * below. This is the one place that has to know which mode is active, since
+ * HAL only exposes one callback per event regardless of mode.
  */
 
-#include "uart_core.h"
+#include "uart.h"
+#include "uart_interrupt.h"
+#include "uart_dma.h"
 #include "log.h"
 
 /* Callbacks receive a HAL handle, not our handle. Resolve the owning link and
@@ -17,14 +19,17 @@ static UART_Handle_t *OwnerOf(const UART_HandleTypeDef *huart)
 {
     UART_Handle_t *handle = UART_GetActiveHandle();
 
-    return (handle != NULL && handle->ops != NULL && handle->huart == huart) ? handle : NULL;
+    return (handle != NULL && handle->isInitialized && handle->huart == huart) ? handle : NULL;
 }
 
-/* Reception is one-shot, so every completed transfer must re-arm it. */
+/* Reception is one-shot, so every completed transfer must re-arm it; blocking
+ * mode never receives asynchronously, so it has nothing to re-arm. */
 static void RestartReceive(UART_Handle_t *handle)
 {
-    if (handle->ops->rearmReceive != NULL) {
-        handle->ops->rearmReceive(handle);
+    switch (handle->config.mode) {
+        case UART_MODE_INTERRUPT: UART_Interrupt_Rearm(handle); break;
+        case UART_MODE_DMA:       UART_DMA_Rearm(handle); break;
+        default:                  break;
     }
 }
 
@@ -48,7 +53,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     UART_Handle_t *handle = OwnerOf(huart);
 
-    if (handle == NULL || Size == 0 || handle->ops->rearmReceive == NULL) {
+    if (handle == NULL || Size == 0 || handle->config.mode == UART_MODE_BLOCKING) {
         return;
     }
 
@@ -76,13 +81,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     UART_Handle_t *handle = OwnerOf(huart);
 
-    if (handle == NULL || handle->ops->completedReceiveSize == NULL) {
+    if (handle == NULL || handle->config.mode == UART_MODE_BLOCKING) {
         return;
     }
 
-    uint16_t receivedSize = handle->ops->completedReceiveSize(handle, huart);
-
-    CompleteReception(handle, receivedSize);
+    /* This callback only fires once rxBuffer is full, in both async modes. */
+    CompleteReception(handle, handle->rxSize);
 }
 
 /**
@@ -117,8 +121,8 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     HAL_UART_AbortReceive(huart);
     huart->ErrorCode = HAL_UART_ERROR_NONE;
 
-    if (handle->ops->recoverFromError != NULL) {
-        handle->ops->recoverFromError(handle);
+    if (handle->config.mode == UART_MODE_INTERRUPT) {
+        UART_Interrupt_Recover(handle);
     }
 
     RestartReceive(handle);

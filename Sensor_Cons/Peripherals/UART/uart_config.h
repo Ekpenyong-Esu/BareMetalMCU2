@@ -24,19 +24,12 @@ extern "C" {
 
 /* Default timeout value in milliseconds */
 #define UART_TIMEOUT         5000  /* Default timeout in milliseconds */
-#define UART_CHAR_TIMEOUT   100   /* Timeout for single character reception */
-
 
 /* DMA wiring for USART1, consumed by HAL_UART_MspInit() in Core */
 #define UART_DMA_TX_CHANNEL      DMA_CHANNEL_4
 #define UART_DMA_RX_CHANNEL      DMA_CHANNEL_4
 #define UART_DMA_TX_STREAM       DMA2_Stream7
 #define UART_DMA_RX_STREAM       DMA2_Stream5
-
-/* Buffer sizes */
-#define RX_BUFFER_SIZE     512  /* Match UART_RX_BUFFER_SIZE */
-#define TX_BUFFER_SIZE     512  /* Match UART_TX_BUFFER_SIZE */
-#define SINGLE_CHAR_BUFFER_SIZE  1   /* For single character operations */
 
 #ifdef __cplusplus
 }

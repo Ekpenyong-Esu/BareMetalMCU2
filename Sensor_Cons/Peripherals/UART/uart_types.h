@@ -53,42 +53,18 @@ typedef struct {
 typedef struct UART_Handle UART_Handle_t;
 
 /**
- * @brief What a transfer mode has to be able to do
- *
- * Resolved once by UART_Init(), which is why no other function needs to switch
- * on UART_Mode_t. Optional entries are NULL when the mode has nothing to do:
- * blocking mode never runs in interrupt context, so it fills in neither
- * rearmReceive, completedReceiveSize nor recoverFromError.
- */
-typedef struct {
-    const char *name; /*!< Mode name, for logs */
-
-    UART_Status_t (*init)(UART_Handle_t *handle);
-    UART_Status_t (*transmit)(UART_Handle_t *handle, const uint8_t *data, uint16_t size, uint32_t timeout);
-    UART_Status_t (*receive)(UART_Handle_t *handle, uint8_t *data, uint16_t size, uint32_t timeout);
-
-    /** Re-arm one-shot reception. NULL marks a mode that never receives asynchronously. */
-    void (*rearmReceive)(UART_Handle_t *handle);
-
-    /** Bytes the HAL has just delivered into rxBuffer, asked at RxCplt time. */
-    uint16_t (*completedReceiveSize)(const UART_Handle_t *handle, const UART_HandleTypeDef *huart);
-
-    /** Extra work needed to make the peripheral usable again after a line error. */
-    void (*recoverFromError)(UART_Handle_t *handle);
-} UART_ModeOps_t;
-
-/**
  * @brief Runtime state of one UART link
  *
  * All per-link state lives here, so opening a second link cannot disturb the
- * first.
+ * first. There is no mode vtable: each mode module (blocking, interrupt, DMA)
+ * is an independent set of functions, the same way tim_pwm.h/tim_ic.h are.
+ * `config.mode` is just a record of which one last initialized this handle,
+ * read by uart_events.c to know how to react to a HAL callback.
  */
 struct UART_Handle {
     UART_HandleTypeDef *huart;  /*!< HAL UART handle */
     UART_Config_t config;       /*!< Configuration this link was opened with */
-    const UART_ModeOps_t *ops;  /*!< Transfer mode, resolved by UART_Init() */
     uint8_t *rxBuffer;          /*!< Landing area the HAL receives into */
-    uint8_t *txBuffer;          /*!< Transmit buffer */
     uint16_t rxSize;            /*!< Size of rxBuffer */
     RingBuffer_t rxRing;        /*!< Received bytes waiting to be read */
     volatile bool txComplete;   /*!< Raised by the TX callback */

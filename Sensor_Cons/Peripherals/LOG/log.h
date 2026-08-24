@@ -1,48 +1,39 @@
+/**
+ * @file    log.h
+ * @brief   Logging API: levels, call-site macros and backend selection
+ * @details Aggregator over the LOG modules. Include this and nothing else:
+ *          `log_types.h` defines the vocabulary, `log_format.*` renders lines
+ *          and each `log_sink_*` writes them somewhere.
+ */
+
 #ifndef LOG_H
 #define LOG_H
 
-#include "stm32f4xx_hal.h"
+#include "log_types.h"
+#include "log_sink_printf.h"
+#include "log_sink_uart.h"
 
-// ----------------------------------------------------------------------------
-// Configuration
-// Each option can be overridden from the build (e.g. -DLOG_USE_UART=1) or by
-// defining it before including this header.
-// ----------------------------------------------------------------------------
-
-// Select the output backend. Set to 1 to enable, 0 to disable.
-// If both are enabled, LOG_USE_PRINTF takes precedence.
-#ifndef LOG_USE_PRINTF
-#define LOG_USE_PRINTF 1  // Use printf for logging
-#endif
-#ifndef LOG_USE_UART
-#define LOG_USE_UART 0    // Use UART for logging (requires log_init)
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-// Size of the internal line buffer used when LOG_USE_UART is enabled
-#ifndef LOG_BUFFER_SIZE
-#define LOG_BUFFER_SIZE 128
-#endif
+/**
+ * @brief  Choose where log lines go
+ * @details Logging goes to printf until this is called, e.g.
+ *          @code log_set_sink(log_sink_uart(&huart1)); @endcode
+ * @param  sink Backend to use, or NULL to silence logging
+ */
+void log_set_sink(const log_sink_t *sink);
 
-// Show full file path or only filename in logs.
-// Set to 1 to include full path (e.g., /home/.../file.c), 0 to include only the basename (file.c)
-#ifndef LOG_SHOW_FULLPATH
-#define LOG_SHOW_FULLPATH 0
-#endif
-
-// Log levels
-typedef enum {
-    LOG_LEVEL_DEBUG,
-    LOG_LEVEL_INFO,
-    LOG_LEVEL_WARNING,
-    LOG_LEVEL_ERROR
-} log_level_t;
-
-// Function to initialize logging (required for UART)
-void log_init(UART_HandleTypeDef *huart);
+/**
+ * @brief  Backend currently receiving log lines
+ * @retval Active sink, or NULL if logging was silenced
+ */
+const log_sink_t *log_get_sink(void);
 
 // Core logging function that accepts caller location
-// Not reentrant with LOG_USE_UART: the line buffer is shared, so logging from
-// an interrupt while the main loop logs will interleave the two lines.
+// Not reentrant: the line buffer is shared, so logging from an interrupt while
+// the main loop logs will interleave the two lines.
 void log_logf(log_level_t level, const char *file, int line, const char *format, ...);
 
 // Convenience macros that automatically pass __FILE__ and __LINE__
@@ -50,5 +41,9 @@ void log_logf(log_level_t level, const char *file, int line, const char *format,
 #define log_info(format, ...)    log_logf(LOG_LEVEL_INFO,    __FILE__, __LINE__, format, ##__VA_ARGS__)
 #define log_warning(format, ...) log_logf(LOG_LEVEL_WARNING, __FILE__, __LINE__, format, ##__VA_ARGS__)
 #define log_error(format, ...)   log_logf(LOG_LEVEL_ERROR,   __FILE__, __LINE__, format, ##__VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LOG_H

@@ -23,7 +23,7 @@
 #include "stm32f4xx.h"
 
 /* USER CODE BEGIN Includes */
-#include "uart_core.h"
+#include "uart.h"
 #include "uart_config.h"
 
 /* USER CODE END Includes */
