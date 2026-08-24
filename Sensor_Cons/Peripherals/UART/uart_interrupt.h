@@ -2,7 +2,15 @@
  * @file uart_interrupt.h
  * @brief Interrupt-driven transfer mode
  *
- * Transfers are started here and completed by the callbacks in uart_events.c.
+ * Nothing here waits. Init() arms reception and it stays armed: the callbacks
+ * in uart_events.c park each chunk in the handle's ring buffer and re-arm
+ * immediately, so bytes keep arriving while the main loop is busy elsewhere.
+ * Read() takes whatever has piled up and returns at once; Write() hands the
+ * peripheral a buffer and returns while it is still going out.
+ *
+ * That is the whole difference from uart_blocking.h. If you find yourself
+ * spinning on these calls, you wanted blocking mode.
+ *
  * Independently callable, like tim_ic.h: no vtable, no dispatch.
  */
 
@@ -16,36 +24,43 @@ extern "C" {
 #include "uart_types.h"
 
 /**
- * @brief  Open a link in interrupt mode
+ * @brief  Open a link in interrupt mode and start listening
  * @note   Re-initializes the handle if it is already open.
- * @param  handle UART handle to populate
- * @param  config Desired configuration
+ * @param  rxBuffer     Landing area the ISR receives into; must outlive the
+ *                      handle and belongs to the driver until DeInit
+ * @param  rxBufferSize Size of @p rxBuffer, at most RING_BUFFER_SIZE
  * @retval UART_OK on success
  */
-UART_Status_t UART_Interrupt_Init(UART_Handle_t *handle, const UART_Config_t *config);
+UART_Status_t UART_Interrupt_Init(UART_Handle_t *handle, const UART_Config_t *config,
+                                  uint8_t *rxBuffer, uint16_t rxBufferSize);
 
 /**
- * @brief  Start a send and optionally wait for the TX interrupt to finish it
- * @param  handle  UART handle
- * @param  data    Bytes to send
- * @param  size    Number of bytes
- * @param  timeout Milliseconds to wait, 0 to return immediately
- * @retval UART_OK on success
+ * @brief  Take whatever has been received so far, up to @p size bytes
+ * @note   Returns immediately. A quiet line is not an error: @p received is
+ *         set to 0 and the status is still UART_OK. Bytes past @p received
+ *         are untouched, so never treat @p data as a string.
+ * @param  received Out: bytes actually written, set even on failure
+ * @retval UART_OK unless the arguments were wrong
  */
-UART_Status_t UART_Interrupt_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size, uint32_t timeout);
+UART_Status_t UART_Interrupt_Read(UART_Handle_t *handle, uint8_t *data, uint16_t size,
+                                  uint16_t *received);
 
 /**
- * @brief  Start reception and wait for a full packet to drain from the ring
- * @param  handle  UART handle
- * @param  data    Destination buffer
- * @param  size    Number of bytes requested
- * @param  timeout Milliseconds to wait, 0 for a single non-blocking drain
- * @retval UART_OK on success
+ * @brief  Start sending and return; the ISR does the work
+ * @note   @p data belongs to the driver until UART_Interrupt_IsTxDone() goes
+ *         true. Reusing or freeing it before then corrupts the transmission.
+ * @retval UART_BUSY if the previous send is still in flight
  */
-UART_Status_t UART_Interrupt_Receive(UART_Handle_t *handle, uint8_t *data, uint16_t size, uint32_t timeout);
+UART_Status_t UART_Interrupt_Write(UART_Handle_t *handle, const uint8_t *data, uint16_t size);
 
 /**
- * @brief  Re-arm one-shot reception after a completed transfer
+ * @brief  Whether the last Write() has finished leaving the peripheral
+ * @note   True when idle, so it is safe to call before the first Write().
+ */
+bool UART_Interrupt_IsTxDone(const UART_Handle_t *handle);
+
+/**
+ * @brief  Re-arm reception after a completed transfer
  * @details Called by uart_events.c; not part of the app-facing API.
  */
 void UART_Interrupt_Rearm(UART_Handle_t *handle);

@@ -69,6 +69,20 @@ bool RingBuffer_GetBytes(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t count
     return true;
 }
 
+uint32_t RingBuffer_Read(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t maxCount)
+{
+    if (ringBuffer == NULL || data == NULL) {
+        return 0;
+    }
+
+    uint32_t read = 0;
+    while (read < maxCount && RingBuffer_Get(ringBuffer, &data[read])) {
+        read++;
+    }
+
+    return read;
+}
+
 uint32_t RingBuffer_Available(const RingBuffer_t *ringBuffer)
 {
     return ringBuffer->count;

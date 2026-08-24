@@ -1,6 +1,6 @@
 /**
  * @file uart.c
- * @brief Shared UART utilities: teardown, active-link lookup, flag waits
+ * @brief Shared UART utilities: teardown and active-link lookup
  *
  * Each transfer mode owns its own Init/Transmit/Receive; this file never
  * includes a mode header and has no dispatch table, matching how tim_clock.c
@@ -24,19 +24,6 @@ void UART_SetActiveHandle(UART_Handle_t *handle)
 UART_Handle_t *UART_GetActiveHandle(void)
 {
     return s_activeHandle;
-}
-
-UART_Status_t UART_WaitForFlag(volatile bool *flag, uint32_t timeout)
-{
-    uint32_t startTick = HAL_GetTick();
-
-    while (!*flag) {
-        if ((HAL_GetTick() - startTick) > timeout) {
-            return UART_TIMEOUT_ERROR;
-        }
-    }
-
-    return UART_OK;
 }
 
 UART_Status_t UART_DeInit(UART_Handle_t* handle)

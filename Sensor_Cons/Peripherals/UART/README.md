@@ -17,7 +17,7 @@ transfer mode is an independent, directly-callable API, the same shape as
    - No behaviour, so every module can include it without a dependency cycle
 
 2. **Shared utilities** (`uart.h`, `uart.c`)
-   - `UART_DeInit()`, `UART_GetActiveHandle()`/`UART_SetActiveHandle()`, `UART_WaitForFlag()`
+   - `UART_DeInit()`, `UART_GetActiveHandle()`/`UART_SetActiveHandle()`
    - The UART equivalent of `tim_clock.h`: genuinely mode-agnostic helpers that
      each mode module depends on one-way. Holds no Init/Transmit/Receive of its
      own and never includes a mode header.
@@ -53,8 +53,11 @@ dispatch table to look one up in.
    - Synchronous transfers with every interrupt source disabled
    - Suitable for simple, low-throughput applications
 
-7. **Interrupt Mode** (`uart_interrupt.h`: `UART_Interrupt_Init/Transmit/Receive`)
-   - Interrupt-driven transfers, completed by the callbacks in `uart_events.c`
+7. **Interrupt Mode** (`uart_interrupt.h`: `UART_Interrupt_Init/Read/Write`)
+   - Nothing waits. Reception is armed once by `Init()` and stays armed, so
+     bytes arriving while the main loop is busy land in the ring instead of
+     being lost. `Read()` drains the ring, `Write()` returns while the send
+     is still going out and `IsTxDone()` says when the buffer is free again.
    - Also exports `UART_Interrupt_Rearm()`/`UART_Interrupt_Recover()`, called
      only by `uart_events.c` after a completed transfer or a line fault
 
@@ -76,20 +79,20 @@ dispatch table to look one up in.
 ```
 uart_ring_buffer.h      (no UART dependency)
   └── uart_types.h
-        ├── uart.h              shared utilities (DeInit, active handle, wait-for-flag)
+        ├── uart.h              shared utilities (DeInit, active handle)
         ├── uart_blocking.h     UART_Blocking_Init/Transmit/Receive
-        ├── uart_interrupt.h    UART_Interrupt_Init/Transmit/Receive/Rearm/Recover
+        ├── uart_interrupt.h    UART_Interrupt_Init/Read/Write/IsTxDone/Rearm/Recover
         └── uart_dma.h          UART_DMA_Init/Transmit/Receive/Rearm
 ```
 
 `uart_ring_buffer.h` sits at the bottom and depends on nothing. `uart.h` is a
 pure utility module, the UART equivalent of `tim_clock.h`: each mode `.c` file
-depends on it one-way (for `UART_DeInit`/`UART_SetActiveHandle`/
-`UART_WaitForFlag`), and `uart.c` never includes a mode header back. No file
+depends on it one-way (for `UART_DeInit`/`UART_SetActiveHandle`), and `uart.c`
+never includes a mode header back. No file
 switches on `UART_Mode_t` except `uart_events.c` (choosing how to react to a
 HAL callback) — the driver itself has no dispatch table. `Applications/
-uart_app/uart_blocking_app.c` is the one example: it owns its own HAL handle
-and calls `UART_Blocking_Init`/`Transmit`/`Receive` directly.
+uart_app/uart_interrupt_app.c` is the one example: it owns its own HAL handle
+and calls `UART_Interrupt_Init`/`Read`/`Write` directly.
 
 
 ## Usage
@@ -127,12 +130,28 @@ uint16_t received = 0;
 UART_Blocking_Receive(&uartHandle, rxBuffer, sizeof(rxBuffer), &received, 1000);
 ```
 
-Switching mode means calling a different Init/Transmit/Receive set — e.g.
-`UART_Interrupt_Init`/`UART_Interrupt_Transmit`/`UART_Interrupt_Receive`, or
-`UART_DMA_Init`/`UART_DMA_Transmit`/`UART_DMA_Receive`. The driver itself has
-no dispatch table; `Applications/uart_app/uart_blocking_app.c` shows blocking
-mode, the simplest to read, and `main()` calls its single
-`UartBlockingApp_Run()`.
+Interrupt mode is not the same call set with a different prefix, because it
+does not wait:
+
+```c
+static uint8_t rxLanding[64];   // the ISR receives into this; keep it alive
+UART_Handle_t uartHandle = { .huart = &huart1 };
+UART_Interrupt_Init(&uartHandle, &config, rxLanding, sizeof(rxLanding));
+
+// In the super-loop. Both calls return immediately.
+uint8_t rxBuffer[64];
+uint16_t received = 0;
+UART_Interrupt_Read(&uartHandle, rxBuffer, sizeof(rxBuffer), &received);
+if (received > 0) { /* ... */ }
+
+if (UART_Interrupt_IsTxDone(&uartHandle)) {          // last send has landed
+    UART_Interrupt_Write(&uartHandle, txBuffer, txLength);  // txBuffer is the
+}                                                    // driver's until IsTxDone
+```
+
+The driver has no dispatch table, so each mode is just a different set of
+functions. `Applications/uart_app/uart_interrupt_app.c` shows the non-blocking
+super-loop, and `main()` calls its single `UartInterruptApp_Run()`.
 
 ### 3. Ring Buffer Usage
 

@@ -1,6 +1,6 @@
 /**
  * @file uart.h
- * @brief Shared UART utilities: teardown, active-link lookup, flag waits
+ * @brief Shared UART utilities: teardown and active-link lookup
  *
  * Not a dispatcher: each transfer mode (uart_blocking.h/uart_interrupt.h/
  * uart_dma.h) is an independent, directly-callable API, the same way
@@ -38,15 +38,6 @@ void UART_SetActiveHandle(UART_Handle_t *handle);
  * @retval Active handle, or NULL if no link is open
  */
 UART_Handle_t *UART_GetActiveHandle(void);
-
-/**
- * @brief  Spin until a completion flag is raised
- * @param  flag    Flag an interrupt callback will set
- * @param  timeout Milliseconds to wait; 0 returns UART_TIMEOUT_ERROR unless
- *                 the flag is already raised
- * @retval UART_OK once raised, UART_TIMEOUT_ERROR if the wait expired
- */
-UART_Status_t UART_WaitForFlag(volatile bool *flag, uint32_t timeout);
 
 #ifdef __cplusplus
 }

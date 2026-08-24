@@ -48,6 +48,14 @@ uint32_t RingBuffer_PutBytes(RingBuffer_t *ringBuffer, const uint8_t *data, uint
  */
 bool RingBuffer_GetBytes(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t count);
 
+/**
+ * @brief  Read whatever is queued, up to @p maxCount bytes
+ * @note   Unlike RingBuffer_GetBytes() this never refuses a short read, which
+ *         is what a stream reader wants: take what has arrived so far.
+ * @retval Number of bytes copied into @p data, 0 if the buffer was empty
+ */
+uint32_t RingBuffer_Read(RingBuffer_t *ringBuffer, uint8_t *data, uint32_t maxCount);
+
 uint32_t RingBuffer_Available(const RingBuffer_t *ringBuffer);
 bool RingBuffer_IsFull(const RingBuffer_t *ringBuffer);
 bool RingBuffer_IsEmpty(const RingBuffer_t *ringBuffer);

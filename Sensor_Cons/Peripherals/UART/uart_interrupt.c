@@ -9,61 +9,44 @@
 #include "log.h"
 #include <string.h>
 
-/* Spins until the TX callback raises txComplete; self-contained, so this mode
-   never depends on the driver's other files. */
-static UART_Status_t WaitForFlag(volatile bool *flag, uint32_t timeout)
-{
-    uint32_t startTick = HAL_GetTick();
-
-    while (!*flag) {
-        if ((HAL_GetTick() - startTick) > timeout) {
-            return UART_TIMEOUT_ERROR;
-        }
-    }
-
-    return UART_OK;
-}
-
-/* Reception lands in the ring; this drains a complete packet out of it. */
-static UART_Status_t WaitForRingData(UART_Handle_t *handle, uint8_t *data, uint16_t size, uint32_t timeout)
-{
-    uint32_t startTick = HAL_GetTick();
-
-    while (timeout > 0 && !handle->rxComplete) {
-        if (RingBuffer_GetBytes(&handle->rxRing, data, size)) {
-            return UART_OK;
-        }
-
-        if ((HAL_GetTick() - startTick) > timeout) {
-            log_debug("UART Receive timeout");
-            return UART_TIMEOUT_ERROR;
-        }
-    }
-
-    if (RingBuffer_GetBytes(&handle->rxRing, data, size)) {
-        return UART_OK;
-    }
-
-    return UART_ERROR;
-}
-
 /* Reception is armed the same way whether it is the first call or a re-arm
    from interrupt context, so both paths share this. Bytes always land in the
    driver's landing buffer; the caller's buffer is filled from the ring. */
 static bool StartReceive(UART_Handle_t* handle)
 {
-    if (HAL_UARTEx_ReceiveToIdle_IT(handle->huart, handle->rxBuffer, handle->rxSize) == HAL_OK) {
-        return true;
-    }
-
-    log_debug("UART ReceiveToIdle failed, falling back to fixed-length receive");
-    return HAL_UART_Receive_IT(handle->huart, handle->rxBuffer, handle->rxSize) == HAL_OK;
+    return HAL_UARTEx_ReceiveToIdle_IT(handle->huart, handle->rxBuffer, handle->rxSize) == HAL_OK;
 }
 
-UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* config)
+/* The ISR fills the ring while the caller drains it, and head/tail/count are
+   plain read-modify-write. Masking interrupts for the length of one copy is
+   cheap next to an 87us byte time at 115200 baud. */
+static uint16_t ReadRing(UART_Handle_t* handle, uint8_t* data, uint16_t size)
+{
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+
+    uint32_t read = RingBuffer_Read(&handle->rxRing, data, size);
+
+    __set_PRIMASK(primask);
+    return (uint16_t)read;
+}
+
+UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* config,
+                                  uint8_t* rxBuffer, uint16_t rxBufferSize)
 {
     if (handle == NULL || config == NULL || config->instance == NULL || handle->huart == NULL) {
         log_debug("Interrupt UART: handle, huart or config is NULL");
+        return UART_ERROR;
+    }
+
+    if (rxBuffer == NULL || rxBufferSize == 0) {
+        log_debug("Interrupt UART: no RX landing buffer");
+        return UART_ERROR;
+    }
+
+    /* A chunk larger than the ring could never be stored whole. */
+    if (rxBufferSize > RING_BUFFER_SIZE) {
+        log_debug("Interrupt UART: RX buffer larger than the ring");
         return UART_ERROR;
     }
 
@@ -72,6 +55,10 @@ UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* co
     }
 
     handle->config = *config;
+    handle->rxBuffer = rxBuffer;
+    handle->rxSize = rxBufferSize;
+    handle->txComplete = true; /* idle counts as done, so the first Write() may start */
+    handle->rxComplete = false;
     RingBuffer_Init(&handle->rxRing);
     memset(handle->huart, 0, sizeof(UART_HandleTypeDef));
 
@@ -97,6 +84,15 @@ UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* co
     __HAL_UART_ENABLE_IT(handle->huart, UART_IT_ERR);
 
     handle->isInitialized = true;
+
+    /* Listen from now on, not from the next Read(), so bytes arriving while the
+       main loop is busy are captured instead of dropped. */
+    if (!StartReceive(handle)) {
+        log_debug("Interrupt UART failed to start listening");
+        handle->isInitialized = false;
+        return UART_ERROR;
+    }
+
     log_debug("UART: opened in interrupt mode");
     return UART_OK;
 }
@@ -127,47 +123,54 @@ static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, ui
     return true;
 }
 
-UART_Status_t UART_Interrupt_Transmit(UART_Handle_t* handle, const uint8_t* data, uint16_t size, uint32_t timeout)
+UART_Status_t UART_Interrupt_Read(UART_Handle_t* handle, uint8_t* data, uint16_t size,
+                                  uint16_t* received)
+{
+    if (received == NULL) {
+        log_debug("UART received-count pointer is NULL");
+        return UART_ERROR;
+    }
+
+    *received = 0;
+
+    if (!IsReadyForTransfer(handle, data, size)) {
+        return UART_ERROR;
+    }
+
+    /* Reception is already running; this only moves bytes out of the ring. */
+    *received = ReadRing(handle, data, size);
+    return UART_OK;
+}
+
+UART_Status_t UART_Interrupt_Write(UART_Handle_t* handle, const uint8_t* data, uint16_t size)
 {
     if (!IsReadyForTransfer(handle, data, size)) {
         return UART_ERROR;
+    }
+
+    /* One send at a time: there is no TX queue, the caller's buffer is the queue. */
+    if (!handle->txComplete) {
+        return UART_BUSY;
     }
 
     handle->txComplete = false;
 
     if (HAL_UART_Transmit_IT(handle->huart, (uint8_t*)data, size) != HAL_OK) {
-        log_debug("UART Transmit failed");
+        handle->txComplete = true;
+        log_debug("UART Transmit failed to start");
         return UART_ERROR;
     }
 
-    if (timeout == 0) {
-        return UART_OK;
-    }
-
-    return WaitForFlag(&handle->txComplete, timeout);
+    return UART_OK;
 }
 
-UART_Status_t UART_Interrupt_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size, uint32_t timeout)
+bool UART_Interrupt_IsTxDone(const UART_Handle_t* handle)
 {
-    if (!IsReadyForTransfer(handle, data, size)) {
-        return UART_ERROR;
+    if (handle == NULL) {
+        return false;
     }
 
-    if (size > RING_BUFFER_SIZE) {
-        log_debug("Requested size exceeds ring buffer size");
-        return UART_ERROR;
-    }
-
-    handle->rxComplete = false;
-
-    if (!StartReceive(handle)) {
-        log_debug("UART Receive failed to start");
-        return UART_ERROR;
-    }
-
-    /* Interrupts land bytes in handle->rxBuffer and forward them into the ring,
-       so the caller's buffer is only filled by draining the ring. */
-    return WaitForRingData(handle, data, size, timeout);
+    return handle->txComplete;
 }
 
 void UART_Interrupt_Rearm(UART_Handle_t* handle)
@@ -177,8 +180,16 @@ void UART_Interrupt_Rearm(UART_Handle_t* handle)
 
 void UART_Interrupt_Recover(UART_Handle_t* handle)
 {
-    /* Interrupt mode needs the peripheral rebuilt before reception can restart. */
+    /* Interrupt mode needs the peripheral rebuilt before reception can restart;
+       HAL_UART_Init() rewrites CR1/CR3, so the interrupts go back on after it. */
     HAL_UART_Init(handle->huart);
+    __HAL_UART_ENABLE_IT(handle->huart, UART_IT_IDLE);
+    __HAL_UART_ENABLE_IT(handle->huart, UART_IT_ERR);
+
+    /* HAL_UART_Init() reset gState, so a send that was in flight is gone and
+       its TxCplt callback will never arrive. Release the caller's buffer here
+       or IsTxDone() stays false forever and the loop above it never runs again. */
+    handle->txComplete = true;
 }
 
 /*

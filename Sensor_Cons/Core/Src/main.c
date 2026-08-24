@@ -9,7 +9,7 @@
 
 #include "main.h"
 #include "sys.h"
-#include "uart_blocking_app.h"
+#include "uart_interrupt_app.h"
 
 /**
  * @brief  Program entry point: bring up the system, then run the UART app.
@@ -17,7 +17,7 @@
 int main(void)
 {
     SYS_Init();              /* HAL init, system clock, SysTick */
-    UartBlockingApp_Run();   /* Echoes whatever is typed over USART1, forever */
+    UartInterruptApp_Run();  /* Echoes whatever is typed over USART1, forever */
 
     /* Only reached if the UART failed to open. main() must never return. */
     for (;;) {
