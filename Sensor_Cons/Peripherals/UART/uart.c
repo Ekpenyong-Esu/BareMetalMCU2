@@ -1,10 +1,10 @@
 /**
  * @file uart.c
- * @brief Shared UART utilities: teardown and active-link lookup
+ * @brief Small helpers shared by all three UART modes (blocking/interrupt/DMA)
  *
- * Each transfer mode owns its own Init/Transmit/Receive; this file never
- * includes a mode header and has no dispatch table, matching how tim_clock.c
- * knows nothing about tim_pwm.c or tim_ic.c.
+ * Each mode has its own Init/Transmit/Receive functions elsewhere. This file
+ * only holds the bits every mode needs: closing a link down, and keeping
+ * track of which link is currently open.
  */
 
 #include "uart.h"
@@ -12,8 +12,8 @@
 #include "log.h"
 #include <string.h>
 
-/* The MSP and the interrupt vectors run without a caller-supplied handle, so
- * the driver publishes the link it is currently serving. */
+/* Interrupts and HAL's setup code can't be passed our handle directly, so we
+ * remember it here and they look it up when they need it. */
 static UART_Handle_t *s_activeHandle = NULL;
 
 void UART_SetActiveHandle(UART_Handle_t *handle)
@@ -33,20 +33,20 @@ UART_Status_t UART_DeInit(UART_Handle_t* handle)
         return UART_ERROR;
     }
 
-    /* Disable all UART interrupts */
+    /* Turn off every interrupt source so nothing fires after we tear down. */
     __HAL_UART_DISABLE_IT(handle->huart, UART_IT_RXNE);
     __HAL_UART_DISABLE_IT(handle->huart, UART_IT_TC);
     __HAL_UART_DISABLE_IT(handle->huart, UART_IT_PE);
     __HAL_UART_DISABLE_IT(handle->huart, UART_IT_ERR);
     __HAL_UART_DISABLE_IT(handle->huart, UART_IT_IDLE);
 
-    /* HAL_UART_DeInit() releases the MSP resources on our behalf. */
+    /* Let HAL release the pins/clocks/DMA it set up for us. */
     if (HAL_UART_DeInit(handle->huart) != HAL_OK) {
         log_debug("UART deinitialization failed");
         return UART_ERROR;
     }
 
-    /* Reset handle state */
+    /* Put the handle back to a clean, unused state. */
     handle->isInitialized = false;
     handle->rxBuffer = NULL;
     handle->rxSize = 0;

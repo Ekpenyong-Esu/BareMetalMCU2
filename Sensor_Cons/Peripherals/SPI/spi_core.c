@@ -28,8 +28,7 @@ SPI_StatusTypeDef SPI_ConvertHALStatus(HAL_StatusTypeDef halStatus)
 
 bool SPI_IsReady(void)
 {
-    /* Instance is assigned before HAL_SPI_Init runs, so testing it would
-       report a bus that failed to come up as usable. */
+    /* Instance is set before HAL_SPI_Init runs, so testing it would hide init failures. */
     return s_initialized;
 }
 

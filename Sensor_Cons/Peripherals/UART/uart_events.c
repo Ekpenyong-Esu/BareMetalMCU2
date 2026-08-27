@@ -1,11 +1,10 @@
 /**
  * @file uart_events.c
- * @brief HAL UART callbacks: turn interrupt events into buffered data and flags
+ * @brief Functions HAL calls automatically when something happens on UART
  *
- * Everything here runs in interrupt context. The vectors themselves live in
- * Core/Src/stm32f4xx_it.c; HAL_UART_IRQHandler() dispatches into the callbacks
- * below. This is the one place that has to know which mode is active, since
- * HAL only exposes one callback per event regardless of mode.
+ * These are "callbacks" - HAL runs them for us when an interrupt fires
+ * (data arrived, send finished, error occurred). We never call them
+ * ourselves. All of this runs inside an interrupt, so keep it fast.
  */
 
 #include "uart.h"
@@ -13,8 +12,8 @@
 #include "uart_dma.h"
 #include "log.h"
 
-/* Callbacks receive a HAL handle, not our handle. Resolve the owning link and
- * ignore events raised by any other UART in the system. */
+/* HAL only tells us which raw huart triggered the event, not our own handle.
+ * Look up our handle from it, so we can ignore events from other UARTs. */
 static UART_Handle_t *OwnerOf(const UART_HandleTypeDef *huart)
 {
     UART_Handle_t *handle = UART_GetActiveHandle();
@@ -22,8 +21,8 @@ static UART_Handle_t *OwnerOf(const UART_HandleTypeDef *huart)
     return (handle != NULL && handle->isInitialized && handle->huart == huart) ? handle : NULL;
 }
 
-/* Reception is one-shot, so every completed transfer must re-arm it; blocking
- * mode never receives asynchronously, so it has nothing to re-arm. */
+/* Once a receive finishes, HAL stops listening until we tell it to start
+ * again - so we "re-arm" it here. Blocking mode has nothing to re-arm. */
 static void RestartReceive(UART_Handle_t *handle)
 {
     switch (handle->config.mode) {
@@ -33,21 +32,25 @@ static void RestartReceive(UART_Handle_t *handle)
     }
 }
 
+/* Called whenever new bytes have landed in rxBuffer, no matter why. */
 static void CompleteReception(UART_Handle_t *handle, uint16_t size)
 {
     if (size > 0) {
-        uint32_t stored = RingBuffer_PutBytes(&handle->rxRing, handle->rxBuffer, size);
+        /* Copy the fresh bytes into the ring buffer so they're safe before*/
+        uint32_t stored = RingBuffer_PutBytes(&handle->rxRing, handle->rxBuffer, size); // We copy the data from the HAL landing buffer into our ring buffer, which is where the main program will read it from.
         if (stored < size) {
             log_debug("UART RX ring full, dropped %u bytes", (unsigned)(size - stored));
         }
     }
 
     handle->rxComplete = true;
-    RestartReceive(handle);
+
+    RestartReceive(handle); /* start listening and receiving into the HAL landing buffer */
 }
 
 /**
- * @brief Idle line detected: a partial buffer has arrived
+ * @brief Called when the line goes idle, meaning the sender paused/stopped
+ *        and whatever arrived so far (maybe less than a full buffer) is ready
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
@@ -61,7 +64,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 }
 
 /**
- * @brief Transmission finished
+ * @brief Called once all the bytes we asked to send have gone out
  */
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -75,7 +78,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 }
 
 /**
- * @brief Requested number of bytes received
+ * @brief Called when rxBuffer has completely filled up (no idle pause needed)
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -85,12 +88,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         return;
     }
 
-    /* This callback only fires once rxBuffer is full, in both async modes. */
+    /* Buffer is full, so the whole thing counts as the received data. */
     CompleteReception(handle, handle->rxSize);
 }
 
 /**
- * @brief Line error: clear the cause, then get reception running again
+ * @brief Called when something went wrong on the line (noise, overrun, etc.)
+ *        Logs what happened, clears the error, then starts listening again
  */
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
@@ -100,6 +104,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
         return;
     }
 
+    /* Each error has its own flag; check and clear them one at a time. */
     if (huart->ErrorCode & HAL_UART_ERROR_ORE) {
         log_debug("UART Overrun Error");
         __HAL_UART_CLEAR_OREFLAG(huart);
@@ -117,7 +122,8 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
         __HAL_UART_CLEAR_PEFLAG(huart);
     }
 
-    /* Abort before re-arming, otherwise the stuck error state survives. */
+    /* Cancel whatever receive was in progress before restarting it,
+     * otherwise the error keeps coming back. */
     HAL_UART_AbortReceive(huart);
     huart->ErrorCode = HAL_UART_ERROR_NONE;
 
@@ -126,4 +132,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     }
 
     RestartReceive(handle);
+
+    log_debug("UART error cleared, reception restarted");
 }

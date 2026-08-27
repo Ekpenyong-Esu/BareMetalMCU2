@@ -1,6 +1,11 @@
 /**
  * @file uart_ring_buffer.c
- * @brief Fixed-capacity byte queue
+ * @brief A simple "first in, first out" byte queue with a fixed size
+ *
+ * Think of it as a circular list of boxes: `head` is where the next new
+ * byte goes, `tail` is where the next byte gets read from, and `count`
+ * says how many boxes are currently full. When head or tail reach the end
+ * of the array they wrap back to 0 (that's the "ring" part).
  */
 
 #include "uart_ring_buffer.h"
@@ -21,7 +26,7 @@ bool RingBuffer_Put(RingBuffer_t *ringBuffer, uint8_t data)
     }
 
     ringBuffer->buffer[ringBuffer->head] = data;
-    ringBuffer->head = (ringBuffer->head + 1) % RING_BUFFER_SIZE;
+    ringBuffer->head = (ringBuffer->head + 1) % RING_BUFFER_SIZE; /* wrap to 0 at the end */
     ringBuffer->count++;
     return true;
 }

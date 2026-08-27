@@ -14,6 +14,7 @@ extern "C" {
 
 #include "servo_types.h"
 
+/* Moves to an angle within the servo's configured range. */
 SERVO_StatusTypeDef SERVO_SetAngle(SERVO_Handle_t *hservo, uint16_t angle);
 
 /**
@@ -25,8 +26,10 @@ uint16_t SERVO_GetAngle(const SERVO_Handle_t *hservo);
 
 uint16_t SERVO_GetPulseWidth(const SERVO_Handle_t *hservo);
 
+/* Moves to the configured minimum-angle endpoint. */
 SERVO_StatusTypeDef SERVO_MoveToMin(SERVO_Handle_t *hservo);
 
+/* Moves to the configured maximum-angle endpoint. */
 SERVO_StatusTypeDef SERVO_MoveToMax(SERVO_Handle_t *hservo);
 
 /** @brief Midpoint of the configured range, not a fixed 90 degrees. */

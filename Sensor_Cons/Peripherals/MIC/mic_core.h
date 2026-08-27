@@ -34,14 +34,21 @@ MIC_StatusTypeDef MIC_Configure(MIC_HandleTypeDef *hmic, const MIC_ConfigTypeDef
  */
 MIC_StatusTypeDef MIC_GetDefaultConfig(MIC_ConfigTypeDef *config);
 
+/* Sets digital output volume (post-capture gain). */
 MIC_StatusTypeDef MIC_SetVolume(MIC_HandleTypeDef *hmic, uint8_t volume);
 MIC_StatusTypeDef MIC_GetVolume(const MIC_HandleTypeDef *hmic, uint8_t *volume);
+/* Sets the analog/preamp gain stage. */
 MIC_StatusTypeDef MIC_SetGain(MIC_HandleTypeDef *hmic, MIC_GainTypeDef gain);
+/* Enables/disables muting samples below threshold to suppress background hiss. */
 MIC_StatusTypeDef MIC_ConfigureNoiseGate(MIC_HandleTypeDef *hmic, bool enable, float threshold);
+/* Current I2S sample rate in Hz. */
 uint32_t MIC_GetSampleRate(const MIC_HandleTypeDef *hmic);
 
+/* Reads the current RMS and peak signal levels. */
 MIC_StatusTypeDef MIC_GetAudioLevel(const MIC_HandleTypeDef *hmic, float *rms_level, float *peak_level);
+/* Reads accumulated capture statistics (e.g. overrun/error counts). */
 MIC_StatusTypeDef MIC_GetStatistics(const MIC_HandleTypeDef *hmic, MIC_StatisticsTypeDef *stats);
+/* Zeroes the accumulated capture statistics. */
 MIC_StatusTypeDef MIC_ResetStatistics(MIC_HandleTypeDef *hmic);
 
 /**

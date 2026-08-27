@@ -1,6 +1,11 @@
 /**
  * @file uart_interrupt.c
- * @brief Interrupt-driven transfer mode
+ * @brief Interrupt mode: the CPU is told about bytes instead of waiting for them
+ *
+ * Sending/receiving happens in the background: an interrupt fires when a
+ * byte or a full message arrives, and the callbacks in uart_events.c handle
+ * it. The main program just checks flags/reads the ring buffer whenever it
+ * wants, instead of being stuck waiting like in blocking mode.
  */
 
 #include "uart_interrupt.h"
@@ -9,17 +14,15 @@
 #include "log.h"
 #include <string.h>
 
-/* Reception is armed the same way whether it is the first call or a re-arm
-   from interrupt context, so both paths share this. Bytes always land in the
-   driver's landing buffer; the caller's buffer is filled from the ring. */
+/* Tells HAL "start listening and let me know on the next idle gap or full
+   buffer". Used both for the very first receive and every re-arm after. */
 static bool StartReceive(UART_Handle_t* handle)
 {
     return HAL_UARTEx_ReceiveToIdle_IT(handle->huart, handle->rxBuffer, handle->rxSize) == HAL_OK;
 }
 
-/* The ISR fills the ring while the caller drains it, and head/tail/count are
-   plain read-modify-write. Masking interrupts for the length of one copy is
-   cheap next to an 87us byte time at 115200 baud. */
+/* Copies bytes out of the ring buffer. Interrupts are turned off just for
+   this copy so the ISR can't change the ring halfway through it. */
 static uint16_t ReadRing(UART_Handle_t* handle, uint8_t* data, uint16_t size)
 {
     uint32_t primask = __get_PRIMASK();
@@ -97,7 +100,7 @@ UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* co
     return UART_OK;
 }
 
-/* Both transfer directions share the same preconditions. */
+/* Sanity checks shared by both send and receive, so we don't repeat them. */
 static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, uint16_t size)
 {
     if (handle == NULL) {
@@ -137,7 +140,8 @@ UART_Status_t UART_Interrupt_Read(UART_Handle_t* handle, uint8_t* data, uint16_t
         return UART_ERROR;
     }
 
-    /* Reception is already running; this only moves bytes out of the ring. */
+    /* Listening is already happening in the background; just grab what's
+       arrived so far from the ring buffer. */
     *received = ReadRing(handle, data, size);
     return UART_OK;
 }
@@ -148,7 +152,7 @@ UART_Status_t UART_Interrupt_Write(UART_Handle_t* handle, const uint8_t* data, u
         return UART_ERROR;
     }
 
-    /* One send at a time: there is no TX queue, the caller's buffer is the queue. */
+    /* Only one send at a time - if the last one isn't finished, say so. */
     if (!handle->txComplete) {
         return UART_BUSY;
     }
@@ -173,22 +177,23 @@ bool UART_Interrupt_IsTxDone(const UART_Handle_t* handle)
     return handle->txComplete;
 }
 
+/* Called after a receive finishes, to start listening for the next one. */
 void UART_Interrupt_Rearm(UART_Handle_t* handle)
 {
     StartReceive(handle);
 }
 
+/* Called after a line error, to reset the peripheral before listening again. */
 void UART_Interrupt_Recover(UART_Handle_t* handle)
 {
-    /* Interrupt mode needs the peripheral rebuilt before reception can restart;
-       HAL_UART_Init() rewrites CR1/CR3, so the interrupts go back on after it. */
+    /* Re-run HAL's init so the UART registers are back to a known-good state,
+       then turn the interrupts we need back on (init clears them). */
     HAL_UART_Init(handle->huart);
     __HAL_UART_ENABLE_IT(handle->huart, UART_IT_IDLE);
     __HAL_UART_ENABLE_IT(handle->huart, UART_IT_ERR);
 
-    /* HAL_UART_Init() reset gState, so a send that was in flight is gone and
-       its TxCplt callback will never arrive. Release the caller's buffer here
-       or IsTxDone() stays false forever and the loop above it never runs again. */
+    /* Re-init wipes out any send that was in progress, so its "done" callback
+       will never come. Mark it done ourselves or Write() would stay stuck. */
     handle->txComplete = true;
 }
 

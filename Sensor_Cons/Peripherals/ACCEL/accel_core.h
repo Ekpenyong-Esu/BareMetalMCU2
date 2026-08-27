@@ -14,14 +14,18 @@ extern "C" {
 
 #include "accel_types.h"
 
+/* Brings up the accelerometer with the driver's default settings. */
 ACCEL_StatusTypeDef ACCEL_Init(void);
+/* Brings up the accelerometer using caller-supplied settings instead of the defaults. */
 ACCEL_StatusTypeDef ACCEL_Init_Custom(const ACCEL_ConfigTypeDef *config);
+/* Tears down the driver so it can be re-initialised. */
 ACCEL_StatusTypeDef ACCEL_DeInit(void);
 
 /**
  * @brief Verify the device answers with the expected WHO_AM_I value.
  */
 ACCEL_StatusTypeDef ACCEL_IsReady(void);
+/* Reads the device's WHO_AM_I register. */
 ACCEL_StatusTypeDef ACCEL_GetDeviceID(uint8_t *deviceId);
 
 /**

@@ -1,6 +1,10 @@
 /**
  * @file uart_blocking.c
- * @brief Blocking transfer mode
+ * @brief Blocking mode: the simplest way to use UART
+ *
+ * "Blocking" means the CPU just sits and waits until the send/receive is
+ * done (or it times out). No interrupts, no background copying - easy to
+ * follow, but the CPU can't do anything else while it waits.
  */
 
 #include "uart_blocking.h"
@@ -40,7 +44,7 @@ UART_Status_t UART_Blocking_Init(UART_Handle_t* handle, const UART_Config_t* con
         return UART_ERROR;
     }
 
-    /* The CPU polls the peripheral directly, so every interrupt source stays off. */
+    /* Blocking mode never uses interrupts, so make sure they're all off. */
     __HAL_UART_DISABLE_IT(handle->huart, UART_IT_RXNE);
     __HAL_UART_DISABLE_IT(handle->huart, UART_IT_TC);
     __HAL_UART_DISABLE_IT(handle->huart, UART_IT_PE);
@@ -52,7 +56,7 @@ UART_Status_t UART_Blocking_Init(UART_Handle_t* handle, const UART_Config_t* con
     return UART_OK;
 }
 
-/* Both transfer directions share the same preconditions. */
+/* Sanity checks shared by both send and receive, so we don't repeat them. */
 static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, uint16_t size)
 {
     if (handle == NULL) {
@@ -106,18 +110,17 @@ UART_Status_t UART_Blocking_Receive(UART_Handle_t* handle, uint8_t* data, uint16
         return UART_ERROR;
     }
 
-    /* ReceiveToIdle returns on a gap in the stream, so a short frame does not
-       have to wait out the whole timeout. */
+    /* "ToIdle" means it also stops early if the sender pauses, so a short
+       message doesn't force us to wait for the full timeout. */
     HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle(handle->huart, data, size, received, timeout);
 
     if (status == HAL_TIMEOUT) {
-        /* Data that arrived before the deadline still counts as a frame. */
+        /* Timed out, but if some bytes did arrive, treat that as a success. */
         return (*received > 0) ? UART_OK : UART_TIMEOUT_ERROR;
     }
 
     if (status != HAL_OK) {
-        /* Bytes that land while the CPU is elsewhere latch ORE; clear it here
-           or every later call fails too. Also covers PE/FE/NE. */
+        /* Clear any leftover error flag, otherwise every future call fails too. */
         __HAL_UART_CLEAR_OREFLAG(handle->huart);
         handle->huart->ErrorCode = HAL_UART_ERROR_NONE;
         log_debug("Blocking UART Receive failed: %d", status);

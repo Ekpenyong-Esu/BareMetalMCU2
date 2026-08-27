@@ -1,6 +1,10 @@
 /**
  * @file uart_dma.c
- * @brief DMA transfer mode
+ * @brief DMA mode: a separate piece of hardware moves the bytes for us
+ *
+ * DMA (Direct Memory Access) copies bytes between the UART and memory
+ * without the CPU touching each one. This frees up the CPU the most out
+ * of all three modes, at the cost of needing DMA streams to be set up.
  */
 
 #include "uart_dma.h"
@@ -10,8 +14,7 @@
 #include "log.h"
 #include <string.h>
 
-/* Spins until the TX callback raises txComplete; self-contained, so this mode
-   never depends on the driver's other files. */
+/* Blocks until a callback sets *flag true, or timeout elapses. */
 static UART_Status_t WaitForFlag(volatile bool *flag, uint32_t timeout)
 {
     uint32_t startTick = HAL_GetTick();
@@ -25,7 +28,7 @@ static UART_Status_t WaitForFlag(volatile bool *flag, uint32_t timeout)
     return UART_OK;
 }
 
-/* Reception lands in the ring; this drains a complete packet out of it. */
+/* Polls the ring buffer for `size` bytes until they arrive or we time out. */
 static UART_Status_t WaitForRingData(UART_Handle_t *handle, uint8_t *data, uint16_t size, uint32_t timeout)
 {
     uint32_t startTick = HAL_GetTick();
@@ -48,12 +51,11 @@ static UART_Status_t WaitForRingData(UART_Handle_t *handle, uint8_t *data, uint1
     return UART_ERROR;
 }
 
-/* Reception is armed the same way whether it is the first call or a re-arm
-   from interrupt context, so both paths share this. */
+/* Arms DMA reception (idle-line or fixed-length); shared by first receive and every re-arm. */
 static bool StartReceive(UART_Handle_t* handle)
 {
     if (HAL_UARTEx_ReceiveToIdle_DMA(handle->huart, handle->rxBuffer, handle->rxSize) == HAL_OK) {
-        /* Half-transfer interrupts would report packets that have not arrived yet. */
+        /* Half-full interrupt is noise - we only care once the packet finishes. */
         __HAL_DMA_DISABLE_IT(handle->huart->hdmarx, DMA_IT_HT);
         return true;
     }
@@ -74,11 +76,12 @@ UART_Status_t UART_DMA_Init(UART_Handle_t* handle, const UART_Config_t* config)
     }
 
     handle->config = *config;
+
     RingBuffer_Init(&handle->rxRing);
+    
     memset(handle->huart, 0, sizeof(UART_HandleTypeDef));
 
-    /* Publish before HAL_UART_Init(), which calls into HAL_UART_MspInit() and
-     * needs the mode to decide whether to wire up DMA. */
+    /* Must be set before HAL_UART_Init() calls HAL_UART_MspInit(), which needs it to wire up DMA. */
     UART_SetActiveHandle(handle);
 
     handle->huart->Instance = config->instance;
@@ -95,14 +98,13 @@ UART_Status_t UART_DMA_Init(UART_Handle_t* handle, const UART_Config_t* config)
         return UART_ERROR;
     }
 
-    /* MspInit is what links the DMA streams. Without them HAL_UART_*_DMA would
-       dereference a NULL hdmatx/hdmarx on the first transfer. */
+    /* Fail now rather than crash later on an unwired DMA stream. */
     if (handle->huart->hdmatx == NULL || handle->huart->hdmarx == NULL) {
         log_error("UART: DMA mode selected but no DMA stream is linked");
         return UART_ERROR;
     }
 
-    /* IDLE detects packet boundaries; RXNE would fight the DMA controller. */
+    /* IDLE tells us a packet ended; DMA (not RXNE) handles moving the bytes. */
     __HAL_UART_ENABLE_IT(handle->huart, UART_IT_ERR);
     __HAL_UART_ENABLE_IT(handle->huart, UART_IT_IDLE);
 
@@ -175,18 +177,14 @@ UART_Status_t UART_DMA_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t si
         return UART_ERROR;
     }
 
-    /* DMA lands in handle->rxBuffer and the callbacks forward it into the ring,
-       so the caller's buffer is only filled by draining the ring. */
+    /* A callback copies DMA's rxBuffer into the ring, so we wait on the ring, not rxBuffer. */
     return WaitForRingData(handle, data, size, timeout);
 }
 
+/* Called after a receive finishes, to start listening for the next one. */
 void UART_DMA_Rearm(UART_Handle_t* handle)
 {
     StartReceive(handle);
 }
 
-/*
- * DMA interrupt vectors are owned by Core, not this driver.
- * DMA2_Stream7_IRQHandler() (TX) and DMA2_Stream5_IRQHandler() (RX) are
- * defined in Core/Src/stm32f4xx_it.c and dispatch via HAL_DMA_IRQHandler().
- */
+/* DMA2_Stream7/5_IRQHandler() (TX/RX) live in Core/Src/stm32f4xx_it.c, not here. */

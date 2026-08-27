@@ -22,10 +22,13 @@ typedef struct {
     uint32_t pwmTimerClockHz; // Timer input clock (for passive mode)
 } Buzzer_t;
 
+/* Sets up an active buzzer, driven simply on/off by a GPIO pin. */
 HAL_StatusTypeDef Buzzer_InitActive(Buzzer_t *buzzer, GPIO_TypeDef *port, uint16_t pin);
+/* Sets up a passive buzzer, driven by a PWM timer channel for tone control. */
 HAL_StatusTypeDef Buzzer_InitPassive(Buzzer_t *buzzer, TIM_HandleTypeDef *htim, uint32_t channel, uint32_t timerClockHz);
 void Buzzer_On(Buzzer_t *buzzer);
 void Buzzer_Off(Buzzer_t *buzzer);
+/* Passive mode only: plays a tone at frequencyHz with the given PWM duty cycle. */
 HAL_StatusTypeDef Buzzer_Tone(Buzzer_t *buzzer, uint32_t frequencyHz, uint8_t dutyPercent);
 bool Buzzer_IsOn(const Buzzer_t *buzzer);
 
