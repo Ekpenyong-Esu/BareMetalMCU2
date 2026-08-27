@@ -1,94 +1,105 @@
 /**
  * @file adc_voltmeter_app.c
- * @brief The ADC application: voltmeter example
+ * @brief The ADC application: voltmeter example, running on FreeRTOS.
  *
- * Measures the voltage on PA0 (ADC1 channel 0) and prints it over USART1
- * (115200 8N1) once per second. Wire a potentiometer or any 0-3.3 V source to
- * PA0 and watch the value change in the terminal.
+ * Producer/consumer via ONE FreeRTOS queue:
+ *   - reader task (producer): samples PA0 (ADC1 channel 0) once a second and
+ *     sends the voltage into the queue.
+ *   - display task (consumer): blocks on the queue and prints each sample
+ *     over USART1 (115200 8N1).
  *
- * The ADC is read in polling mode: each pass of the loop asks for one
- * conversion and waits for it. A conversion takes microseconds, so blocking
- * here costs nothing -- unlike the UART echo app, there is no background
- * traffic to miss while waiting.
+ * Flow:  ADC -> xQueueSend(voltage) -> queue -> xQueueReceive -> UART
+ * The queue decouples the two tasks: the reader never waits on UART, and the
+ * display task never decides when the next sample is taken.
  *
- * The raw ADC count (0-4095 for 12-bit) means nothing on its own, so the
- * driver scales it against the 3.3 V reference before this file ever sees it.
+ * Layering:
+ *   main.c              -> chooses and runs the application
+ *   adc_voltmeter_app   -> composition only (this module)
+ *   voltage_reader       -> ADC setup + single-channel voltage reads
+ *   voltage_display      -> UART setup + formatted voltage output
  */
 
 #include "adc_voltmeter_app.h"
 
-#include "adc_convert.h"
-#include "adc_core.h"
-#include "adc_measure.h"
-#include "uart_blocking.h"
-#include "uart_config.h"
-#include <printf/printf.h>
-#include <stdint.h>
-#include <stdio.h>
+#include "main.h"
+#include "voltage_display.h"
+#include "voltage_reader.h"
 
-#define ADC_VOLTMETER_APP_CHANNEL    ADC_CHANNEL_0  /* PA0 on the discovery header */
-#define ADC_VOLTMETER_APP_PERIOD_MS  1000U          /* one reading per second */
-#define ADC_VOLTMETER_APP_TX_SIZE    64             /* one line: "Voltage: x.xxx V\r\n" */
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "task.h"
 
-static const char kGreeting[] = "ADC voltmeter ready. Reading PA0 once per second.\r\n";
+/* Sample cadence (ms): how often the reader task takes a reading. */
+#define READER_PERIOD_MS      1000u
 
-/* All static: the UART and ADC drivers hold pointers to these handles for the
- * whole run, so they must outlive the call that set them up. */
-static UART_HandleTypeDef s_halUart;
-static UART_Handle_t s_uart;
-static ADC_HandleStruct s_adc;
+/* Task priorities (higher number = higher priority). */
+#define TASK_PRIO_READER      2
+#define TASK_PRIO_DISPLAY     1
 
+/* Task stack size in words (1 word = 4 bytes on Cortex-M4). */
+#define TASK_STACK_SIZE_WORDS 256u
 
-static char s_txLine[ADC_VOLTMETER_APP_TX_SIZE];
+/* Queue depth: the display task drains readings faster than they arrive. */
+#define VOLTAGE_QUEUE_LENGTH  4u
 
-void AdcVoltmeterApp_Run(void)
+/* Handles --------------------------------------------------------------- */
+static QueueHandle_t   s_voltageQueue;
+static VoltageReader_t s_reader;
+static VoltageDisplay_t s_display;
+
+/* Producer: samples the ADC and sends each reading into the queue -------- */
+static void ReaderTask(void *arg)
 {
-    const UART_Config_t uartConfig = {
-        .instance   = USART1,
-        .baudRate   = UART_DEFAULT_BAUDRATE,
-        .wordLength = UART_DEFAULT_WORDLENGTH,
-        .stopBits   = UART_DEFAULT_STOPBITS,
-        .parity     = UART_DEFAULT_PARITY,
-        .mode       = UART_MODE_BLOCKING,
-    };
-
-    const ADC_ConfigTypeDef adcConfig = {
-        .instance      = ADC1,
-        .channel       = ADC_VOLTMETER_APP_CHANNEL,
-        .resolution    = ADC_RESOLUTION_12B,
-        .sampling_time = ADC_SAMPLETIME_56CYCLES,
-        .conv_mode     = ADC_MODE_SINGLE,
-        .dma_enabled   = false,
-    };
-
-    s_uart.huart = &s_halUart;
-
-    if (UART_Blocking_Init(&s_uart, &uartConfig) != UART_OK) {
-        return; /* no way to report readings; the caller decides what to do */
-    }
-
-    UART_Blocking_Transmit(&s_uart, (const uint8_t *)kGreeting,
-                           (uint16_t)(sizeof(kGreeting) - 1), HAL_MAX_DELAY);
-
-    if (ADC_Init(&s_adc, &adcConfig) != HAL_OK) {
-        return; /* nothing to measure with */
-    }
+    (void)arg;
 
     for (;;) {
-        float voltage = ADC_ReadChannelVoltage(&s_adc, ADC_VOLTMETER_APP_CHANNEL);
-
-        if (voltage >= 0.0f) {
-            /* %d.%03d keeps float formatting out of the printf library. */
-            int millivolts = (int)(voltage * 1000.0f);
-            int written = snprintf(s_txLine, sizeof(s_txLine), "Voltage: %d.%03d V\r\n",
-                                   millivolts / 1000, millivolts % 1000);
-
-            if (written > 0) {
-                UART_Blocking_Transmit(&s_uart, (const uint8_t *)s_txLine,
-                                       (uint16_t)written, HAL_MAX_DELAY);
-            }
-        }
-
-        HAL_Delay(ADC_VOLTMETER_APP_PERIOD_MS);
+        float voltage = VoltageReader_Read(&s_reader);
+        xQueueSend(s_voltageQueue, &voltage, 0u);
+        vTaskDelay(pdMS_TO_TICKS(READER_PERIOD_MS));
     }
+}
+
+/* Consumer: waits for a reading and prints it over UART ------------------ */
+static void DisplayTask(void *arg)
+{
+    (void)arg;
+    float voltage = 0.0f;
+
+    for (;;) {
+        if (xQueueReceive(s_voltageQueue, &voltage, portMAX_DELAY) == pdTRUE) {
+            VoltageDisplay_Show(&s_display, voltage);
+        }
+    }
+}
+
+/* ------------------------------------------------------------------------ */
+void AdcVoltmeterApp_Run(void)
+{
+    if (!VoltageDisplay_Init(&s_display)) {
+        Error_Handler(); /* no way to report readings; nothing else to do */
+    }
+
+    if (!VoltageReader_Init(&s_reader)) {
+        Error_Handler(); /* nothing to measure with */
+    }
+
+    s_voltageQueue = xQueueCreate(VOLTAGE_QUEUE_LENGTH, sizeof(float));
+    if (s_voltageQueue == NULL) {
+        Error_Handler();
+    }
+
+    if (xTaskCreate(ReaderTask, "reader", TASK_STACK_SIZE_WORDS, NULL,
+                    TASK_PRIO_READER, NULL) != pdPASS) {
+        Error_Handler();
+    }
+
+    if (xTaskCreate(DisplayTask, "display", TASK_STACK_SIZE_WORDS, NULL,
+                    TASK_PRIO_DISPLAY, NULL) != pdPASS) {
+        Error_Handler();
+    }
+
+    /* Hand control to the scheduler; only returns on a fatal error. */
+    vTaskStartScheduler();
+
+    Error_Handler();
 }
