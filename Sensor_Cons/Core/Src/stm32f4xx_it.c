@@ -76,9 +76,6 @@
 /* External variables --------------------------------------------------------*/
 extern HCD_HandleTypeDef hhcd_USB_OTG_HS;
 extern TIM_HandleTypeDef htim6;
-/* DMA handles */
-extern DMA_HandleTypeDef hdma_uart1_tx;  /* UART TX DMA handle */
-extern DMA_HandleTypeDef hdma_uart1_rx;  /* UART RX DMA handle */
 
 /* USER CODE BEGIN EV */
 
@@ -256,42 +253,6 @@ void EXTI0_IRQHandler(void)
   SEGGER_SYSVIEW_RecordEnterISR();
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
   SEGGER_SYSVIEW_RecordExitISR();
-}
-
-/**
-  * @brief This function handles USART1 global interrupt (UART interrupt mode).
-  */
-void USART1_IRQHandler(void)
-{
-  UART_Handle_t *uart = UART_GetActiveHandle();
-
-  if (uart != NULL && uart->huart != NULL && uart->huart->Instance == USART1) {
-    HAL_UART_IRQHandler(uart->huart);
-  }
-}
-
-/**
-  * @brief This function handles DMA2 stream5 global interrupt (UART1 RX).
-  */
-void DMA2_Stream5_IRQHandler(void)
-{
-  UART_Handle_t *uart = UART_GetActiveHandle();
-
-  if (uart != NULL && uart->huart != NULL && uart->huart->hdmarx != NULL) {
-    HAL_DMA_IRQHandler(uart->huart->hdmarx);
-  }
-}
-
-/**
-  * @brief This function handles DMA2 stream7 global interrupt (UART1 TX).
-  */
-void DMA2_Stream7_IRQHandler(void)
-{
-  UART_Handle_t *uart = UART_GetActiveHandle();
-
-  if (uart != NULL && uart->huart != NULL && uart->huart->hdmatx != NULL) {
-    HAL_DMA_IRQHandler(uart->huart->hdmatx);
-  }
 }
 
 /**

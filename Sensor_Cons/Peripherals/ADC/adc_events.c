@@ -13,6 +13,8 @@
 
 /* HAL callbacks -------------------------------------------------------------*/
 
+/* Runs in ISR context when a conversion finishes. Cache the value and flag
+ * before invoking the user callback so the data is valid even without one. */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
     ADC_HandleStruct* handle = ADC_GetHandleFor(hadc);
@@ -29,6 +31,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
     }
 }
 
+/* Overrun and DMA errors land here. The handle stays valid; only the user
+ * callback decides whether the error is fatal. */
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef* hadc)
 {
     ADC_HandleStruct* handle = ADC_GetHandleFor(hadc);

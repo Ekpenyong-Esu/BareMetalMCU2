@@ -21,6 +21,8 @@ typedef struct {
 
 /* Private constants ---------------------------------------------------------*/
 
+/* Board-fixed mapping: each ADC channel is hard-wired to one pin. Internal
+ * channels (temp sensor, VREF, VBAT) have no pin, hence NULL port. */
 static const ADC_ChannelMapEntry_t adc_channel_map[] = {
     { ADC_CHANNEL_0,  GPIOA, GPIO_PIN_0, "PA0" },
     { ADC_CHANNEL_1,  GPIOA, GPIO_PIN_1, "PA1" },
@@ -48,6 +50,12 @@ static const ADC_ChannelMapEntry_t adc_channel_map[] = {
 
 /* Private functions ---------------------------------------------------------*/
 
+/**
+ * @brief   Find the map entry for a channel
+ * @param   channel HAL channel constant
+ * @retval  const ADC_ChannelMapEntry_t* Entry, or NULL when unknown
+ * @note    Linear lookup; the table is small so no hashing is needed.
+ */
 static const ADC_ChannelMapEntry_t* ADC_FindChannel(uint32_t channel)
 {
     for (uint32_t i = 0; i < ADC_CHANNEL_MAP_COUNT; i++) {
@@ -71,7 +79,8 @@ HAL_StatusTypeDef ADC_ConfigureChannelGpio(uint32_t channel)
         return HAL_OK;  /* Internal channel, no pin to configure */
     }
 
-    /* The GPIO driver enables the port clock */
+    /* The GPIO driver enables the port clock. Analog mode disconnects the
+     * digital input buffer, which is what the ADC needs on the pin. */
     GPIO_InitTypeDef init = {0};
     init.Pin = entry->pin;
     init.Mode = GPIO_MODE_ANALOG;
@@ -81,6 +90,7 @@ HAL_StatusTypeDef ADC_ConfigureChannelGpio(uint32_t channel)
     return HAL_OK;
 }
 
+/* For log/debug output; not used for control flow. */
 const char* ADC_GetChannelName(uint32_t channel)
 {
     const ADC_ChannelMapEntry_t* entry = ADC_FindChannel(channel);

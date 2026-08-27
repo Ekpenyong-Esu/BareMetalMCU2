@@ -27,6 +27,11 @@ static const ADC_InstanceMapEntry_t adc_instance_map[ADC_INSTANCE_COUNT] = {
 
 /* Private functions ---------------------------------------------------------*/
 
+/**
+ * @brief   Find the DMA routing entry for an ADC instance
+ * @param   instance ADC peripheral (ADC1/ADC2/ADC3)
+ * @retval  const ADC_InstanceMapEntry_t* Entry, or NULL when unknown
+ */
 static const ADC_InstanceMapEntry_t* ADC_FindInstance(const ADC_TypeDef* instance)
 {
     for (uint32_t i = 0; i < ADC_INSTANCE_COUNT; i++) {
@@ -46,7 +51,7 @@ uint32_t ADC_InstanceIndex(const ADC_TypeDef* instance)
             return i;
         }
     }
-    return ADC_INSTANCE_COUNT;
+    return ADC_INSTANCE_COUNT;  /* not found: out-of-range sentinel */
 }
 
 HAL_StatusTypeDef ADC_EnableInstanceClock(const ADC_TypeDef* instance)
@@ -65,6 +70,7 @@ HAL_StatusTypeDef ADC_EnableInstanceClock(const ADC_TypeDef* instance)
     return HAL_OK;
 }
 
+/* Sets up and links the DMA stream fixed for this ADC instance; called only when dma_enabled. */
 HAL_StatusTypeDef ADC_ConfigureDma(ADC_HandleStruct* hadc)
 {
     if (hadc == NULL) {
@@ -81,8 +87,8 @@ HAL_StatusTypeDef ADC_ConfigureDma(ADC_HandleStruct* hadc)
     hadc->hdma_adc.Instance = entry->stream;
     hadc->hdma_adc.Init.Channel = entry->dmaChannel;
     hadc->hdma_adc.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hadc->hdma_adc.Init.PeriphInc = DMA_PINC_DISABLE;
-    hadc->hdma_adc.Init.MemInc = DMA_MINC_ENABLE;
+    hadc->hdma_adc.Init.PeriphInc = DMA_PINC_DISABLE;  /* ADC data register stays put */
+    hadc->hdma_adc.Init.MemInc = DMA_MINC_ENABLE;      /* buffer advances per sample */
     hadc->hdma_adc.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
     hadc->hdma_adc.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
     hadc->hdma_adc.Init.Mode = DMA_NORMAL;
@@ -99,6 +105,8 @@ HAL_StatusTypeDef ADC_ConfigureDma(ADC_HandleStruct* hadc)
     return HAL_OK;
 }
 
+/* Anything unrecognized falls back to the safe defaults: 12-bit resolution
+ * and a mid-range sampling time. */
 uint32_t ADC_ValidateResolution(uint32_t resolution)
 {
     switch (resolution) {
@@ -112,6 +120,7 @@ uint32_t ADC_ValidateResolution(uint32_t resolution)
     }
 }
 
+/* Same fallback strategy as ADC_ValidateResolution(), for sampling time instead. */
 uint32_t ADC_ValidateSamplingTime(uint32_t sampling_time)
 {
     switch (sampling_time) {

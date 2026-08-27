@@ -2,10 +2,9 @@
  * @file uart.h
  * @brief Shared UART utilities: teardown and active-link lookup
  *
- * Not a dispatcher: each transfer mode (uart_blocking.h/uart_interrupt.h/
- * uart_dma.h) is an independent, directly-callable API, the same way
- * tim_pwm.h/tim_ic.h are. This header only holds the handful of things that
- * are genuinely mode-agnostic, the UART equivalent of tim_clock.h.
+ * The transfer mode (uart_blocking.h) is an independent, directly-callable
+ * API. This header only holds the handful of things that are genuinely
+ * mode-agnostic.
  */
 
 #ifndef UART_H

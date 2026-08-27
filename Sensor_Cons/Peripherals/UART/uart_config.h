@@ -25,12 +25,6 @@ extern "C" {
 /* Default timeout value in milliseconds */
 #define UART_TIMEOUT         5000  /* Default timeout in milliseconds */
 
-/* DMA wiring for USART1, consumed by HAL_UART_MspInit() in Core */
-#define UART_DMA_TX_CHANNEL      DMA_CHANNEL_4
-#define UART_DMA_RX_CHANNEL      DMA_CHANNEL_4
-#define UART_DMA_TX_STREAM       DMA2_Stream7
-#define UART_DMA_RX_STREAM       DMA2_Stream5
-
 #ifdef __cplusplus
 }
 #endif

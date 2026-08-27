@@ -2,24 +2,24 @@
 /**
  ******************************************************************************
  * @file           : main.c
- * @brief          : UART showcase (STM32F429I-DISC1)
+ * @brief          : ADC voltmeter showcase (STM32F429I-DISC1)
  ******************************************************************************
  */
 /* USER CODE END Header */
 
 #include "main.h"
 #include "sys.h"
-#include "uart_interrupt_app.h"
+#include "adc_voltmeter_app.h"
 
 /**
- * @brief  Program entry point: bring up the system, then run the UART app.
+ * @brief  Program entry point: bring up the system, then run the ADC app.
  */
 int main(void)
 {
-    SYS_Init();              /* HAL init, system clock, SysTick */
-    UartInterruptApp_Run();  /* Echoes whatever is typed over USART1, forever */
+    SYS_Init();            /* HAL init, system clock, SysTick */
+    AdcVoltmeterApp_Run(); /* Prints the voltage on PA0 over USART1, forever */
 
-    /* Only reached if the UART failed to open. main() must never return. */
+    /* Only reached if the ADC or UART failed to open. main() must never return. */
     for (;;) {
     }
 }

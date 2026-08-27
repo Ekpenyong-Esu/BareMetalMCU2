@@ -900,22 +900,8 @@ void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef* hdcmi)
   HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
 }
 
-/* USART1 board wiring: PA9 -> TX, PA10 -> RX. The UART driver decides the
- * transfer mode, so ask it whether the DMA streams are needed. */
-static bool UART_UsesDma(void)
-{
-  const UART_Handle_t *handle = UART_GetActiveHandle();
-
-  return (handle != NULL) && (handle->config.mode == UART_MODE_DMA);
-}
-
-static bool UART_UsesInterrupts(void)
-{
-  const UART_Handle_t *handle = UART_GetActiveHandle();
-
-  return (handle != NULL) && (handle->config.mode != UART_MODE_BLOCKING);
-}
-
+/* USART1 board wiring: PA9 -> TX, PA10 -> RX. Blocking mode only, so no DMA
+ * streams and no NVIC line are set up here. */
 static void UART_MspInitPins(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -928,53 +914,6 @@ static void UART_MspInitPins(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-}
-
-static void UART_MspInitDma(UART_HandleTypeDef *huart)
-{
-  static DMA_HandleTypeDef hdma_usart1_tx;
-  static DMA_HandleTypeDef hdma_usart1_rx;
-
-  __HAL_RCC_DMA2_CLK_ENABLE();
-
-  hdma_usart1_tx.Instance = UART_DMA_TX_STREAM;
-  hdma_usart1_tx.Init.Channel = UART_DMA_TX_CHANNEL;
-  hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
-  hdma_usart1_tx.Init.PeriphInc = DMA_PINC_DISABLE;
-  hdma_usart1_tx.Init.MemInc = DMA_MINC_ENABLE;
-  hdma_usart1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-  hdma_usart1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-  hdma_usart1_tx.Init.Mode = DMA_NORMAL;
-  hdma_usart1_tx.Init.Priority = DMA_PRIORITY_LOW;
-  hdma_usart1_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-
-  if (HAL_DMA_Init(&hdma_usart1_tx) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  __HAL_LINKDMA(huart, hdmatx, hdma_usart1_tx);
-
-  hdma_usart1_rx.Instance = UART_DMA_RX_STREAM;
-  hdma_usart1_rx.Init.Channel = UART_DMA_RX_CHANNEL;
-  hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
-  hdma_usart1_rx.Init.PeriphInc = DMA_PINC_DISABLE;
-  hdma_usart1_rx.Init.MemInc = DMA_MINC_ENABLE;
-  hdma_usart1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-  hdma_usart1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-  hdma_usart1_rx.Init.Mode = DMA_NORMAL;
-  hdma_usart1_rx.Init.Priority = DMA_PRIORITY_HIGH;
-  hdma_usart1_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-
-  if (HAL_DMA_Init(&hdma_usart1_rx) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  __HAL_LINKDMA(huart, hdmarx, hdma_usart1_rx);
-
-  HAL_NVIC_SetPriority(DMA2_Stream7_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream7_IRQn);
-  HAL_NVIC_SetPriority(DMA2_Stream5_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 }
 
 /**
@@ -992,17 +931,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 
   __HAL_RCC_USART1_CLK_ENABLE();
   UART_MspInitPins();
-
-  if (UART_UsesDma())
-  {
-    UART_MspInitDma(huart);
-  }
-
-  if (UART_UsesInterrupts())
-  {
-    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(USART1_IRQn);
-  }
 }
 
 /**
@@ -1020,19 +948,6 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
 
   __HAL_RCC_USART1_CLK_DISABLE();
   HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9 | GPIO_PIN_10);
-
-  if (huart->hdmatx != NULL)
-  {
-    HAL_DMA_DeInit(huart->hdmatx);
-    HAL_NVIC_DisableIRQ(DMA2_Stream7_IRQn);
-  }
-  if (huart->hdmarx != NULL)
-  {
-    HAL_DMA_DeInit(huart->hdmarx);
-    HAL_NVIC_DisableIRQ(DMA2_Stream5_IRQn);
-  }
-
-  HAL_NVIC_DisableIRQ(USART1_IRQn);
 }
 
 /* USER CODE END 1 */

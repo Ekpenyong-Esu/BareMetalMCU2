@@ -18,7 +18,13 @@
 
 /* Private functions ---------------------------------------------------------*/
 
-/** @brief Read one channel and scale it, returning @p onError on failure */
+/**
+ * @brief   Read one channel and convert the raw count to volts
+ * @param   hadc ADC handle
+ * @param   channel Channel to read
+ * @param   onError Value returned when the read fails
+ * @retval  float Voltage in Volts, or @p onError on failure
+ */
 static float ADC_ReadScaled(ADC_HandleStruct* hadc, uint32_t channel, float onError)
 {
     uint32_t raw = 0;
@@ -32,6 +38,7 @@ static float ADC_ReadScaled(ADC_HandleStruct* hadc, uint32_t channel, float onEr
 
 /* Exported functions --------------------------------------------------------*/
 
+/* Full-scale count depends on the configured resolution (12-bit -> 4095). */
 uint32_t ADC_GetMaxValue(uint32_t resolution)
 {
     switch (resolution) {
@@ -43,11 +50,13 @@ uint32_t ADC_GetMaxValue(uint32_t resolution)
     }
 }
 
+/* Linear scale: raw / max * 3.3 V. */
 float ADC_RawToVoltage(uint32_t raw_value, uint32_t resolution)
 {
     return ((float)raw_value * ADC_REFERENCE_VOLTAGE) / (float)ADC_GetMaxValue(resolution);
 }
 
+/* Inverse of ADC_RawToVoltage. */
 uint32_t ADC_VoltageToRaw(float voltage, uint32_t resolution)
 {
     return (uint32_t)((voltage * (float)ADC_GetMaxValue(resolution)) / ADC_REFERENCE_VOLTAGE);
@@ -74,6 +83,7 @@ float ADC_ReadVrefInt(ADC_HandleStruct* hadc)
     return ADC_ReadScaled(hadc, ADC_CHANNEL_VREFINT, -1.0f);
 }
 
+/* VBAT reaches the ADC through an internal /2 divider, so double the result. */
 float ADC_ReadVbat(ADC_HandleStruct* hadc)
 {
     float voltage = ADC_ReadScaled(hadc, ADC_CHANNEL_VBAT, -1.0f);

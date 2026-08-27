@@ -19,6 +19,12 @@ static ADC_HandleStruct* s_handles[ADC_INSTANCE_COUNT] = {0};
 
 /* Private functions ---------------------------------------------------------*/
 
+/**
+ * @brief   Add a handle to the instance registry
+ * @param   hadc Handle to register
+ * @note    Lets HAL callbacks (which receive only the HAL handle) find the
+ *          owning driver handle.
+ */
 static void ADC_Register(ADC_HandleStruct* hadc)
 {
     uint32_t index = ADC_InstanceIndex(hadc->hal_handle.Instance);
@@ -27,6 +33,10 @@ static void ADC_Register(ADC_HandleStruct* hadc)
     }
 }
 
+/**
+ * @brief   Remove a handle from the instance registry
+ * @param   hadc Handle to remove; ignored if it is not the registered one
+ */
 static void ADC_Unregister(const ADC_HandleStruct* hadc)
 {
     uint32_t index = ADC_InstanceIndex(hadc->hal_handle.Instance);
@@ -35,6 +45,14 @@ static void ADC_Unregister(const ADC_HandleStruct* hadc)
     }
 }
 
+/**
+ * @brief   Configure one channel: analog GPIO, rank and sampling time
+ * @param   hadc ADC handle
+ * @param   channel Channel to configure
+ * @param   sampling_time Sampling time for that channel
+ * @param   rank Position in the conversion sequence (1-based)
+ * @retval  HAL_StatusTypeDef Status of the operation
+ */
 static HAL_StatusTypeDef ADC_ApplyChannel(ADC_HandleStruct* hadc, uint32_t channel,
                                           uint32_t sampling_time, uint32_t rank)
 {
@@ -53,6 +71,7 @@ static HAL_StatusTypeDef ADC_ApplyChannel(ADC_HandleStruct* hadc, uint32_t chann
 
 /* Exported functions --------------------------------------------------------*/
 
+/* Brings up the peripheral, GPIO and (optionally) DMA for one handle. */
 HAL_StatusTypeDef ADC_Init(ADC_HandleStruct* hadc, const ADC_ConfigTypeDef* config)
 {
     if (hadc == NULL || config == NULL) {
@@ -61,6 +80,7 @@ HAL_StatusTypeDef ADC_Init(ADC_HandleStruct* hadc, const ADC_ConfigTypeDef* conf
 
     log_debug("ADC: Initializing ADC");
 
+    /* NULL instance defaults to ADC1. */
     ADC_TypeDef* instance = (config->instance != NULL) ? config->instance : ADC1;
     if (ADC_InstanceIndex(instance) >= ADC_INSTANCE_COUNT) {
         return HAL_ERROR;
@@ -77,6 +97,7 @@ HAL_StatusTypeDef ADC_Init(ADC_HandleStruct* hadc, const ADC_ConfigTypeDef* conf
     hadc->config = *config;
     hadc->config.instance = instance;
 
+    /* Single-channel, software-triggered setup: no scan, no external trigger. */
     hadc->hal_handle.Instance = instance;
     hadc->hal_handle.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
     hadc->hal_handle.Init.Resolution = ADC_ValidateResolution(config->resolution);
@@ -111,6 +132,7 @@ HAL_StatusTypeDef ADC_Init(ADC_HandleStruct* hadc, const ADC_ConfigTypeDef* conf
     return HAL_OK;
 }
 
+/* Tears down HAL, DMA and the registry entry in that order. */
 HAL_StatusTypeDef ADC_DeInit(ADC_HandleStruct* hadc)
 {
     HAL_StatusTypeDef status = ADC_CheckReady(hadc);
@@ -136,6 +158,7 @@ HAL_StatusTypeDef ADC_DeInit(ADC_HandleStruct* hadc)
     return HAL_OK;
 }
 
+/* Single-channel convenience wrapper around ADC_ApplyChannel(). */
 HAL_StatusTypeDef ADC_ConfigChannel(ADC_HandleStruct* hadc, uint32_t channel,
                                     uint32_t sampling_time)
 {
@@ -147,6 +170,7 @@ HAL_StatusTypeDef ADC_ConfigChannel(ADC_HandleStruct* hadc, uint32_t channel,
     return ADC_ApplyChannel(hadc, channel, sampling_time, 1);
 }
 
+/* Applies every channel in order, then re-inits with the new sequence length. */
 HAL_StatusTypeDef ADC_ConfigMultiChannel(ADC_HandleStruct* hadc,
                                          const uint32_t* channels,
                                          const uint32_t* sampling_times,
@@ -171,6 +195,7 @@ HAL_StatusTypeDef ADC_ConfigMultiChannel(ADC_HandleStruct* hadc,
     hadc->hal_handle.Init.NbrOfConversion = num_channels;
     hadc->hal_handle.Init.ScanConvMode = (num_channels > 1) ? ENABLE : DISABLE;
 
+    /* Re-init so the new sequence length takes effect. */
     return HAL_ADC_Init(&hadc->hal_handle);
 }
 
@@ -184,6 +209,7 @@ HAL_StatusTypeDef ADC_SetResolution(ADC_HandleStruct* hadc, uint32_t resolution)
     hadc->hal_handle.Init.Resolution = ADC_ValidateResolution(resolution);
     hadc->config.resolution = resolution;
 
+    /* Re-init so the new resolution takes effect. */
     return HAL_ADC_Init(&hadc->hal_handle);
 }
 
@@ -193,6 +219,7 @@ HAL_StatusTypeDef ADC_SetSamplingTime(ADC_HandleStruct* hadc, uint32_t channel,
     return ADC_ConfigChannel(hadc, channel, sampling_time);
 }
 
+/* Reports HAL_BUSY mid-conversion instead of surfacing the raw HAL state. */
 HAL_StatusTypeDef ADC_GetStatus(const ADC_HandleStruct* hadc)
 {
     HAL_StatusTypeDef status = ADC_CheckReady(hadc);
@@ -203,6 +230,7 @@ HAL_StatusTypeDef ADC_GetStatus(const ADC_HandleStruct* hadc)
     return (hadc->hal_handle.State == HAL_ADC_STATE_BUSY) ? HAL_BUSY : HAL_OK;
 }
 
+/* Thin wrapper so callers don't need to know about ADC_CheckReady(). */
 bool ADC_IsReady(const ADC_HandleStruct* hadc)
 {
     return ADC_CheckReady(hadc) == HAL_OK;
@@ -214,9 +242,11 @@ bool ADC_IsConversionComplete(const ADC_HandleStruct* hadc)
         return false;
     }
 
+    /* End-of-conversion flag in the status register. */
     return (hadc->hal_handle.Instance->SR & ADC_FLAG_EOC) != 0U;
 }
 
+/* A fatal error leaves the handle unusable until the next ADC_Init. */
 void ADC_ErrorHandler(ADC_HandleStruct* hadc)
 {
     if (hadc != NULL) {
@@ -224,6 +254,7 @@ void ADC_ErrorHandler(ADC_HandleStruct* hadc)
     }
 }
 
+/* HAL callbacks carry only the HAL handle; the registry finds our handle. */
 ADC_HandleStruct* ADC_GetHandleFor(const ADC_HandleTypeDef* hal)
 {
     if (hal == NULL) {
@@ -234,6 +265,7 @@ ADC_HandleStruct* ADC_GetHandleFor(const ADC_HandleTypeDef* hal)
     return (index < ADC_INSTANCE_COUNT) ? s_handles[index] : NULL;
 }
 
+/* For log/debug output; not used for control flow. */
 const char* ADC_GetStatusString(HAL_StatusTypeDef status)
 {
     switch (status) {
