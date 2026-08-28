@@ -2,24 +2,24 @@
 /**
  ******************************************************************************
  * @file           : main.c
- * @brief          : ADC voltmeter showcase (STM32F429I-DISC1)
+ * @brief          : DAC waveform generator showcase (STM32F429I-DISC1)
  ******************************************************************************
  */
 /* USER CODE END Header */
 
 #include "main.h"
 #include "sys.h"
-#include "adc_voltmeter_app.h"
+#include "dac_waveform_app.h"
 
 /**
- * @brief  Program entry point: bring up the system, then run the ADC app.
+ * @brief  Program entry point: bring up the system, then run the DAC app.
  */
 int main(void)
 {
     SYS_Init();            /* HAL init, system clock, SysTick */
-    AdcVoltmeterApp_Run(); /* Prints the voltage on PA0 over USART1, forever */
+    DacWaveformApp_Run();  /* Outputs a sine wave on DAC_OUT1 (PA4), forever */
 
-    /* Only reached if the ADC or UART failed to open. main() must never return. */
+    /* Only reached if the DAC failed to open. main() must never return. */
     for (;;) {
     }
 }

@@ -271,15 +271,13 @@ endif()
 # Add your custom application .c files that aren't in Peripherals/
 # Example: target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/my_app.c)
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Application: the ADC voltmeter example (FreeRTOS)
-    ${CMAKE_SOURCE_DIR}/Applications/adc_app/adc_voltmeter_app.c
-    ${CMAKE_SOURCE_DIR}/Applications/adc_app/voltage_reader.c
-    ${CMAKE_SOURCE_DIR}/Applications/adc_app/voltage_display.c
+    # Application: the DAC waveform generator example
+    ${CMAKE_SOURCE_DIR}/Applications/dac_app/dac_waveform_app.c
 )
 
 # Make application headers available to the build
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    ${CMAKE_SOURCE_DIR}/Applications/adc_app
+    ${CMAKE_SOURCE_DIR}/Applications/dac_app
 )
 
 # ------------------------------------------------------------------------------
