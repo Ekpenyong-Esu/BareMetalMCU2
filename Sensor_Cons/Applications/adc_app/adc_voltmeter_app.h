@@ -1,6 +1,6 @@
 /**
  * @file adc_voltmeter_app.h
- * @brief The ADC application: voltmeter example, running on FreeRTOS
+ * @brief The ADC application: voltmeter example, bare-metal super-loop version
  */
 
 #ifndef ADC_VOLTMETER_APP_H
@@ -11,9 +11,9 @@ extern "C" {
 #endif
 
 /**
- * @brief   Run the ADC voltmeter on FreeRTOS (queue-based producer/consumer).
- * @note    Initialises everything, creates the tasks, then starts the
- *          scheduler; only returns on a fatal error.
+ * @brief   Run the ADC voltmeter as a blocking super-loop (no FreeRTOS).
+ * @note    Initialises everything, then samples and prints in a loop;
+ *          only returns on a fatal error.
  */
 void AdcVoltmeterApp_Run(void);
 
