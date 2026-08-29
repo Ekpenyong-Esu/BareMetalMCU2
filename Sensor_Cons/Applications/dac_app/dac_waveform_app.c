@@ -1,58 +1,82 @@
 /**
  * @file dac_waveform_app.c
- * @brief The DAC application: waveform generator example
+ * @brief The DAC application: waveform generator example, TIM6-TRGO driven.
  *
- * Outputs a sine wave on DAC_OUT1 (PA4). Wire a scope or the DAC pin to an
- * LED (through a resistor) to see/hear the result.
+ * Orchestrates independent modules:
+ *   sine_lut      builds the waveform sample table (pure math),
+ *   waveform_dac  owns the DAC config/arming,
+ *   waveform_timer owns the TIM6 pacing counter and TRGO routing.
  *
- * This is the "ordinary" version: no timer trigger, no DMA. A lookup table
- * is precomputed once, then the main loop writes one sample at a time and
- * paces itself with HAL_Delay. That is plenty for a slow, visible waveform;
- * a FreeRTOS or timer/DMA-driven version can push the sample rate much higher
- * without keeping the CPU busy in a delay loop.
+ * TIM6 fires TRGO on its update event; each trigger clocks the next LUT
+ * sample into the DAC, so timing is hardware-exact. With PSC=83 (84 MHz /
+ * 1 MHz) and ARR=2000 the update period is 2 ms, so 100 samples round out
+ * every 200 ms -> 5 Hz, same cadence as the HAL_Delay variant but without
+ * busy-waiting.
+ *
+ * Layering:
+ *   main.c              -> chooses and runs the application
+ *   dac_waveform_app    -> orchestration only (this module)
+ *   sine_lut, waveform_dac, waveform_timer, dac, tim -> independent modules
  */
 
 #include "dac_waveform_app.h"
 
+#include "sine_lut.h"
+#include "tim.h"
+#include "waveform_dac.h"
+#include "waveform_display.h"
+#include "waveform_timer.h"
+
 #include "dac.h"
-#include <math.h>
+
 #include <stdint.h>
 
-#define DAC_WAVEFORM_APP_CHANNEL       DAC_CHANNEL_1
-#define DAC_WAVEFORM_SAMPLE_COUNT      100U  /* points per sine cycle */
-#define DAC_WAVEFORM_SAMPLE_PERIOD_MS  2U    /* 100 * 2 ms = 200 ms period -> 5 Hz */
+/* Print every Nth sample: a blocking 115200 line takes ~2.5 ms, longer than
+ * the 2 ms tick, so printing every sample would stall the pump. */
+#define PRINT_EVERY_N_SAMPLES  20U
 
+/* Handles --------------------------------------------------------------- */
 static DAC_HandleStruct s_dac;
-static uint32_t s_sineTable[DAC_WAVEFORM_SAMPLE_COUNT];
-
-/* One-time lookup table: sample i holds the DAC code for angle 2*pi*i/N. */
-static void BuildSineTable(void)
-{
-    for (uint32_t i = 0; i < DAC_WAVEFORM_SAMPLE_COUNT; i++) {
-        float angle = (2.0f * (float)M_PI * (float)i) / (float)DAC_WAVEFORM_SAMPLE_COUNT;
-        float unit  = (sinf(angle) + 1.0f) * 0.5f; /* rescale -1..1 to 0..1 */
-        s_sineTable[i] = (uint32_t)(unit * (float)DAC_MAX_VALUE_12BIT);
-    }
-}
+static TIM_HandleTypeDef s_tim;
+static Waveform_Display_t s_display;
+static uint32_t s_lut[SINE_LUT_SIZE];
 
 void DacWaveformApp_Run(void)
 {
-    const DAC_ConfigTypeDef dacConfig = {
-        .channel       = DAC_WAVEFORM_APP_CHANNEL,
-        .trigger       = DAC_TRIGGER_NONE,
-        .output_buffer = DAC_OUTPUTBUFFER_ENABLE,
-    };
-
-    if (DAC_Init(&s_dac, &dacConfig) != HAL_OK) {
-        return; /* nothing to output to */
+    if (!Waveform_DisplayInit(&s_display)) {
+        return;
+    }
+    if (!Waveform_DacInit(&s_dac)) {
+        return;
+    }
+    if (!Waveform_TimerInit(&s_tim)) {
+        return;
+    }
+    if (!Waveform_TimerRouteTrigger(&s_tim)) {
+        return;
     }
 
-    BuildSineTable();
+    SineLut_Build(s_lut);
+
+    if (!Waveform_DacArmStart(&s_dac, s_lut[0])) {
+        return;
+    }
+    if (TIM_Start(&s_tim) != HAL_OK) {
+        return;
+    }
+
+    uint32_t index = 1U;
 
     for (;;) {
-        for (uint32_t i = 0; i < DAC_WAVEFORM_SAMPLE_COUNT; i++) {
-            DAC_SetValue(&s_dac, DAC_WAVEFORM_APP_CHANNEL, s_sineTable[i]);
-            HAL_Delay(DAC_WAVEFORM_SAMPLE_PERIOD_MS);
+        if (Waveform_TimerTickArrived(&s_tim)) {
+            Waveform_TimerAckTick(&s_tim);
+            DAC_SetValue(&s_dac, WAVEFORM_DAC_CHANNEL, s_lut[index]);
+
+            if ((index % PRINT_EVERY_N_SAMPLES) == 0U) {
+                Waveform_DisplayShow(&s_display, index, s_lut[index]);
+            }
+
+            index = (index + 1U) % SINE_LUT_SIZE;
         }
     }
 }
