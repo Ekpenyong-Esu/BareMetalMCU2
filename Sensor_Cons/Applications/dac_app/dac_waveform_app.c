@@ -1,30 +1,31 @@
 /**
  * @file dac_waveform_app.c
- * @brief The DAC application: waveform generator example, running on FreeRTOS.
+ * @brief The DAC application: waveform generator example, DMA-streamed.
  *
- * Two tasks and one queue:
- *   - waveform task (producer): wakes every 2 ms, writes the next LUT sample
- *     to the DAC, and posts a copy to the queue.
- *   - display task (consumer): blocks on the queue and prints over USART1.
+ * Nothing in software sits on the sample path. TIM7 raises TRGO every 2 ms,
+ * each trigger makes the DAC pull one word from the LUT over DMA, and the
+ * circular buffer repeats forever. The CPU is not involved per sample, so the
+ * output cannot jitter or slip no matter what the scheduler is doing.
  *
- * Flow:  vTaskDelayUntil -> DAC write -> queue -> UART
+ * That leaves the tasks doing only policy:
+ *   - waveform task: every WAVEFORM_HOLD_MS, points the DMA at the next table
+ *     and announces the change on the queue.
+ *   - display task: reports the level actually present on the pin, and prints
+ *     a banner whenever the queue tells it the shape changed.
  *
- * The queue is the point of this version. In the super-loop variant the print
- * happened inline, and a blocking 115200 line (~2.5 ms) outlasted the 2 ms
- * sample period. Here the producer never touches the UART, so a slow console
- * cannot disturb the waveform.
+ * Flow:  TIM7 TRGO -> DMA -> DAC -> PA4        (hardware only)
+ *        waveform task -> queue -> display task (software, off the sample path)
  *
- * Software still only refills the DAC's holding register; TIM7's TRGO decides
- * when that value reaches the pin, so RTOS scheduling jitter never shows up in
- * the analog output.
+ * The display reads DAC_GetValue rather than a software index, so what it
+ * prints is what the pin is really doing.
  *
  * Layering:
  *   main.c              -> chooses and runs the application
  *   dac_waveform_app    -> composition only (this module)
  *   waveform_lut        -> sample tables (pure math)
- *   waveform_dac        -> DAC config + arming
+ *   waveform_dac        -> DAC config + DMA streaming
  *   waveform_timer      -> TIM7 trigger source
- *   waveform_display    -> UART setup + formatted sample output
+ *   waveform_display    -> UART setup + formatted output
  */
 
 #include "dac_waveform_app.h"
@@ -43,10 +44,10 @@
 #include <stdint.h>
 
 /* How long each waveform runs before switching (200 ms per cycle). */
-#define CYCLES_PER_WAVEFORM   10U
+#define WAVEFORM_HOLD_MS      2000U
 
-/* Post every Nth sample to the console; 500 lines/s is unreadable. */
-#define PRINT_EVERY_N_SAMPLES 20U
+/* How often the console reports the output level. */
+#define DISPLAY_PERIOD_MS     250U
 
 /* Task priorities (higher number = higher priority). */
 #define TASK_PRIO_WAVEFORM    2
@@ -55,75 +56,52 @@
 /* Task stack size in words (1 word = 4 bytes on Cortex-M4). */
 #define TASK_STACK_SIZE_WORDS 256u
 
-/* Shallow on purpose: the UART cannot keep up with the sample rate, so a
- * longer queue would only buffer stale samples. */
-#define SAMPLE_QUEUE_LENGTH   8u
-
-typedef struct {
-    uint32_t        index;
-    uint32_t        code;
-    Waveform_Type_t type;
-} WaveformSample_t;
+#define WAVEFORM_QUEUE_LENGTH 4u
 
 /* Handles --------------------------------------------------------------- */
-static QueueHandle_t      s_sampleQueue;
+static QueueHandle_t      s_waveformQueue;
 static DAC_HandleStruct   s_dac;
 static Waveform_Display_t s_display;
 
-/* All tables are built up front so switching never stalls the producer. */
+/* Handed to the DMA, so these must live as long as the transfer does. */
 static uint32_t s_lut[WAVEFORM_TYPE_COUNT][WAVEFORM_LUT_SIZE];
 
-/* Producer: one DAC sample every 2 ms ------------------------------------ */
+/* Policy: rotate the shape the DMA is streaming --------------------------- */
 static void WaveformTask(void *arg)
 {
     (void)arg;
 
     TickType_t      lastWake = xTaskGetTickCount();
     Waveform_Type_t type     = WAVEFORM_SINE;
-    uint32_t        index    = 0U;
-    uint32_t        cycles   = 0U;
 
     for (;;) {
-        vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(WAVEFORM_SAMPLE_PERIOD_MS));
+        vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(WAVEFORM_HOLD_MS));
 
-        const uint32_t code = s_lut[type][index];
-        DAC_SetValue(&s_dac, WAVEFORM_DAC_CHANNEL, code);
+        type = (Waveform_Type_t)((type + 1U) % WAVEFORM_TYPE_COUNT);
 
-        if ((index % PRINT_EVERY_N_SAMPLES) == 0U) {
-            const WaveformSample_t sample = {index, code, type};
-            xQueueSend(s_sampleQueue, &sample, 0u); /* dropped if full: by design */
+        if (!Waveform_DacStream(&s_dac, s_lut[type])) {
+            Error_Handler();
         }
 
-        index = (index + 1U) % WAVEFORM_LUT_SIZE;
-
-        /* Switch shapes only at a cycle boundary, so the output never takes a
-         * step discontinuity mid-period. */
-        if (index == 0U && ++cycles == CYCLES_PER_WAVEFORM) {
-            cycles = 0U;
-            type   = (Waveform_Type_t)((type + 1U) % WAVEFORM_TYPE_COUNT);
-        }
+        xQueueSend(s_waveformQueue, &type, 0u);
     }
 }
 
-/* Consumer: waits for a sample and prints it over UART ------------------- */
+/* Reports the level actually on the pin ----------------------------------- */
 static void DisplayTask(void *arg)
 {
     (void)arg;
 
-    WaveformSample_t sample;
-    Waveform_Type_t  shown = WAVEFORM_TYPE_COUNT; /* forces a banner first time */
+    Waveform_Type_t type;
 
     for (;;) {
-        if (xQueueReceive(s_sampleQueue, &sample, portMAX_DELAY) != pdTRUE) {
-            continue;
+        /* Doubles as the print interval: a shape change cuts the wait short. */
+        if (xQueueReceive(s_waveformQueue, &type,
+                          pdMS_TO_TICKS(DISPLAY_PERIOD_MS)) == pdTRUE) {
+            Waveform_DisplayBanner(&s_display, WaveformLut_Name(type));
         }
 
-        if (sample.type != shown) {
-            shown = sample.type;
-            Waveform_DisplayBanner(&s_display, WaveformLut_Name(shown));
-        }
-
-        Waveform_DisplayShow(&s_display, sample.index, sample.code);
+        Waveform_DisplayLevel(&s_display, DAC_GetValue(&s_dac, WAVEFORM_DAC_CHANNEL));
     }
 }
 
@@ -131,7 +109,7 @@ static void DisplayTask(void *arg)
 void DacWaveformApp_Run(void)
 {
     if (!Waveform_DisplayInit(&s_display)) {
-        Error_Handler(); /* no way to report samples; nothing else to do */
+        Error_Handler(); /* no way to report anything; nothing else to do */
     }
 
     if (!Waveform_DacInit(&s_dac)) {
@@ -142,16 +120,19 @@ void DacWaveformApp_Run(void)
         WaveformLut_Build(s_lut[t], (Waveform_Type_t)t);
     }
 
-    if (!Waveform_DacArmStart(&s_dac, s_lut[WAVEFORM_SINE][0])) {
+    if (!Waveform_DacStream(&s_dac, s_lut[WAVEFORM_SINE])) {
         Error_Handler();
     }
 
+    /* Started last: the DMA must be armed before the first trigger arrives. */
     if (!Waveform_TimerStart()) {
         Error_Handler();
     }
 
-    s_sampleQueue = xQueueCreate(SAMPLE_QUEUE_LENGTH, sizeof(WaveformSample_t));
-    if (s_sampleQueue == NULL) {
+    Waveform_DisplayBanner(&s_display, WaveformLut_Name(WAVEFORM_SINE));
+
+    s_waveformQueue = xQueueCreate(WAVEFORM_QUEUE_LENGTH, sizeof(Waveform_Type_t));
+    if (s_waveformQueue == NULL) {
         Error_Handler();
     }
 

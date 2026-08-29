@@ -13,7 +13,7 @@
 
 #define WAVEFORM_DISPLAY_TX_SIZE  64
 
-static const char kGreeting[] = "DAC waveform on PA4. Printing decimated samples.\r\n";
+static const char kGreeting[] = "DAC waveform on PA4, streamed by DMA.\r\n";
 static char s_txLine[WAVEFORM_DISPLAY_TX_SIZE];
 
 bool Waveform_DisplayInit(Waveform_Display_t *display)
@@ -48,12 +48,12 @@ void Waveform_DisplayBanner(Waveform_Display_t *display, const char *name)
     }
 }
 
-void Waveform_DisplayShow(Waveform_Display_t *display, uint32_t index, uint32_t code)
+void Waveform_DisplayLevel(Waveform_Display_t *display, uint32_t code)
 {
     /* %d.%03d keeps float formatting out of the printf library. */
     int millivolts = (int)(DAC_RawToVoltage(code) * 1000.0f);
-    int written = snprintf(s_txLine, sizeof(s_txLine), "s[%2lu] = %4lu  (%d.%03d V)\r\n",
-                           (unsigned long)index, (unsigned long)code,
+    int written = snprintf(s_txLine, sizeof(s_txLine), "out = %4lu  (%d.%03d V)\r\n",
+                           (unsigned long)code,
                            millivolts / 1000, millivolts % 1000);
 
     if (written > 0) {

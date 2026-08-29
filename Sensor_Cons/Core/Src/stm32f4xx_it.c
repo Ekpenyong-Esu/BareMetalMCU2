@@ -32,6 +32,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "SEGGER_SYSVIEW.h"
+#include "dac_dma.h"
 
 /* USER CODE END Includes */
 /**
@@ -193,6 +194,19 @@ void TIM6_DAC_IRQHandler(void)
   /* USER CODE END TIM6_DAC_IRQn 1 */
 
   /* USER CODE END TIM6_DAC_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 stream5 global interrupt.
+  *        Carries the DAC waveform; deferred to DAC_DMA_IrqHandler().
+  */
+void DMA1_Stream5_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream5_IRQn 0 */
+  SEGGER_SYSVIEW_RecordEnterISR();
+  DAC_DMA_IrqHandler();
+  SEGGER_SYSVIEW_RecordExitISR();
+  /* USER CODE END DMA1_Stream5_IRQn 0 */
 }
 
 /**

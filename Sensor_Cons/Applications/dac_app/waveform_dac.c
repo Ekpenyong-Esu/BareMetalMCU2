@@ -22,11 +22,15 @@ bool Waveform_DacInit(DAC_HandleStruct *dac)
     return true;
 }
 
-bool Waveform_DacArmStart(DAC_HandleStruct *dac, uint32_t firstCode)
+bool Waveform_DacStream(DAC_HandleStruct *dac, uint32_t *samples)
 {
-    if (HAL_DAC_SetValue(&dac->hal_handle, WAVEFORM_DAC_CHANNEL,
-                         DAC_ALIGN_12B_R, firstCode) != HAL_OK) {
+    /* Ignored on the first call, when nothing is streaming yet. */
+    (void)DAC_StopDMA(dac, WAVEFORM_DAC_CHANNEL);
+
+    if (DAC_StartCircularDMA(dac, WAVEFORM_DAC_CHANNEL, samples,
+                             WAVEFORM_LUT_SIZE) != HAL_OK) {
+        log_error("DAC waveform: DMA stream start failed");
         return false;
     }
-    return DAC_Start(dac, WAVEFORM_DAC_CHANNEL) == HAL_OK;
+    return true;
 }

@@ -26,8 +26,8 @@ bool Waveform_DisplayInit(Waveform_Display_t *display);
 /** Announce which waveform is now being generated. */
 void Waveform_DisplayBanner(Waveform_Display_t *display, const char *name);
 
-/** Print one sample as "s[i] = code (x.xxx V)". */
-void Waveform_DisplayShow(Waveform_Display_t *display, uint32_t index, uint32_t code);
+/** Print the live output level as "out = code (x.xxx V)". */
+void Waveform_DisplayLevel(Waveform_Display_t *display, uint32_t code);
 
 #ifdef __cplusplus
 }
