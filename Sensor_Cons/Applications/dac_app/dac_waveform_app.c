@@ -3,20 +3,20 @@
  * @brief The DAC application: waveform generator example, running on FreeRTOS.
  *
  * Two tasks and one queue:
- *   - waveform task (producer): wakes every 2 ms, writes the next LUT sample
- *     to the DAC, and posts a copy to the queue.
+ *   - waveform task (producer): woken by the TIM7 update ISR, writes the next
+ *     LUT sample to the DAC, and posts a copy to the queue.
  *   - display task (consumer): blocks on the queue and prints over USART1.
  *
- * Flow:  vTaskDelayUntil -> DAC write -> queue -> UART
+ * Flow:  TIM7 IRQ -> notify -> DAC write -> queue -> UART
  *
- * The queue is the point of this version. In the super-loop variant the print
- * happened inline, and a blocking 115200 line (~2.5 ms) outlasted the 2 ms
- * sample period. Here the producer never touches the UART, so a slow console
- * cannot disturb the waveform.
+ * The queue keeps the producer off the UART: a blocking 115200 line (~2.5 ms)
+ * outlasts the 2 ms sample period, so printing inline would disturb the
+ * waveform.
  *
- * Software still only refills the DAC's holding register; TIM7's TRGO decides
- * when that value reaches the pin, so RTOS scheduling jitter never shows up in
- * the analog output.
+ * Taking the tick from the timer's own interrupt rather than from
+ * vTaskDelayUntil means the sample rate is set by TIM7 alone, so it is neither
+ * quantised to the 1 kHz RTOS tick nor able to slip a sample when the
+ * scheduler runs late.
  *
  * Layering:
  *   main.c              -> chooses and runs the application
@@ -73,18 +73,31 @@ static Waveform_Display_t s_display;
 /* All tables are built up front so switching never stalls the producer. */
 static uint32_t s_lut[WAVEFORM_TYPE_COUNT][WAVEFORM_LUT_SIZE];
 
-/* Producer: one DAC sample every 2 ms ------------------------------------ */
+static TaskHandle_t s_waveformTask;
+
+/* ISR: hand the tick to the waveform task and get out -------------------- */
+static void OnTimerTick(void)
+{
+    BaseType_t higherPriorityTaskWoken = pdFALSE;
+    vTaskNotifyGiveFromISR(s_waveformTask, &higherPriorityTaskWoken);
+    portYIELD_FROM_ISR(higherPriorityTaskWoken);
+}
+
+/* Producer: one DAC sample per TIM7 update ------------------------------- */
 static void WaveformTask(void *arg)
 {
     (void)arg;
 
-    TickType_t      lastWake = xTaskGetTickCount();
-    Waveform_Type_t type     = WAVEFORM_SINE;
-    uint32_t        index    = 0U;
-    uint32_t        cycles   = 0U;
+    Waveform_Type_t type   = WAVEFORM_SINE;
+    uint32_t        index  = 0U;
+    uint32_t        cycles = 0U;
+
+    if (!Waveform_TimerStart(OnTimerTick)) {
+        Error_Handler();
+    }
 
     for (;;) {
-        vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(WAVEFORM_SAMPLE_PERIOD_MS));
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
         const uint32_t code = s_lut[type][index];
         DAC_SetValue(&s_dac, WAVEFORM_DAC_CHANNEL, code);
@@ -146,17 +159,14 @@ void DacWaveformApp_Run(void)
         Error_Handler();
     }
 
-    if (!Waveform_TimerStart()) {
-        Error_Handler();
-    }
-
     s_sampleQueue = xQueueCreate(SAMPLE_QUEUE_LENGTH, sizeof(WaveformSample_t));
     if (s_sampleQueue == NULL) {
         Error_Handler();
     }
 
+    /* The task starts the timer itself, so it exists before the first IRQ. */
     if (xTaskCreate(WaveformTask, "waveform", TASK_STACK_SIZE_WORDS, NULL,
-                    TASK_PRIO_WAVEFORM, NULL) != pdPASS) {
+                    TASK_PRIO_WAVEFORM, &s_waveformTask) != pdPASS) {
         Error_Handler();
     }
 
