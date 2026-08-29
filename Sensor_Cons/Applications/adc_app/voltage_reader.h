@@ -1,6 +1,6 @@
 /**
  * @file voltage_reader.h
- * @brief SRP module: owns the ADC channel and turns it into voltage samples.
+ * @brief SRP module: owns the ADC scan sequence and turns it into voltages.
  */
 
 #ifndef VOLTAGE_READER_H
@@ -14,15 +14,21 @@
 extern "C" {
 #endif
 
+/** Channels in the scan; also the length of the buffer Read() fills. */
+#define VOLTAGE_READER_CHANNEL_COUNT  4u
+
 typedef struct {
     ADC_HandleStruct adc;
 } VoltageReader_t;
 
-/** Bring up ADC1 channel 0 (PA0) for single-conversion polling reads. */
+/** Bring up ADC1 in scan mode over the channel list. */
 bool VoltageReader_Init(VoltageReader_t *reader);
 
-/** Take one reading; returns the voltage in volts, or a negative value on error. */
-float VoltageReader_Read(VoltageReader_t *reader);
+/** Run one scan; fills VOLTAGE_READER_CHANNEL_COUNT volts. False on error. */
+bool VoltageReader_Read(VoltageReader_t *reader, float *volts);
+
+/** Pin name of the channel at @p index in the scan, for labelling output. */
+const char *VoltageReader_ChannelName(uint32_t index);
 
 #ifdef __cplusplus
 }

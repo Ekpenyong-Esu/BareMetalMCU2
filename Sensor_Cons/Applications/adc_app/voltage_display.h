@@ -23,8 +23,11 @@ typedef struct {
 /** Bring up USART1 (115200 8N1) and print the ready-banner. */
 bool VoltageDisplay_Init(VoltageDisplay_t *display);
 
-/** Print one "Voltage: x.xxx V" line. Silently ignores negative (error) readings. */
-void VoltageDisplay_Show(VoltageDisplay_t *display, float voltage);
+/** Print one "PA0 : x.xxx V" line. Silently ignores negative (error) readings. */
+void VoltageDisplay_Show(VoltageDisplay_t *display, const char *label, float voltage);
+
+/** Blank line, so consecutive scans stay visually separated. */
+void VoltageDisplay_EndScan(VoltageDisplay_t *display);
 
 #ifdef __cplusplus
 }

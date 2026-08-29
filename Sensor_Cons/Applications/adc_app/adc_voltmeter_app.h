@@ -1,6 +1,6 @@
 /**
  * @file adc_voltmeter_app.h
- * @brief The ADC application: voltmeter example, bare-metal super-loop version
+ * @brief The ADC application: multi-channel voltmeter, bare-metal super-loop
  */
 
 #ifndef ADC_VOLTMETER_APP_H

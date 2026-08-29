@@ -10,11 +10,20 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define VOLTAGE_DISPLAY_TX_SIZE  64  /* one line: "Voltage: x.xxx V\r\n" */
+#define VOLTAGE_DISPLAY_TX_SIZE  64  /* one line: "PA0 : x.xxx V\r\n" */
 
-static const char kGreeting[] = "ADC voltmeter ready. Reading PA0 once per second.\r\n";
+static const char kGreeting[] =
+    "ADC scanner ready. Polling PA0, PA1, PA2 and VREFINT once per second.\r\n";
 
 static char s_txLine[VOLTAGE_DISPLAY_TX_SIZE];
+
+static void VoltageDisplay_Send(VoltageDisplay_t *display, const char *text, int length)
+{
+    if (length > 0) {
+        UART_Blocking_Transmit(&display->uart, (const uint8_t *)text,
+                               (uint16_t)length, HAL_MAX_DELAY);
+    }
+}
 
 bool VoltageDisplay_Init(VoltageDisplay_t *display)
 {
@@ -33,12 +42,11 @@ bool VoltageDisplay_Init(VoltageDisplay_t *display)
         return false;
     }
 
-    UART_Blocking_Transmit(&display->uart, (const uint8_t *)kGreeting,
-                           (uint16_t)(sizeof(kGreeting) - 1), HAL_MAX_DELAY);
+    VoltageDisplay_Send(display, kGreeting, (int)(sizeof(kGreeting) - 1));
     return true;
 }
 
-void VoltageDisplay_Show(VoltageDisplay_t *display, float voltage)
+void VoltageDisplay_Show(VoltageDisplay_t *display, const char *label, float voltage)
 {
     if (voltage < 0.0f) {
         return; /* reader signals "no sample" with a negative value */
@@ -46,11 +54,13 @@ void VoltageDisplay_Show(VoltageDisplay_t *display, float voltage)
 
     /* %d.%03d keeps float formatting out of the printf library. */
     int millivolts = (int)(voltage * 1000.0f);
-    int written = snprintf(s_txLine, sizeof(s_txLine), "Voltage: %d.%03d V\r\n",
-                           millivolts / 1000, millivolts % 1000);
+    int written = snprintf(s_txLine, sizeof(s_txLine), "%-4s : %d.%03d V\r\n",
+                           label, millivolts / 1000, millivolts % 1000);
 
-    if (written > 0) {
-        UART_Blocking_Transmit(&display->uart, (const uint8_t *)s_txLine,
-                               (uint16_t)written, HAL_MAX_DELAY);
-    }
+    VoltageDisplay_Send(display, s_txLine, written);
+}
+
+void VoltageDisplay_EndScan(VoltageDisplay_t *display)
+{
+    VoltageDisplay_Send(display, "\r\n", 2);
 }

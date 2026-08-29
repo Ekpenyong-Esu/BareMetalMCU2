@@ -1,19 +1,23 @@
 /**
  * @file adc_voltmeter_app.c
- * @brief The ADC application: voltmeter example, bare-metal super-loop version.
+ * @brief The ADC application: multi-channel voltmeter, polled super-loop.
  *
- * No FreeRTOS here: a single blocking loop samples PA0 (ADC1 channel 0) once
- * a second and prints each reading over USART1 (115200 8N1) before sleeping.
+ * One ADC, several inputs. A scan sequence walks PA0, PA1, PA2 and the
+ * internal reference in rank order, and the loop waits for each conversion in
+ * turn before reading it out.
  *
- * Flow:  ADC -> read -> format -> UART -> HAL_Delay
- * This is the simpler cousin of the FreeRTOS queue-based version: the UART
- * transmit blocks the loop, but at 1 sample/s nobody cares, and the code
- * stays small enough to see the whole application on one screen.
+ * Flow:  start scan -> wait, read -> wait, read -> ... -> print -> HAL_Delay
+ *
+ * The waiting is the point of this version: the CPU spins inside
+ * ADC_PollForConversion for the whole sequence and can do nothing else. That
+ * is affordable at one scan per second, and it makes the sequencing visible
+ * with no callbacks to follow. The interrupt and DMA branches remove those
+ * waits one at a time.
  *
  * Layering:
  *   main.c              -> chooses and runs the application
  *   adc_voltmeter_app   -> composition only (this module)
- *   voltage_reader      -> ADC setup + single-channel voltage reads
+ *   voltage_reader      -> ADC scan setup + polled voltage reads
  *   voltage_display     -> UART setup + formatted voltage output
  */
 
@@ -23,7 +27,9 @@
 #include "voltage_display.h"
 #include "voltage_reader.h"
 
-/* Sample cadence (ms): how often the loop takes a reading. */
+#include <stdint.h>
+
+/* Sample cadence (ms): how often the loop runs a scan. */
 #define SAMPLE_PERIOD_MS      1000u
 
 /* Handles --------------------------------------------------------------- */
@@ -41,11 +47,17 @@ void AdcVoltmeterApp_Run(void)
         Error_Handler(); /* nothing to measure with */
     }
 
-    /* Super-loop: sample, print, sleep. Never returns. */
+    /* Super-loop: scan, print, sleep. Never returns. */
     for (;;) {
-        float voltage = VoltageReader_Read(&s_reader);
+        float volts[VOLTAGE_READER_CHANNEL_COUNT];
 
-        VoltageDisplay_Show(&s_display, voltage);
+        if (VoltageReader_Read(&s_reader, volts)) {
+            for (uint32_t i = 0; i < VOLTAGE_READER_CHANNEL_COUNT; i++) {
+                VoltageDisplay_Show(&s_display, VoltageReader_ChannelName(i), volts[i]);
+            }
+            VoltageDisplay_EndScan(&s_display);
+        }
+
         HAL_Delay(SAMPLE_PERIOD_MS);
     }
 }
