@@ -58,9 +58,13 @@ void AdcVoltmeterApp_Run(void)
             }
 
             if (VoltageReader_Take(&s_reader, volts)) {
-                for (uint32_t i = 0; i < VOLTAGE_READER_CHANNEL_COUNT; i++) {
+                for (uint32_t i = 0; i < VOLTAGE_READER_VREFINT_INDEX; i++) {
                     VoltageDisplay_Show(&s_display, VoltageReader_ChannelName(i), volts[i]);
                 }
+
+                /* The VREFINT rank is reported as the supply it measures; scaled
+                 * back to volts it would only ever restate the bandgap. */
+                VoltageDisplay_Show(&s_display, "VDDA", VoltageReader_Vdda(&s_reader));
                 VoltageDisplay_EndScan(&s_display);
             }
         }

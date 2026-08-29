@@ -20,10 +20,14 @@ extern "C" {
 /** Channels in the scan; also the length of the buffer Take() fills. */
 #define VOLTAGE_READER_CHANNEL_COUNT  4u
 
+/** Rank of the internal reference, which measures the supply rather than a pin. */
+#define VOLTAGE_READER_VREFINT_INDEX  (VOLTAGE_READER_CHANNEL_COUNT - 1u)
+
 typedef struct {
     ADC_HandleStruct adc;
     /** Written by the DMA controller, so it must outlive every transfer. */
     uint32_t         raw[VOLTAGE_READER_CHANNEL_COUNT];
+    float            vdda;     /*!< Supply measured during the last scan */
     volatile bool    complete; /*!< Set by the transfer-complete ISR */
 } VoltageReader_t;
 
@@ -38,6 +42,9 @@ bool VoltageReader_IsComplete(const VoltageReader_t *reader);
 
 /** Convert the finished scan to volts. False if it is not complete yet. */
 bool VoltageReader_Take(VoltageReader_t *reader, float *volts);
+
+/** Analog supply seen during the last successful scan, in volts. */
+float VoltageReader_Vdda(const VoltageReader_t *reader);
 
 /** Pin name of the channel at @p index in the scan, for labelling output. */
 const char *VoltageReader_ChannelName(uint32_t index);

@@ -30,6 +30,31 @@ uint32_t ADC_GetMaxValue(uint32_t resolution);
 float ADC_RawToVoltage(uint32_t raw_value, uint32_t resolution);
 
 /**
+ * @brief   Convert a raw count to volts against a known reference
+ * @details Counts are a fraction of whatever is on VREF+, so a reading is only
+ *          as accurate as the reference it is scaled against. Pair with
+ *          ADC_MeasureVdda() instead of trusting the nominal 3.3 V.
+ * @param   raw_value Raw ADC value
+ * @param   resolution HAL resolution constant
+ * @param   reference_voltage Full-scale voltage in Volts
+ * @retval  float Voltage in Volts
+ */
+float ADC_RawToVoltageRef(uint32_t raw_value, uint32_t resolution,
+                          float reference_voltage);
+
+/**
+ * @brief   Derive the analog supply from a reading of the internal reference
+ * @details VREFINT is a bandgap fixed at about 1.21 V, so the count it
+ *          produces varies only with VDDA. Every part is factory-trimmed at
+ *          exactly 3.3 V and the resulting count is stored in system memory,
+ *          which turns one VREFINT conversion into a measurement of the rail.
+ * @param   vrefint_raw Raw count from ADC_CHANNEL_VREFINT
+ * @param   resolution HAL resolution constant used for that conversion
+ * @retval  float VDDA in Volts, or -1.0f when @p vrefint_raw is zero
+ */
+float ADC_MeasureVdda(uint32_t vrefint_raw, uint32_t resolution);
+
+/**
  * @brief   Convert volts to a raw count
  * @param   voltage Voltage in Volts
  * @param   resolution HAL resolution constant

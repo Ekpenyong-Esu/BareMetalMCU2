@@ -113,11 +113,21 @@ bool VoltageReader_Take(VoltageReader_t *reader, float *volts)
     /* Releases the stream so the next Start() can rearm it. */
     (void)ADC_StopDMA(&reader->adc);
 
+    /* Scale against the supply this scan actually ran on, not a nominal 3.3 V. */
+    reader->vdda = ADC_MeasureVdda(reader->raw[VOLTAGE_READER_VREFINT_INDEX],
+                                   reader->adc.config.resolution);
+
     for (uint32_t i = 0; i < VOLTAGE_READER_CHANNEL_COUNT; i++) {
-        volts[i] = ADC_RawToVoltage(reader->raw[i], reader->adc.config.resolution);
+        volts[i] = ADC_RawToVoltageRef(reader->raw[i], reader->adc.config.resolution,
+                                       reader->vdda);
     }
 
     return true;
+}
+
+float VoltageReader_Vdda(const VoltageReader_t *reader)
+{
+    return reader->vdda;
 }
 
 const char *VoltageReader_ChannelName(uint32_t index)

@@ -16,6 +16,12 @@
 #define ADC_VBAT_DIVIDER    2.0f        /*!< VBAT internal divider ratio */
 #define ADC_ABSOLUTE_ZERO   -273.15f    /*!< Returned when a temperature read fails */
 
+/** @brief System-memory address of the factory VREFINT count (STM32F42x/F43x) */
+#define ADC_VREFINT_CAL     (*(const volatile uint16_t*)0x1FFF7A2AU)
+
+/** @brief Supply the factory used when trimming ADC_VREFINT_CAL */
+#define ADC_VREFINT_CAL_VDDA  3.3f
+
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -53,7 +59,28 @@ uint32_t ADC_GetMaxValue(uint32_t resolution)
 /* Linear scale: raw / max * 3.3 V. */
 float ADC_RawToVoltage(uint32_t raw_value, uint32_t resolution)
 {
-    return ((float)raw_value * ADC_REFERENCE_VOLTAGE) / (float)ADC_GetMaxValue(resolution);
+    return ADC_RawToVoltageRef(raw_value, resolution, ADC_REFERENCE_VOLTAGE);
+}
+
+float ADC_RawToVoltageRef(uint32_t raw_value, uint32_t resolution,
+                          float reference_voltage)
+{
+    return ((float)raw_value * reference_voltage) / (float)ADC_GetMaxValue(resolution);
+}
+
+float ADC_MeasureVdda(uint32_t vrefint_raw, uint32_t resolution)
+{
+    if (vrefint_raw == 0U) {
+        return -1.0f;
+    }
+
+    /* The stored count is 12-bit; rescale it if this conversion was narrower. */
+    float calibrated = (float)ADC_VREFINT_CAL *
+                       (float)ADC_GetMaxValue(resolution) / (float)ADC_MAX_VALUE_12BIT;
+
+    /* raw is inversely proportional to VDDA, so the trim point scales by the
+     * ratio of the two counts. */
+    return (ADC_VREFINT_CAL_VDDA * calibrated) / (float)vrefint_raw;
 }
 
 /* Inverse of ADC_RawToVoltage. */
