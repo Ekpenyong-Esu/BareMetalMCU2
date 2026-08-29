@@ -17,7 +17,7 @@
 int main(void)
 {
     SYS_Init();            /* HAL init, system clock, SysTick */
-    DacWaveformApp_Run();  /* Outputs a sine wave on DAC_OUT1 (PA4), forever */
+    DacWaveformApp_Run();  /* Cycles waveforms on DAC_OUT1 (PA4) under FreeRTOS */
 
     /* Only reached if the DAC failed to open. main() must never return. */
     for (;;) {

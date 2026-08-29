@@ -32,6 +32,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "SEGGER_SYSVIEW.h"
+#include "waveform_timer.h"
 
 /* USER CODE END Includes */
 /**
@@ -193,6 +194,19 @@ void TIM6_DAC_IRQHandler(void)
   /* USER CODE END TIM6_DAC_IRQn 1 */
 
   /* USER CODE END TIM6_DAC_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM7 global interrupt.
+  *        Paces the DAC waveform app; deferred to Waveform_TimerIrqHandler().
+  */
+void TIM7_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM7_IRQn 0 */
+  SEGGER_SYSVIEW_RecordEnterISR();
+  Waveform_TimerIrqHandler();
+  SEGGER_SYSVIEW_RecordExitISR();
+  /* USER CODE END TIM7_IRQn 0 */
 }
 
 /**

@@ -11,7 +11,7 @@ bool Waveform_DacInit(DAC_HandleStruct *dac)
 {
     const DAC_ConfigTypeDef dacConfig = {
         .channel       = WAVEFORM_DAC_CHANNEL,
-        .trigger       = DAC_TRIGGER_T6_TRGO,
+        .trigger       = DAC_TRIGGER_T7_TRGO,
         .output_buffer = DAC_OUTPUTBUFFER_ENABLE,
     };
 
