@@ -273,9 +273,9 @@ endif()
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Application: the DAC waveform generator example
     ${CMAKE_SOURCE_DIR}/Applications/dac_app/dac_waveform_app.c
-    ${CMAKE_SOURCE_DIR}/Applications/dac_app/sine_lut.c
     ${CMAKE_SOURCE_DIR}/Applications/dac_app/waveform_dac.c
     ${CMAKE_SOURCE_DIR}/Applications/dac_app/waveform_display.c
+    ${CMAKE_SOURCE_DIR}/Applications/dac_app/waveform_lut.c
     ${CMAKE_SOURCE_DIR}/Applications/dac_app/waveform_timer.c
 )
 

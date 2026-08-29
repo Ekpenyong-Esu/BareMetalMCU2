@@ -3,9 +3,13 @@
  * @brief The DAC application: waveform generator example, TIM6-TRGO driven.
  *
  * Orchestrates independent modules:
- *   sine_lut      builds the waveform sample table (pure math),
- *   waveform_dac  owns the DAC config/arming,
- *   waveform_timer owns the TIM6 pacing counter and TRGO routing.
+ *   waveform_lut     builds the sample tables (pure math),
+ *   waveform_dac     owns the DAC config/arming,
+ *   waveform_timer   owns the TIM6 pacing counter and TRGO routing,
+ *   waveform_display owns the USART1 output.
+ *
+ * Cycles sine -> triangle -> sawtooth on DAC_OUT1 (PA4), switching every
+ * CYCLES_PER_WAVEFORM periods.
  *
  * TIM6 fires TRGO on its update event; each trigger clocks the next LUT
  * sample into the DAC, so timing is hardware-exact. With PSC=83 (84 MHz /
@@ -16,15 +20,16 @@
  * Layering:
  *   main.c              -> chooses and runs the application
  *   dac_waveform_app    -> orchestration only (this module)
- *   sine_lut, waveform_dac, waveform_timer, dac, tim -> independent modules
+ *   waveform_lut, waveform_dac, waveform_timer, waveform_display, dac, tim
+ *                       -> independent modules
  */
 
 #include "dac_waveform_app.h"
 
-#include "sine_lut.h"
 #include "tim.h"
 #include "waveform_dac.h"
 #include "waveform_display.h"
+#include "waveform_lut.h"
 #include "waveform_timer.h"
 
 #include "dac.h"
@@ -35,11 +40,16 @@
  * the 2 ms tick, so printing every sample would stall the pump. */
 #define PRINT_EVERY_N_SAMPLES  20U
 
+/* How long each waveform runs before switching (200 ms per cycle). */
+#define CYCLES_PER_WAVEFORM    10U
+
 /* Handles --------------------------------------------------------------- */
 static DAC_HandleStruct s_dac;
 static TIM_HandleTypeDef s_tim;
 static Waveform_Display_t s_display;
-static uint32_t s_lut[SINE_LUT_SIZE];
+
+/* All tables are built up front so switching never stalls the sample pump. */
+static uint32_t s_lut[WAVEFORM_TYPE_COUNT][WAVEFORM_LUT_SIZE];
 
 void DacWaveformApp_Run(void)
 {
@@ -56,27 +66,40 @@ void DacWaveformApp_Run(void)
         return;
     }
 
-    SineLut_Build(s_lut);
+    for (uint32_t t = 0; t < WAVEFORM_TYPE_COUNT; t++) {
+        WaveformLut_Build(s_lut[t], (Waveform_Type_t)t);
+    }
 
-    if (!Waveform_DacArmStart(&s_dac, s_lut[0])) {
+    Waveform_Type_t type = WAVEFORM_SINE;
+
+    if (!Waveform_DacArmStart(&s_dac, s_lut[type][0])) {
         return;
     }
     if (TIM_Start(&s_tim) != HAL_OK) {
         return;
     }
 
+    Waveform_DisplayBanner(&s_display, WaveformLut_Name(type));
+
     uint32_t index = 1U;
+    uint32_t cycles = 0U;
 
     for (;;) {
         if (Waveform_TimerTickArrived(&s_tim)) {
             Waveform_TimerAckTick(&s_tim);
-            DAC_SetValue(&s_dac, WAVEFORM_DAC_CHANNEL, s_lut[index]);
+            DAC_SetValue(&s_dac, WAVEFORM_DAC_CHANNEL, s_lut[type][index]);
 
             if ((index % PRINT_EVERY_N_SAMPLES) == 0U) {
-                Waveform_DisplayShow(&s_display, index, s_lut[index]);
+                Waveform_DisplayShow(&s_display, index, s_lut[type][index]);
             }
 
-            index = (index + 1U) % SINE_LUT_SIZE;
+            index = (index + 1U) % WAVEFORM_LUT_SIZE;
+
+            if (index == 0U && ++cycles == CYCLES_PER_WAVEFORM) {
+                cycles = 0U;
+                type = (Waveform_Type_t)((type + 1U) % WAVEFORM_TYPE_COUNT);
+                Waveform_DisplayBanner(&s_display, WaveformLut_Name(type));
+            }
         }
     }
 }

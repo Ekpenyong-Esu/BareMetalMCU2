@@ -14,7 +14,6 @@
 #define WAVEFORM_DISPLAY_TX_SIZE  64
 
 static const char kGreeting[] = "DAC waveform on PA4. Printing decimated samples.\r\n";
-
 static char s_txLine[WAVEFORM_DISPLAY_TX_SIZE];
 
 bool Waveform_DisplayInit(Waveform_Display_t *display)
@@ -37,6 +36,16 @@ bool Waveform_DisplayInit(Waveform_Display_t *display)
     UART_Blocking_Transmit(&display->uart, (const uint8_t *)kGreeting,
                            (uint16_t)(sizeof(kGreeting) - 1), HAL_MAX_DELAY);
     return true;
+}
+
+void Waveform_DisplayBanner(Waveform_Display_t *display, const char *name)
+{
+    int written = snprintf(s_txLine, sizeof(s_txLine), "\r\n--- %s ---\r\n", name);
+
+    if (written > 0) {
+        UART_Blocking_Transmit(&display->uart, (const uint8_t *)s_txLine,
+                               (uint16_t)written, HAL_MAX_DELAY);
+    }
 }
 
 void Waveform_DisplayShow(Waveform_Display_t *display, uint32_t index, uint32_t code)

@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-/** Output a continuous, TIM6-TRGO-paced sine wave on DAC_OUT1 (PA4). */
+/** Cycle sine, triangle and sawtooth on DAC_OUT1 (PA4), TIM6-TRGO paced. */
 void DacWaveformApp_Run(void);
 
 #ifdef __cplusplus

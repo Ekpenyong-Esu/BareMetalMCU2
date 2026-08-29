@@ -23,6 +23,9 @@ typedef struct {
 /** Bring up USART1 (115200 8N1) and print the banner. */
 bool Waveform_DisplayInit(Waveform_Display_t *display);
 
+/** Announce which waveform is now being generated. */
+void Waveform_DisplayBanner(Waveform_Display_t *display, const char *name);
+
 /** Print one sample as "s[i] = code (x.xxx V)". */
 void Waveform_DisplayShow(Waveform_Display_t *display, uint32_t index, uint32_t code);
 
