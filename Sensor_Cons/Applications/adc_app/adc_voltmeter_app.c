@@ -1,23 +1,22 @@
 /**
  * @file adc_voltmeter_app.c
- * @brief The ADC application: multi-channel voltmeter, polled super-loop.
+ * @brief The ADC application: multi-channel voltmeter, DMA-driven.
  *
  * One ADC, several inputs. A scan sequence walks PA0, PA1, PA2 and the
- * internal reference in rank order, and the loop waits for each conversion in
- * turn before reading it out.
+ * internal reference in rank order, and every conversion raises a DMA request
+ * that writes the result straight into memory. The CPU never handles a sample.
  *
- * Flow:  start scan -> wait, read -> wait, read -> ... -> print -> HAL_Delay
+ * Flow:  start scan -> ADC -> DMA -> buffer -> (one IRQ) -> print -> HAL_Delay
  *
- * The waiting is the point of this version: the CPU spins inside
- * ADC_PollForConversion for the whole sequence and can do nothing else. That
- * is affordable at one scan per second, and it makes the sequencing visible
- * with no callbacks to follow. The interrupt and DMA branches remove those
- * waits one at a time.
+ * Compared with the interrupt branch this trades four interrupts per scan for
+ * one, and the saving grows with the sequence: a sixteen-channel scan still
+ * costs exactly one. The buffer lives in the reader because the DMA writes to
+ * it directly, so it has to outlive the transfer.
  *
  * Layering:
  *   main.c              -> chooses and runs the application
  *   adc_voltmeter_app   -> composition only (this module)
- *   voltage_reader      -> ADC scan setup + polled voltage reads
+ *   voltage_reader      -> ADC scan setup + DMA transfer of the results
  *   voltage_display     -> UART setup + formatted voltage output
  */
 
@@ -51,11 +50,19 @@ void AdcVoltmeterApp_Run(void)
     for (;;) {
         float volts[VOLTAGE_READER_CHANNEL_COUNT];
 
-        if (VoltageReader_Read(&s_reader, volts)) {
-            for (uint32_t i = 0; i < VOLTAGE_READER_CHANNEL_COUNT; i++) {
-                VoltageDisplay_Show(&s_display, VoltageReader_ChannelName(i), volts[i]);
+        if (VoltageReader_Start(&s_reader)) {
+            /* Idle until the transfer completes. A real workload would go
+             * here instead; the scan needs nothing from the CPU. */
+            while (!VoltageReader_IsComplete(&s_reader)) {
+                __WFI();
             }
-            VoltageDisplay_EndScan(&s_display);
+
+            if (VoltageReader_Take(&s_reader, volts)) {
+                for (uint32_t i = 0; i < VOLTAGE_READER_CHANNEL_COUNT; i++) {
+                    VoltageDisplay_Show(&s_display, VoltageReader_ChannelName(i), volts[i]);
+                }
+                VoltageDisplay_EndScan(&s_display);
+            }
         }
 
         HAL_Delay(SAMPLE_PERIOD_MS);

@@ -13,7 +13,7 @@
 #define VOLTAGE_DISPLAY_TX_SIZE  64  /* one line: "PA0 : x.xxx V\r\n" */
 
 static const char kGreeting[] =
-    "ADC scanner ready. Polling PA0, PA1, PA2 and VREFINT once per second.\r\n";
+    "ADC scanner ready. PA0, PA1, PA2 and VREFINT, transferred by DMA.\r\n";
 
 static char s_txLine[VOLTAGE_DISPLAY_TX_SIZE];
 

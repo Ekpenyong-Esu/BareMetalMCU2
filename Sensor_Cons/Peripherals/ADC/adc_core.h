@@ -108,6 +108,14 @@ void ADC_ErrorHandler(ADC_HandleStruct* hadc);
 ADC_HandleStruct* ADC_GetHandleFor(const ADC_HandleTypeDef* hal);
 
 /**
+ * @brief   Vector entry point for the DMA stream serving an ADC
+ * @param   instance ADC whose stream raised the interrupt
+ * @note    Each ADC has its own stream and therefore its own vector, unlike
+ *          the ADC interrupt itself. Called from Core/Src/stm32f4xx_it.c.
+ */
+void ADC_DmaIrqHandler(ADC_TypeDef* instance);
+
+/**
  * @brief   Human readable form of a HAL status
  * @param   status Status to describe
  * @retval  const char* Status name

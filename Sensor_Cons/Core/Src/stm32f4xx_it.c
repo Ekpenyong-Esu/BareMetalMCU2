@@ -32,6 +32,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "SEGGER_SYSVIEW.h"
+#include "adc_core.h"
 
 /* USER CODE END Includes */
 /**
@@ -339,5 +340,15 @@ void ETH_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 
+/**
+  * @brief This function handles DMA2 stream0 global interrupt.
+  *        Carries the ADC1 scan results; deferred to ADC_DmaIrqHandler().
+  */
+void DMA2_Stream0_IRQHandler(void)
+{
+  SEGGER_SYSVIEW_RecordEnterISR();
+  ADC_DmaIrqHandler(ADC1);
+  SEGGER_SYSVIEW_RecordExitISR();
+}
 
 /* USER CODE END 1 */

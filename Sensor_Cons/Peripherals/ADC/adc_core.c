@@ -265,6 +265,16 @@ ADC_HandleStruct* ADC_GetHandleFor(const ADC_HandleTypeDef* hal)
     return (index < ADC_INSTANCE_COUNT) ? s_handles[index] : NULL;
 }
 
+/* The stream vector knows its ADC at compile time, so this only has to find
+ * the handle that owns the matching DMA sub-handle. */
+void ADC_DmaIrqHandler(ADC_TypeDef* instance)
+{
+    uint32_t index = ADC_InstanceIndex(instance);
+    if (index < ADC_INSTANCE_COUNT && s_handles[index] != NULL) {
+        HAL_DMA_IRQHandler(&s_handles[index]->hdma_adc);
+    }
+}
+
 /* For log/debug output; not used for control flow. */
 const char* ADC_GetStatusString(HAL_StatusTypeDef status)
 {
