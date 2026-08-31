@@ -52,7 +52,13 @@ ACCEL_StatusTypeDef ACCEL_Init_Custom(const ACCEL_ConfigTypeDef *config)
         return ACCEL_INVALID_PARAM;
     }
 
-    ACCEL_StatusTypeDef status = ACCEL_IsReady();
+    ACCEL_StatusTypeDef status = ACCEL_IO_Init();
+    if (status != ACCEL_OK)
+    {
+        return status;
+    }
+
+    status = ACCEL_IsReady();
     if (status != ACCEL_OK)
     {
         return status;

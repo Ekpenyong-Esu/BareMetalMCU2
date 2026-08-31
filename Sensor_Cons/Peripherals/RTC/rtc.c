@@ -25,8 +25,24 @@ static void RTC_MspDeInit(void);
 
 /* Public functions ----------------------------------------------------------*/
 
-RTC_StatusTypeDef RTC_Init(void)
+RTC_ConfigTypeDef RTC_ConfigDefault(void)
 {
+    RTC_ConfigTypeDef config;
+
+    config.HourFormat = RTC_HOURFORMAT_24;
+    config.AsynchPrediv = RTC_ASYNCH_PREDIV;
+    config.SynchPrediv = RTC_SYNCH_PREDIV;
+
+    return config;
+}
+
+RTC_StatusTypeDef RTC_Init_Custom(const RTC_ConfigTypeDef *config)
+{
+    if (config == NULL)
+    {
+        return RTC_STATUS_ERROR;
+    }
+
     log_debug("RTC: Initializing RTC");
 
     if (RTC_MspInit() != RTC_STATUS_OK)
@@ -36,9 +52,12 @@ RTC_StatusTypeDef RTC_Init(void)
     }
 
     hrtc.Instance = RTC;
-    hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
-    hrtc.Init.AsynchPrediv = RTC_ASYNCH_PREDIV;
-    hrtc.Init.SynchPrediv = RTC_SYNCH_PREDIV;
+    hrtc.Init.HourFormat = config->HourFormat;
+    hrtc.Init.AsynchPrediv = config->AsynchPrediv;
+    hrtc.Init.SynchPrediv = config->SynchPrediv;
+
+    /* The calibration output drives PC13, which is shared on this board, so it
+       stays off rather than becoming a setting that could break other pins. */
     hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
     hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
     hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
@@ -51,6 +70,13 @@ RTC_StatusTypeDef RTC_Init(void)
     log_debug("RTC: RTC initialized successfully");
 
     return RTC_STATUS_OK;
+}
+
+RTC_StatusTypeDef RTC_Init(void)
+{
+    const RTC_ConfigTypeDef config = RTC_ConfigDefault();
+
+    return RTC_Init_Custom(&config);
 }
 
 RTC_StatusTypeDef RTC_DeInit(void)

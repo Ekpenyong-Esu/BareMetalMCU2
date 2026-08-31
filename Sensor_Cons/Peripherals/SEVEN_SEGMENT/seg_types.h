@@ -21,7 +21,6 @@ extern "C" {
 /* Exported constants --------------------------------------------------------*/
 
 #define SEG_MAX_DIGITS                  8       /**< Maximum supported digits */
-#define SEG_DEFAULT_MULTIPLEX_DELAY_US  2000    /**< 2ms default multiplex delay */
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -127,7 +126,8 @@ typedef struct {
         SegGpioConfig_t gpio;       /**< GPIO backend configuration */
         SegHT1621Config_t ht1621;   /**< HT1621 backend configuration */
     } config;
-    uint16_t multiplexDelayUs;      /**< Multiplex delay (GPIO backend only) */
+    /* The multiplex rate is not set here: Seg_Update() lights one digit and
+       returns, so the rate is however often the caller's timer calls it. */
     bool leadingZeros;              /**< Pad numeric output with zeros */
 } SegDisplayConfig_t;
 

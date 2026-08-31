@@ -17,6 +17,7 @@ extern "C" {
 
 /** @brief Largest code the 12-bit converter accepts */
 #define DAC_MAX_VALUE_12BIT     4095U
+#define DAC_MAX_VALUE_8BIT      255U
 
 /** @brief Analog reference of the STM32F429I Discovery board, in volts */
 #define DAC_REFERENCE_VOLTAGE   3.3f
@@ -32,7 +33,18 @@ typedef struct {
     uint32_t channel;        /**< Channel to configure; only DAC_CHANNEL_1 is wired */
     uint32_t trigger;        /**< DAC_TRIGGER_NONE, DAC_TRIGGER_SOFTWARE or a timer TRGO */
     uint32_t output_buffer;  /**< DAC_OUTPUTBUFFER_ENABLE or DAC_OUTPUTBUFFER_DISABLE */
+    uint32_t alignment;      /**< DAC_ALIGN_12B_R, DAC_ALIGN_12B_L or DAC_ALIGN_8B_R */
 } DAC_ConfigTypeDef;
+
+/**
+ * @brief Largest code the given alignment can carry
+ * @note  8-bit mode ignores the low nibble, so accepting a 12-bit code there
+ *        would silently truncate it.
+ */
+static inline uint32_t DAC_MaxValueFor(uint32_t alignment)
+{
+    return (alignment == DAC_ALIGN_8B_R) ? DAC_MAX_VALUE_8BIT : DAC_MAX_VALUE_12BIT;
+}
 
 /**
  * @brief DAC handle

@@ -21,6 +21,15 @@ void IR_TimingInit(void)
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 }
 
+bool IR_TimingIsRunning(void)
+{
+    /* IR_DelayUs() spins on CYCCNT, so a counter that never advances would
+       hang it; some debug configurations leave the DWT unavailable. */
+    const uint32_t first = DWT->CYCCNT;
+    __NOP();
+    return DWT->CYCCNT != first;
+}
+
 void IR_DelayUs(uint32_t us)
 {
     const uint32_t start = DWT->CYCCNT;

@@ -261,7 +261,6 @@ The driver supports these characters:
 | Field | Type | Description |
 |-------|------|-------------|
 | `driverType` | `SegDriverType_t` | `SEG_DRIVER_GPIO` or `SEG_DRIVER_HT1621` |
-| `multiplexDelayUs` | `uint16_t` | Multiplex delay (GPIO mode) |
 | `leadingZeros` | `bool` | Display leading zeros |
 
 ### SegGpioConfig_t (GPIO Mode)

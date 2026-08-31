@@ -51,7 +51,11 @@ FLASH_StatusTypeDef FLASH_EraseSectors(uint32_t startSector, uint32_t endSector)
 
     halStatus = HAL_FLASHEx_Erase(&eraseInit, &sectorError);
 
-    (void)FLASH_Lock();
+    /* Report a failed re-lock, but never let it mask the erase result. */
+    if (FLASH_Lock() != FLASH_STATUS_OK && halStatus == HAL_OK)
+    {
+        return FLASH_STATUS_ERROR;
+    }
 
     if (halStatus != HAL_OK || sectorError != FLASH_ERASE_ALL_OK)
     {

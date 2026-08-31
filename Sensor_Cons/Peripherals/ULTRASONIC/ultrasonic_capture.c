@@ -107,10 +107,14 @@ void ULTRASONIC_CAPTURE_DelayMicroseconds(TIM_HandleTypeDef *htim, uint32_t micr
 
     start = TIM_GetCounter(htim);
 
-    while (1) {
+    /* A stopped timer would never advance the counter, so bound the spin
+       instead of trusting it; the pulse is only a few microseconds. */
+    uint32_t guard = microseconds * ULTRASONIC_DELAY_GUARD_LOOPS;
+
+    while (guard-- > 0U) {
         uint32_t width = ULTRASONIC_EchoWidth(start, TIM_GetCounter(htim), ULTRASONIC_ECHO_PERIOD);
         if (width >= microseconds) {
-            break;
+            return;
         }
         /* 1 tick == 1 us */
     }

@@ -160,7 +160,10 @@ PWR_StatusTypeDef PWR_RestoreFromLowPower(void)
 
     /* Re-init the panel and LTDC before waking them: after a deep sleep their
        registers are gone, so APP_Display_PowerOn() would drive dead hardware. */
-    ili9341_Init();
+    if (!ili9341_Init()) {
+        log_error("APP: panel re-initialization failed");
+        status = PWR_ERROR;
+    }
 
     if (LTDC_HW_Init() != HAL_OK) {
         log_error("APP: LTDC re-initialization failed");

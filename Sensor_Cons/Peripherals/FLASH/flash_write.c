@@ -61,7 +61,12 @@ static FLASH_StatusTypeDef FLASH_ProgramScalar(uint32_t typeProgram, uint32_t ad
 
     halStatus = HAL_FLASH_Program(typeProgram, address, data);
 
-    (void)FLASH_Lock();
+    /* Leaving flash unlocked is a hazard of its own, so a failed re-lock is
+       reported unless the program already failed. */
+    if (FLASH_Lock() != FLASH_STATUS_OK && halStatus == HAL_OK)
+    {
+        return FLASH_STATUS_ERROR;
+    }
 
     return FLASH_ConvertHALStatus(halStatus);
 }
@@ -108,7 +113,10 @@ static FLASH_StatusTypeDef FLASH_ProgramArray(uint32_t typeProgram, uint32_t add
         }
     }
 
-    (void)FLASH_Lock();
+    if (FLASH_Lock() != FLASH_STATUS_OK)
+    {
+        return FLASH_STATUS_ERROR;
+    }
 
     /* Read back: a program that reports success can still leave a bit unset
        when the target was not erased first. */

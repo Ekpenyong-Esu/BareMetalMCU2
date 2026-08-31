@@ -23,12 +23,23 @@ TS_StatusTypeDef TS_EnableInterrupt(TS_HandleTypeDef *hts, bool enable)
     if (enable) {
         log_debug("TS: Enabling touchscreen interrupt");
         /* FIFO threshold as well as touch detect, so movement keeps reporting. */
-        TS_WriteRegister(hts, STMPE811_REG_INT_EN, STMPE811_INT_EN_TOUCH_DET | STMPE811_INT_EN_FIFO_TH);
-        TS_WriteRegister(hts, STMPE811_REG_INT_CTRL,
-                         STMPE811_INT_CTRL_POL_LOW | STMPE811_INT_CTRL_EDGE | STMPE811_INT_CTRL_ENABLE);
+        if (TS_WriteRegister(hts, STMPE811_REG_INT_EN,
+                             STMPE811_INT_EN_TOUCH_DET | STMPE811_INT_EN_FIFO_TH) != TS_OK) {
+            return TS_COMMUNICATION_ERROR;
+        }
+        if (TS_WriteRegister(hts, STMPE811_REG_INT_CTRL,
+                             STMPE811_INT_CTRL_POL_LOW | STMPE811_INT_CTRL_EDGE |
+                             STMPE811_INT_CTRL_ENABLE) != TS_OK) {
+            return TS_COMMUNICATION_ERROR;
+        }
     } else {
-        TS_WriteRegister(hts, STMPE811_REG_INT_EN, 0x00);
-        TS_WriteRegister(hts, STMPE811_REG_INT_CTRL, STMPE811_INT_CTRL_DISABLE);
+        if (TS_WriteRegister(hts, STMPE811_REG_INT_EN, 0x00) != TS_OK) {
+            return TS_COMMUNICATION_ERROR;
+        }
+        if (TS_WriteRegister(hts, STMPE811_REG_INT_CTRL,
+                             STMPE811_INT_CTRL_DISABLE) != TS_OK) {
+            return TS_COMMUNICATION_ERROR;
+        }
     }
 
     return TS_OK;
@@ -66,7 +77,13 @@ void TS_IRQHandler(TS_HandleTypeDef *hts)
     }
 
     uint8_t intStatus = 0;
-    TS_ReadRegister(hts, STMPE811_REG_INT_STA, &intStatus);
+
+    /* A failed read leaves intStatus at zero, so testing it would invent a
+       "no touch" event; bail out and let the next edge retry. */
+    if (TS_ReadRegister(hts, STMPE811_REG_INT_STA, &intStatus) != TS_OK) {
+        log_error("TS: could not read interrupt status; the source stays latched");
+        return;
+    }
 
     if (intStatus & STMPE811_INT_EN_TOUCH_DET) {
         if (hts->TouchCallback != NULL) {
@@ -79,7 +96,11 @@ void TS_IRQHandler(TS_HandleTypeDef *hts)
         }
     }
 
-    TS_WriteRegister(hts, STMPE811_REG_INT_STA, intStatus);
+    /* Failing to acknowledge leaves the line asserted and no further edge will
+       arrive, so it is worth reporting even though there is no return value. */
+    if (TS_WriteRegister(hts, STMPE811_REG_INT_STA, intStatus) != TS_OK) {
+        log_error("TS: could not clear interrupt status; touch may stop reporting");
+    }
 }
 
 void TS_ServiceIRQ(void)

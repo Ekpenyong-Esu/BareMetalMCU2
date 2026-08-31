@@ -51,7 +51,11 @@ HAL_StatusTypeDef LTDC_SetFramebuffer(LTDC_Driver_t *driver, uint8_t layer, uint
     }
 
     /* Swap at the vertical blanking interval so the change never tears. */
-    LTDC_RequestReload(driver, LTDC_SRCR_VBR);
+    if (LTDC_RequestReload(driver, LTDC_SRCR_VBR) != HAL_OK) {
+        driver->errorCode = LTDC_ERROR_FRAMEBUFFER;
+        return HAL_ERROR;
+    }
+
     if (LTDC_WaitForReload(driver, LTDC_RELOAD_TIMEOUT_MS) != HAL_OK) {
         driver->errorCode = LTDC_ERROR_FRAMEBUFFER;
         return HAL_TIMEOUT;
@@ -73,7 +77,13 @@ HAL_StatusTypeDef LTDC_ClearFramebuffer(LTDC_Driver_t *driver, uint8_t layer, ui
                     color,
                     cfg->pixelFormat);
 
-    LTDC_RequestReload(driver, LTDC_SRCR_VBR);
+    /* The pixels are already written; without the reload the panel keeps
+       scanning the old buffer, so a failure here is visible on screen. */
+    if (LTDC_RequestReload(driver, LTDC_SRCR_VBR) != HAL_OK) {
+        driver->errorCode = LTDC_ERROR_FRAMEBUFFER;
+        return HAL_ERROR;
+    }
+
     return HAL_OK;
 }
 

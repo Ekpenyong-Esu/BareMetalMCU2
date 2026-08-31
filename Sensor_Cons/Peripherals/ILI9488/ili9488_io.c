@@ -26,6 +26,9 @@
 #define ILI9488_RGB565_GREEN_MASK   0x07E0U
 #define ILI9488_RGB565_BLUE_MASK    0x001FU
 
+/* This panel's slot on the shared bus. */
+static SPI_Device_t s_device;
+
 static void ILI9488_IO_Select(const ILI9488_Config_t *config, GPIO_PinState dcState)
 {
     HAL_GPIO_WritePin(config->dc_port, config->dc_pin, dcState);
@@ -80,8 +83,9 @@ ILI9488_StatusTypeDef ILI9488_IO_Init(const ILI9488_Config_t *config)
     GPIO_InitStruct.Pin = config->rst_pin;
     GPIO_Driver_Pin_Init(config->rst_port, &GPIO_InitStruct);
 
-    if (SPI_Init() != SPI_OK) {
-        log_error("ILI9488: SPI bus initialization failed");
+    const SPI_ConfigTypeDef spiConfig = SPI_ConfigDefault();
+    if (SPI_DeviceInit(&s_device, &spiConfig) != SPI_OK) {
+        log_error("ILI9488: SPI device registration failed");
         return ILI9488_ERROR;
     }
 
@@ -98,7 +102,7 @@ ILI9488_StatusTypeDef ILI9488_IO_WriteCommand(const ILI9488_Config_t *config, ui
     SPI_StatusTypeDef status;
 
     ILI9488_IO_Select(config, GPIO_PIN_RESET);
-    status = SPI_Transmit(&command, 1U, SPI_TIMEOUT_SHORT);
+    status = SPI_Transmit(&s_device, &command, 1U, SPI_TIMEOUT_SHORT);
 
     return ILI9488_IO_Release(config, status);
 }
@@ -113,7 +117,7 @@ ILI9488_StatusTypeDef ILI9488_IO_WriteData(const ILI9488_Config_t *config,
     }
 
     ILI9488_IO_Select(config, GPIO_PIN_SET);
-    status = SPI_Transmit((uint8_t *)(uintptr_t)data, size, SPI_TIMEOUT_LONG);
+    status = SPI_Transmit(&s_device, (uint8_t *)(uintptr_t)data, size, SPI_TIMEOUT_LONG);
 
     return ILI9488_IO_Release(config, status);
 }
@@ -146,7 +150,7 @@ ILI9488_StatusTypeDef ILI9488_IO_WritePixels(const ILI9488_Config_t *config,
         uint32_t chunk = (remaining > ILI9488_FILL_CHUNK_PIXELS)
                              ? ILI9488_FILL_CHUNK_PIXELS : remaining;
 
-        status = SPI_Transmit(buffer, (uint16_t)(chunk * ILI9488_BYTES_PER_PIXEL),
+        status = SPI_Transmit(&s_device, buffer, (uint16_t)(chunk * ILI9488_BYTES_PER_PIXEL),
                               SPI_TIMEOUT_LONG);
         remaining -= chunk;
     }
@@ -178,7 +182,7 @@ ILI9488_StatusTypeDef ILI9488_IO_WritePixelBuffer(const ILI9488_Config_t *config
             ILI9488_IO_ExpandColor(colors[sent + i], &buffer[i * ILI9488_BYTES_PER_PIXEL]);
         }
 
-        status = SPI_Transmit(buffer, (uint16_t)(chunk * ILI9488_BYTES_PER_PIXEL),
+        status = SPI_Transmit(&s_device, buffer, (uint16_t)(chunk * ILI9488_BYTES_PER_PIXEL),
                               SPI_TIMEOUT_LONG);
         sent += chunk;
     }

@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    spi_core.c
-  * @brief   Lifecycle and handle accessor for the SPI bus driver
+  * @brief   Device registration and bus ownership for the SPI bus driver
   ******************************************************************************
   */
 
@@ -10,10 +10,12 @@
 
 #define SPI_CRC_POLYNOMIAL_DEFAULT    10U
 
-static SPI_HandleTypeDef s_hspi5;
-static bool s_initialized;
+/* The board exposes one usable SPI bus, so the peripheral handle is shared;
+   what varies per device is the configuration loaded into it. */
+static SPI_HandleTypeDef s_bus;
+static SPI_Device_t *s_owner;
 
-SPI_HandleTypeDef *SPI_GetHandle(void) { return &s_hspi5; }
+SPI_HandleTypeDef *SPI_GetHandle(void) { return &s_bus; }
 
 SPI_StatusTypeDef SPI_ConvertHALStatus(HAL_StatusTypeDef halStatus)
 {
@@ -26,90 +28,83 @@ SPI_StatusTypeDef SPI_ConvertHALStatus(HAL_StatusTypeDef halStatus)
     }
 }
 
-bool SPI_IsReady(void)
+SPI_ConfigTypeDef SPI_ConfigDefault(void)
 {
-    /* Instance is assigned before HAL_SPI_Init runs, so testing it would
-       report a bus that failed to come up as usable. */
-    return s_initialized;
+    /* ST BSP settings for the on-board SPI5 devices: mode 0, MSB first, and
+       PCLK2/8 = 10.5 MHz, which both the display and the gyro accept. */
+    const SPI_ConfigTypeDef config = {
+        .Mode              = SPI_MODE_MASTER,
+        .Direction         = SPI_DIRECTION_2LINES,
+        .DataSize          = SPI_DATASIZE_8BIT,
+        .CLKPolarity       = SPI_POLARITY_LOW,
+        .CLKPhase          = SPI_PHASE_1EDGE,
+        .NSS               = SPI_NSS_SOFT,
+        .BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8,
+        .FirstBit          = SPI_FIRSTBIT_MSB,
+        .TIMode            = SPI_TIMODE_DISABLE,
+        .CRCCalculation    = SPI_CRCCALCULATION_DISABLE,
+        .CRCPolynomial     = SPI_CRC_POLYNOMIAL_DEFAULT,
+    };
+
+    return config;
 }
 
-SPI_StatusTypeDef SPI_Init(void)
+bool SPI_DeviceIsReady(const SPI_Device_t *device)
 {
-    log_debug("SPI: Initializing SPI5");
+    return (device != NULL) && device->ready;
+}
 
-    s_hspi5.Instance = SPI5;
-    s_hspi5.Init.Mode = SPI_MODE_MASTER;
-    s_hspi5.Init.Direction = SPI_DIRECTION_2LINES;
-    s_hspi5.Init.DataSize = SPI_DATASIZE_8BIT;
-    s_hspi5.Init.CLKPolarity = SPI_POLARITY_LOW;
-    s_hspi5.Init.CLKPhase = SPI_PHASE_1EDGE;
-    s_hspi5.Init.NSS = SPI_NSS_SOFT;
-    s_hspi5.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
-    s_hspi5.Init.FirstBit = SPI_FIRSTBIT_MSB;
-    s_hspi5.Init.TIMode = SPI_TIMODE_DISABLE;
-    s_hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    s_hspi5.Init.CRCPolynomial = SPI_CRC_POLYNOMIAL_DEFAULT;
-
-    if (HAL_SPI_Init(&s_hspi5) != HAL_OK) {
-        log_error("SPI: SPI5 initialization failed");
-        s_initialized = false;
-        return SPI_ERROR;
+SPI_StatusTypeDef SPI_DeviceInit(SPI_Device_t *device, const SPI_ConfigTypeDef *config)
+{
+    if (device == NULL || config == NULL) {
+        return SPI_INVALID_PARAM;
     }
 
-    s_initialized = true;
-    log_debug("SPI: SPI5 initialized successfully");
+    device->config = *config;
+    device->ready = true;
 
     return SPI_OK;
 }
 
-SPI_StatusTypeDef SPI_Init_Custom(const SPI_ConfigTypeDef *config)
+SPI_StatusTypeDef SPI_Select(SPI_Device_t *device)
 {
-    SPI_StatusTypeDef status = SPI_OK;
-    HAL_StatusTypeDef halStatus = HAL_OK;
-
-    if (config == NULL) {
+    if (!SPI_DeviceIsReady(device)) {
         return SPI_INVALID_PARAM;
     }
 
-    s_hspi5.Instance = SPI5;
-    s_hspi5.Init.Mode = config->Mode;
-    s_hspi5.Init.Direction = config->Direction;
-    s_hspi5.Init.DataSize = config->DataSize;
-    s_hspi5.Init.CLKPolarity = config->CLKPolarity;
-    s_hspi5.Init.CLKPhase = config->CLKPhase;
-    s_hspi5.Init.NSS = config->NSS;
-    s_hspi5.Init.BaudRatePrescaler = config->BaudRatePrescaler;
-    s_hspi5.Init.FirstBit = config->FirstBit;
-    s_hspi5.Init.TIMode = config->TIMode;
-    s_hspi5.Init.CRCCalculation = config->CRCCalculation;
-    s_hspi5.Init.CRCPolynomial = config->CRCPolynomial;
+    if (s_owner == device) {
+        return SPI_OK;
+    }
 
-    halStatus = HAL_SPI_Init(&s_hspi5);
-    status = SPI_ConvertHALStatus(halStatus);
+    s_bus.Instance = SPI5;
+    s_bus.Init.Mode = device->config.Mode;
+    s_bus.Init.Direction = device->config.Direction;
+    s_bus.Init.DataSize = device->config.DataSize;
+    s_bus.Init.CLKPolarity = device->config.CLKPolarity;
+    s_bus.Init.CLKPhase = device->config.CLKPhase;
+    s_bus.Init.NSS = device->config.NSS;
+    s_bus.Init.BaudRatePrescaler = device->config.BaudRatePrescaler;
+    s_bus.Init.FirstBit = device->config.FirstBit;
+    s_bus.Init.TIMode = device->config.TIMode;
+    s_bus.Init.CRCCalculation = device->config.CRCCalculation;
+    s_bus.Init.CRCPolynomial = device->config.CRCPolynomial;
 
-    s_initialized = (status == SPI_OK);
+    if (HAL_SPI_Init(&s_bus) != HAL_OK) {
+        log_error("SPI: failed to program the bus for the selected device");
+        s_owner = NULL;
+        return SPI_ERROR;
+    }
 
-    return status;
+    s_owner = device;
+
+    return SPI_OK;
 }
 
-SPI_StatusTypeDef SPI_DeInit(void)
+SPI_StatusTypeDef SPI_BusDeInit(void)
 {
-    HAL_StatusTypeDef halStatus = HAL_SPI_DeInit(&s_hspi5);
+    HAL_StatusTypeDef halStatus = HAL_SPI_DeInit(&s_bus);
 
-    s_initialized = false;
+    s_owner = NULL;
 
     return SPI_ConvertHALStatus(halStatus);
-}
-
-SPI_StatusTypeDef SPI_Reinit(void)
-{
-    SPI_StatusTypeDef status = SPI_OK;
-    HAL_StatusTypeDef halStatus = HAL_ERROR;
-
-    /* HAL_SPI_DeInit leaves the Init struct untouched, so it can be reused. */
-    halStatus = HAL_SPI_Init(&s_hspi5);
-    status = SPI_ConvertHALStatus(halStatus);
-    s_initialized = (status == SPI_OK);
-
-    return status;
 }

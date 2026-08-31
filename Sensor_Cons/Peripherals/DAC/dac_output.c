@@ -8,11 +8,12 @@
 
 HAL_StatusTypeDef DAC_SetValue(DAC_HandleStruct *hdac, uint32_t channel, uint32_t value)
 {
-    if (!DAC_IsChannelValid(hdac, channel) || (value > DAC_MAX_VALUE_12BIT)) {
+    if (!DAC_IsChannelValid(hdac, channel) ||
+        (value > DAC_MaxValueFor(hdac->config.alignment))) {
         return HAL_ERROR;
     }
 
-    if (HAL_DAC_SetValue(&hdac->hal_handle, channel, DAC_ALIGN_12B_R, value) != HAL_OK) {
+    if (HAL_DAC_SetValue(&hdac->hal_handle, channel, hdac->config.alignment, value) != HAL_OK) {
         return HAL_ERROR;
     }
 

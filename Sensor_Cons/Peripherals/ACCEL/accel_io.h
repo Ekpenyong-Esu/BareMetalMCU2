@@ -17,6 +17,11 @@ extern "C" {
 /** Largest burst read the driver performs (X/Y/Z MSB+LSB). */
 #define ACCEL_BURST_MAX          6U
 
+/**
+ * @brief Claim a slot on the shared SPI bus; call before any register access.
+ */
+ACCEL_StatusTypeDef ACCEL_IO_Init(void);
+
 ACCEL_StatusTypeDef ACCEL_WriteRegister(uint8_t reg, uint8_t value);
 ACCEL_StatusTypeDef ACCEL_ReadRegister(uint8_t reg, uint8_t *value);
 

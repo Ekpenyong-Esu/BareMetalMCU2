@@ -14,16 +14,49 @@ extern "C" {
 
 #include "spi_types.h"
 
-SPI_StatusTypeDef SPI_Transmit(uint8_t *pData, uint16_t Size, uint32_t Timeout);
-SPI_StatusTypeDef SPI_Receive(uint8_t *pData, uint16_t Size, uint32_t Timeout);
-SPI_StatusTypeDef SPI_TransmitReceive(uint8_t *pTxData, uint8_t *pRxData, uint16_t Size, uint32_t Timeout);
-uint32_t SPI_GetError(void);
-const char *SPI_GetStatusString(SPI_StatusTypeDef status);
+/**
+ * @brief   Send bytes to a device, selecting it onto the bus first
+ * @param   device Device to talk to
+ * @param   pData Bytes to send
+ * @param   Size Number of bytes
+ * @param   Timeout Timeout in milliseconds
+ * @retval  SPI_StatusTypeDef Status of the operation
+ */
+SPI_StatusTypeDef SPI_Transmit(SPI_Device_t *device, uint8_t *pData, uint16_t Size,
+                               uint32_t Timeout);
 
 /**
- * @brief Re-initialise the peripheral after a transfer left it in an error state.
+ * @brief   Read bytes from a device, selecting it onto the bus first
+ * @param   device Device to talk to
+ * @param   pData Destination buffer
+ * @param   Size Number of bytes
+ * @param   Timeout Timeout in milliseconds
+ * @retval  SPI_StatusTypeDef Status of the operation
  */
-void SPI_RecoverOnError(void);
+SPI_StatusTypeDef SPI_Receive(SPI_Device_t *device, uint8_t *pData, uint16_t Size,
+                              uint32_t Timeout);
+
+/**
+ * @brief   Full-duplex exchange with a device
+ * @param   device Device to talk to
+ * @param   pTxData Bytes to send
+ * @param   pRxData Destination buffer
+ * @param   Size Number of bytes
+ * @param   Timeout Timeout in milliseconds
+ * @retval  SPI_StatusTypeDef Status of the operation
+ */
+SPI_StatusTypeDef SPI_TransmitReceive(SPI_Device_t *device, uint8_t *pTxData,
+                                      uint8_t *pRxData, uint16_t Size, uint32_t Timeout);
+
+/**
+ * @brief   HAL error code from the last transfer
+ */
+uint32_t SPI_GetError(void);
+
+/**
+ * @brief   Human readable form of a driver status
+ */
+const char *SPI_GetStatusString(SPI_StatusTypeDef status);
 
 #ifdef __cplusplus
 }

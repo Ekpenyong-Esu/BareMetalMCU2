@@ -22,7 +22,7 @@ static void Keypad_Scan_Settle(void)
     }
 }
 
-void Keypad_Scan_GpioInit(const KeypadConfig_t *config)
+bool Keypad_Scan_GpioInit(const KeypadConfig_t *config)
 {
     GPIO_InitTypeDef gpioInit = {0};
 
@@ -33,7 +33,9 @@ void Keypad_Scan_GpioInit(const KeypadConfig_t *config)
         gpioInit.Mode = GPIO_MODE_OUTPUT_OD;
         gpioInit.Pull = GPIO_NOPULL;
         gpioInit.Speed = GPIO_SPEED_FREQ_LOW;
-        GPIO_Driver_Pin_Init(config->rows[i].port, &gpioInit);
+        if (GPIO_Driver_Pin_Init(config->rows[i].port, &gpioInit) != HAL_OK) {
+            return false;
+        }
         HAL_GPIO_WritePin(config->rows[i].port, config->rows[i].pin, GPIO_PIN_SET);
     }
 
@@ -42,8 +44,12 @@ void Keypad_Scan_GpioInit(const KeypadConfig_t *config)
         gpioInit.Mode = GPIO_MODE_INPUT;
         gpioInit.Pull = GPIO_PULLUP;
         gpioInit.Speed = GPIO_SPEED_FREQ_LOW;
-        GPIO_Driver_Pin_Init(config->cols[i].port, &gpioInit);
+        if (GPIO_Driver_Pin_Init(config->cols[i].port, &gpioInit) != HAL_OK) {
+            return false;
+        }
     }
+
+    return true;
 }
 
 void Keypad_Scan_GpioDeInit(const KeypadConfig_t *config)

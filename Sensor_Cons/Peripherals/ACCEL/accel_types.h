@@ -16,6 +16,18 @@ extern "C" {
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "stm32f4xx_hal.h"
+
+/* Chip select ---------------------------------------------------------------*/
+
+/* NSS is software-driven, so the part is only addressed while this pin is low.
+   PC1 is the board's MEMS slot, the only SPI5 chip-select brought out; override
+   both to wire the part elsewhere. */
+#ifndef ACCEL_CS_PIN
+#define ACCEL_CS_PIN             GPIO_PIN_1
+#define ACCEL_CS_PORT            GPIOC
+#endif
+
 /* Status --------------------------------------------------------------------*/
 typedef enum {
     ACCEL_OK = 0,           /**< Operation completed successfully */

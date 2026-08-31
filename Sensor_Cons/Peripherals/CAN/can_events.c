@@ -73,20 +73,16 @@ HAL_StatusTypeDef CAN_DisableInterrupts(void)
 {
     CAN_HandleTypeDef *hcan = CAN_GetHandle();
 
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_TX_MAILBOX_EMPTY);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_RX_FIFO1_MSG_PENDING);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_RX_FIFO0_OVERRUN);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_RX_FIFO1_OVERRUN);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_WAKEUP);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_SLEEP_ACK);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_ERROR_WARNING);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_ERROR_PASSIVE);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_BUSOFF);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_LAST_ERROR_CODE);
-    HAL_CAN_DeactivateNotification(hcan, CAN_IT_ERROR);
+    /* The HAL takes a mask, so one call reports one result; deactivating them
+       one at a time only made the failures easier to lose. */
+    const uint32_t notifications =
+        CAN_IT_TX_MAILBOX_EMPTY | CAN_IT_RX_FIFO0_MSG_PENDING |
+        CAN_IT_RX_FIFO1_MSG_PENDING | CAN_IT_RX_FIFO0_OVERRUN |
+        CAN_IT_RX_FIFO1_OVERRUN | CAN_IT_WAKEUP | CAN_IT_SLEEP_ACK |
+        CAN_IT_ERROR_WARNING | CAN_IT_ERROR_PASSIVE | CAN_IT_BUSOFF |
+        CAN_IT_LAST_ERROR_CODE | CAN_IT_ERROR;
 
-    return HAL_OK;
+    return HAL_CAN_DeactivateNotification(hcan, notifications);
 }
 
 /* ---- HAL callbacks ---- */

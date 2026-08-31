@@ -57,14 +57,15 @@ MEMS_StatusTypeDef MEMS_GetDefaultConfig(MEMS_GyroConfigTypeDef *config)
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, SPI_HandleTypeDef *hspi)
+MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const SPI_ConfigTypeDef *config)
 {
     MEMS_StatusTypeDef status;
     MEMS_GyroConfigTypeDef default_config;
+    SPI_ConfigTypeDef busConfig;
     GPIO_TypeDef *csPort;
     uint16_t csPin;
 
-    if (hmems == NULL || hspi == NULL) {
+    if (hmems == NULL) {
         return MEMS_INVALID_PARAM;
     }
 
@@ -73,9 +74,13 @@ MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, SPI_HandleTypeDef *hspi)
     csPin = hmems->CS_Pin;
 
     memset(hmems, 0, sizeof(*hmems));
-    hmems->hspi = hspi;
     hmems->CS_Port = csPort;
     hmems->CS_Pin = csPin;
+
+    busConfig = (config != NULL) ? *config : SPI_ConfigDefault();
+    if (SPI_DeviceInit(&hmems->device, &busConfig) != SPI_OK) {
+        return MEMS_COMMUNICATION_ERROR;
+    }
 
     status = MEMS_HW_InitGPIO(hmems);
     if (status != MEMS_OK) {

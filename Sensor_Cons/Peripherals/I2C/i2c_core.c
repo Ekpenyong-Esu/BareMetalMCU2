@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    i2c_core.c
-  * @brief   Lifecycle and handle accessor for the I2C bus driver
+  * @brief   Bus lifecycle and per-device registration for the I2C driver
   ******************************************************************************
   */
 
@@ -10,10 +10,12 @@
 
 #define I2C_CLOCK_SPEED_STANDARD     100000U
 
-static I2C_HandleTypeDef s_hi2c3;
-static bool s_initialized;
+/* The board exposes one usable I2C bus, so the peripheral handle is shared;
+   what varies per device is the configuration loaded into it. */
+static I2C_HandleTypeDef s_bus;
+static I2C_Device_t *s_owner;
 
-I2C_HandleTypeDef *I2C_GetHandle(void) { return &s_hi2c3; }
+I2C_HandleTypeDef *I2C_GetHandle(void) { return &s_bus; }
 
 I2C_StatusTypeDef I2C_ConvertHALStatus(HAL_StatusTypeDef halStatus)
 {
@@ -26,83 +28,83 @@ I2C_StatusTypeDef I2C_ConvertHALStatus(HAL_StatusTypeDef halStatus)
     }
 }
 
-bool I2C_IsReady(void)
+I2C_ConfigTypeDef I2C_ConfigDefault(void)
 {
-    /* Instance is assigned before HAL_I2C_Init runs, so testing it would
-       report a bus that failed to come up as usable. */
-    return s_initialized;
+    I2C_ConfigTypeDef config;
+
+    config.ClockSpeed = I2C_CLOCK_SPEED_STANDARD;
+    config.DutyCycle = I2C_DUTYCYCLE_2;
+    config.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    config.OwnAddress1 = 0;
+    config.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    config.OwnAddress2 = 0;
+    config.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    config.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+
+    return config;
 }
 
-I2C_StatusTypeDef I2C_Init(void)
+bool I2C_DeviceIsReady(const I2C_Device_t *device)
 {
-    log_debug("I2C: Initializing I2C3");
+    return (device != NULL) && device->ready;
+}
 
-    s_hi2c3.Instance = I2C3;
-    s_hi2c3.Init.ClockSpeed = I2C_CLOCK_SPEED_STANDARD;
-    s_hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
-    s_hi2c3.Init.OwnAddress1 = 0;
-    s_hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-    s_hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-    s_hi2c3.Init.OwnAddress2 = 0;
-    s_hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-    s_hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-
-    if (HAL_I2C_Init(&s_hi2c3) != HAL_OK) {
-        log_error("I2C: I2C3 initialization failed");
-        s_initialized = false;
-        return I2C_ERROR;
+I2C_StatusTypeDef I2C_DeviceInit(I2C_Device_t *device, uint16_t address,
+                                 const I2C_ConfigTypeDef *config)
+{
+    if ((device == NULL) || (config == NULL)) {
+        return I2C_INVALID_PARAM;
     }
 
-    s_initialized = true;
-    log_debug("I2C: I2C3 initialized successfully");
+    device->address = address;
+    device->config = *config;
+    device->ready = true;
+
+    /* A registration replaces whatever the bus was told last time. */
+    if (s_owner == device) {
+        s_owner = NULL;
+    }
 
     return I2C_OK;
 }
 
-I2C_StatusTypeDef I2C_Init_Custom(const I2C_ConfigTypeDef *config)
+I2C_StatusTypeDef I2C_Select(I2C_Device_t *device)
 {
-    I2C_StatusTypeDef status = I2C_OK;
-    HAL_StatusTypeDef halStatus = HAL_ERROR;
-
-    if (config == NULL) {
+    if (!I2C_DeviceIsReady(device)) {
         return I2C_INVALID_PARAM;
     }
 
-    s_hi2c3.Instance = I2C3;
-    s_hi2c3.Init.ClockSpeed = config->ClockSpeed;
-    s_hi2c3.Init.DutyCycle = config->DutyCycle;
-    s_hi2c3.Init.OwnAddress1 = config->OwnAddress1;
-    s_hi2c3.Init.AddressingMode = config->AddressingMode;
-    s_hi2c3.Init.DualAddressMode = config->DualAddressMode;
-    s_hi2c3.Init.OwnAddress2 = config->OwnAddress2;
-    s_hi2c3.Init.GeneralCallMode = config->GeneralCallMode;
-    s_hi2c3.Init.NoStretchMode = config->NoStretchMode;
+    if (s_owner == device) {
+        return I2C_OK;
+    }
 
-    halStatus = HAL_I2C_Init(&s_hi2c3);
-    status = I2C_ConvertHALStatus(halStatus);
-    s_initialized = (status == I2C_OK);
+    s_bus.Instance = I2C3;
+    s_bus.Init.ClockSpeed = device->config.ClockSpeed;
+    s_bus.Init.DutyCycle = device->config.DutyCycle;
+    s_bus.Init.AddressingMode = device->config.AddressingMode;
+    s_bus.Init.OwnAddress1 = device->config.OwnAddress1;
+    s_bus.Init.DualAddressMode = device->config.DualAddressMode;
+    s_bus.Init.OwnAddress2 = device->config.OwnAddress2;
+    s_bus.Init.GeneralCallMode = device->config.GeneralCallMode;
+    s_bus.Init.NoStretchMode = device->config.NoStretchMode;
 
-    return status;
+    if (HAL_I2C_Init(&s_bus) != HAL_OK) {
+        log_error("I2C: failed to configure the bus for a device");
+        s_owner = NULL;
+        return I2C_ERROR;
+    }
+
+    s_owner = device;
+
+    return I2C_OK;
 }
 
-I2C_StatusTypeDef I2C_DeInit(void)
+I2C_StatusTypeDef I2C_BusDeInit(void)
 {
-    HAL_StatusTypeDef halStatus = HAL_I2C_DeInit(&s_hi2c3);
+    HAL_StatusTypeDef halStatus = HAL_I2C_DeInit(&s_bus);
 
-    s_initialized = false;
+    /* Devices stay registered; the next transfer reprograms the bus. */
+    s_owner = NULL;
 
     return I2C_ConvertHALStatus(halStatus);
-}
-
-I2C_StatusTypeDef I2C_Reinit(void)
-{
-    I2C_StatusTypeDef status = I2C_OK;
-    HAL_StatusTypeDef halStatus = HAL_ERROR;
-
-    /* HAL_I2C_DeInit leaves the Init struct untouched, so it can be reused. */
-    halStatus = HAL_I2C_Init(&s_hi2c3);
-    status = I2C_ConvertHALStatus(halStatus);
-    s_initialized = (status == I2C_OK);
-
-    return status;
 }

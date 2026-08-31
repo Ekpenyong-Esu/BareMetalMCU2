@@ -9,13 +9,33 @@
 
 #define TS_BYTE_MASK    0xFFU
 
+/* The STMPE811 sits at a fixed address, so one device record serves the whole
+   transport layer. */
+static I2C_Device_t s_device;
+
+void TS_IO_BusInit(void)
+{
+    const I2C_ConfigTypeDef config = I2C_ConfigDefault();
+
+    I2C_DeviceInit(&s_device, STMPE811_I2C_ADDRESS, &config);
+}
+
+TS_StatusTypeDef TS_IO_IsDeviceReady(uint32_t trials, uint32_t timeout)
+{
+    if (I2C_IsDeviceReady(&s_device, trials, timeout) != I2C_OK) {
+        return TS_DEVICE_NOT_FOUND;
+    }
+
+    return TS_OK;
+}
+
 TS_StatusTypeDef TS_ReadRegister(TS_HandleTypeDef *hts, uint8_t reg, uint8_t *data)
 {
     if (hts == NULL || data == NULL) {
         return TS_INVALID_PARAM;
     }
 
-    if (I2C_Mem_Read(STMPE811_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, data, 1, TS_TIMEOUT) != I2C_OK) {
+    if (I2C_Mem_Read(&s_device, reg, I2C_MEMADD_SIZE_8BIT, data, 1, TS_TIMEOUT) != I2C_OK) {
         return TS_COMMUNICATION_ERROR;
     }
 
@@ -28,7 +48,7 @@ TS_StatusTypeDef TS_ReadRegisterMulti(TS_HandleTypeDef *hts, uint8_t reg, uint8_
         return TS_INVALID_PARAM;
     }
 
-    if (I2C_Mem_Read(STMPE811_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, data, size, TS_TIMEOUT) != I2C_OK) {
+    if (I2C_Mem_Read(&s_device, reg, I2C_MEMADD_SIZE_8BIT, data, size, TS_TIMEOUT) != I2C_OK) {
         return TS_COMMUNICATION_ERROR;
     }
 
@@ -41,7 +61,7 @@ TS_StatusTypeDef TS_WriteRegister(TS_HandleTypeDef *hts, uint8_t reg, uint8_t da
         return TS_INVALID_PARAM;
     }
 
-    if (I2C_Mem_Write(STMPE811_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, &data, 1, TS_TIMEOUT) != I2C_OK) {
+    if (I2C_Mem_Write(&s_device, reg, I2C_MEMADD_SIZE_8BIT, &data, 1, TS_TIMEOUT) != I2C_OK) {
         return TS_COMMUNICATION_ERROR;
     }
 
@@ -55,7 +75,7 @@ TS_StatusTypeDef TS_ReadRegister16(TS_HandleTypeDef *hts, uint8_t reg, uint16_t 
     }
 
     uint8_t buffer[2];
-    if (I2C_Mem_Read(STMPE811_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, buffer, 2, TS_TIMEOUT) != I2C_OK) {
+    if (I2C_Mem_Read(&s_device, reg, I2C_MEMADD_SIZE_8BIT, buffer, 2, TS_TIMEOUT) != I2C_OK) {
         return TS_COMMUNICATION_ERROR;
     }
 
@@ -75,7 +95,7 @@ TS_StatusTypeDef TS_WriteRegister16(TS_HandleTypeDef *hts, uint8_t reg, uint16_t
         (uint8_t)(data & TS_BYTE_MASK),
     };
 
-    if (I2C_Mem_Write(STMPE811_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, buffer, 2, TS_TIMEOUT) != I2C_OK) {
+    if (I2C_Mem_Write(&s_device, reg, I2C_MEMADD_SIZE_8BIT, buffer, 2, TS_TIMEOUT) != I2C_OK) {
         return TS_COMMUNICATION_ERROR;
     }
 

@@ -205,8 +205,7 @@ HAL_StatusTypeDef LTDC_SetLayerPosition(LTDC_Driver_t *driver, uint8_t layer, ui
         return status;
     }
 
-    LTDC_RequestReload(driver, LTDC_SRCR_VBR);
-    return HAL_OK;
+    return LTDC_RequestReload(driver, LTDC_SRCR_VBR);
 }
 
 HAL_StatusTypeDef LTDC_SetLayerWindow(LTDC_Driver_t *driver, uint8_t layer, LTDC_Rect_t *window)

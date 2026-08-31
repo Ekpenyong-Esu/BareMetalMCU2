@@ -23,6 +23,9 @@
 #define NOKIA5110_RESET_LOW_MS   10U
 #define NOKIA5110_RESET_HIGH_MS  10U           /* Settle before the first command */
 
+/* This panel's slot on the shared bus. */
+static SPI_Device_t s_device;
+
 static NOKIA5110_StatusTypeDef NOKIA5110_IO_Transmit(const uint8_t *data, uint16_t size,
                                                      GPIO_PinState dcState)
 {
@@ -31,7 +34,7 @@ static NOKIA5110_StatusTypeDef NOKIA5110_IO_Transmit(const uint8_t *data, uint16
     HAL_GPIO_WritePin(NOKIA5110_DC_PORT, NOKIA5110_DC_PIN, dcState);
     HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_RESET);
 
-    status = SPI_Transmit((uint8_t *)(uintptr_t)data, size, NOKIA5110_SPI_TIMEOUT);
+    status = SPI_Transmit(&s_device, (uint8_t *)(uintptr_t)data, size, NOKIA5110_SPI_TIMEOUT);
 
     HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_SET);
 
@@ -64,8 +67,9 @@ NOKIA5110_StatusTypeDef NOKIA5110_IO_Init(void)
     HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_SET);
     HAL_GPIO_WritePin(NOKIA5110_DC_PORT, NOKIA5110_DC_PIN, GPIO_PIN_RESET);
 
-    if (SPI_Init() != SPI_OK) {
-        log_error("NOKIA5110: SPI bus initialization failed");
+    const SPI_ConfigTypeDef spiConfig = SPI_ConfigDefault();
+    if (SPI_DeviceInit(&s_device, &spiConfig) != SPI_OK) {
+        log_error("NOKIA5110: SPI device registration failed");
         return NOKIA5110_ERROR;
     }
 

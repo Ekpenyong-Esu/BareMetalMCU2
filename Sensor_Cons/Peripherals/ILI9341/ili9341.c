@@ -74,20 +74,27 @@ static const ILI9341_InitStep_t s_initSequence[] = {
 
 /* Private functions ---------------------------------------------------------*/
 
-static void ILI9341_RunInitSequence(void)
+static bool ILI9341_RunInitSequence(void)
 {
     for (uint32_t index = 0; index < (sizeof(s_initSequence) / sizeof(s_initSequence[0])); index++) {
         const ILI9341_InitStep_t* step = &s_initSequence[index];
-        ili9341_WriteReg(step->command);
+
+        if (ili9341_WriteReg(step->command) != SPI_OK) {
+            return false;
+        }
 
         for (uint8_t dataIndex = 0; dataIndex < step->dataCount; dataIndex++) {
-            ili9341_WriteData(step->data[dataIndex]);
+            if (ili9341_WriteData(step->data[dataIndex]) != SPI_OK) {
+                return false;
+            }
         }
 
         if (step->delayMs > 0U) {
             HAL_Delay(step->delayMs);
         }
     }
+
+    return true;
 }
 
 /* Exported functions --------------------------------------------------------*/
@@ -109,36 +116,61 @@ uint16_t ili9341_ReadID(void)
     return (uint16_t)(devId & ILI9341_WORD_MASK);
 }
 
-void ili9341_DisplayOn(void)
+bool ili9341_DisplayOn(void)
 {
     log_debug("ILI9341: Turning display on");
-    ili9341_WriteReg(ILI9341_DISPLAY_ON);
+
+    return ili9341_WriteReg(ILI9341_DISPLAY_ON) == SPI_OK;
 }
 
-void ili9341_DisplayOff(void)
+bool ili9341_DisplayOff(void)
 {
     log_debug("ILI9341: Turning display off");
-    ili9341_WriteReg(ILI9341_DISPLAY_OFF);
+
+    return ili9341_WriteReg(ILI9341_DISPLAY_OFF) == SPI_OK;
 }
 
-void ili9341_SleepIn(void)
+bool ili9341_SleepIn(void)
 {
     log_debug("ILI9341: Entering sleep mode");
-    ili9341_WriteReg(ILI9341_SLEEP_IN);
+
+    if (ili9341_WriteReg(ILI9341_SLEEP_IN) != SPI_OK) {
+        return false;
+    }
+
     HAL_Delay(ILI9341_SLEEP_DELAY_MS);
+
+    return true;
 }
 
-void ili9341_SleepOut(void)
+bool ili9341_SleepOut(void)
 {
     log_debug("ILI9341: Exiting sleep mode");
-    ili9341_WriteReg(ILI9341_SLEEP_OUT);
+
+    if (ili9341_WriteReg(ILI9341_SLEEP_OUT) != SPI_OK) {
+        return false;
+    }
+
     HAL_Delay(ILI9341_WAKE_DELAY_MS);
+
+    return true;
 }
 
-void ili9341_Init(void)
+bool ili9341_Init(void)
 {
     log_debug("ILI9341: Initializing display");
-    ILI9341_MspInit();
-    ILI9341_RunInitSequence();
+
+    if (!ILI9341_MspInit()) {
+        log_error("ILI9341: board transport init failed");
+        return false;
+    }
+
+    if (!ILI9341_RunInitSequence()) {
+        log_error("ILI9341: panel init sequence failed");
+        return false;
+    }
+
     log_debug("ILI9341: Initialization complete");
+
+    return true;
 }

@@ -68,9 +68,13 @@ MEMS/
 
 ### Initialization Functions
 ```c
-MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, SPI_HandleTypeDef *hspi);
+MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const SPI_ConfigTypeDef *config);
 MEMS_StatusTypeDef MEMS_DeInit(MEMS_HandleTypeDef *hmems);
 ```
+
+Pass `NULL` for `config` to accept `SPI_ConfigDefault()`. The driver registers
+its own `SPI_Device_t`, so SPI5 is reprogrammed to these settings before every
+transfer and the display sharing the bus cannot leave the gyro misconfigured.
 
 ### Configuration Functions
 ```c
@@ -109,7 +113,7 @@ If your gyroscope is not the on-board device and you wired it to a custom CS pin
 ```c
 // Example: external device CS on PA4
 MEMS_SetCS(&hmems, GPIOA, GPIO_PIN_4);
-if (MEMS_Init(&hmems, &hspi5) == MEMS_OK) {
+if (MEMS_Init(&hmems, NULL) == MEMS_OK) {
     // proceed as normal
 }
 ```
@@ -118,11 +122,10 @@ if (MEMS_Init(&hmems, &hspi5) == MEMS_OK) {
 #include "mems_gyro.h"
 
 MEMS_HandleTypeDef hmems;
-SPI_HandleTypeDef hspi5;
 MEMS_AxesTypeDef gyro_data;
 
-// Initialize MEMS sensor
-if (MEMS_Init(&hmems, &hspi5) == MEMS_OK) {
+// Initialize MEMS sensor with the default bus settings
+if (MEMS_Init(&hmems, NULL) == MEMS_OK) {
     // Read gyroscope data
     if (MEMS_GyroRead(&hmems, &gyro_data) == MEMS_OK) {
         printf("Gyro X: %.2f dps\n", gyro_data.X);
@@ -174,23 +177,18 @@ Ensure that the STM32F429 Discovery board is properly connected and powered. The
 #include "mems_interrupt.h"   // Interrupt routing
 ```
 
-### 3. Initialize SPI5
-The SPI5 peripheral must be configured before initializing the MEMS driver. This is typically done in the main initialization routine:
+### 3. Choose the bus settings
+SPI5 itself is owned by the shared driver in `Peripherals/SPI`; you do not
+configure it here. Pass `NULL` to take the defaults, or hand `MEMS_Init()` a
+`SPI_ConfigTypeDef` when the part needs something else:
 
 ```c
-// SPI5 must be configured by the application using the shared SPI driver (Peripherals/SPI). For example call `SPI_Init()` or `SPI_Init_Custom()` before `MEMS_Init()`.
-void MX_SPI5_Init(void) {
-    hspi5.Instance = SPI5;
-    hspi5.Init.Mode = SPI_MODE_MASTER;
-    hspi5.Init.Direction = SPI_DIRECTION_2LINES;
-    hspi5.Init.DataSize = SPI_DATASIZE_8BIT;
-    hspi5.Init.CLKPolarity = SPI_POLARITY_HIGH;
-    hspi5.Init.CLKPhase = SPI_PHASE_2EDGE;
-    hspi5.Init.NSS = SPI_NSS_SOFT;
-    hspi5.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
-    hspi5.Init.FirstBit = SPI_FIRSTBIT_MSB;
-    HAL_SPI_Init(&hspi5);
-}
+SPI_ConfigTypeDef busConfig = SPI_ConfigDefault();
+busConfig.CLKPolarity = SPI_POLARITY_HIGH;   /* L3GD20 samples on the 2nd edge */
+busConfig.CLKPhase = SPI_PHASE_2EDGE;
+busConfig.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+
+MEMS_Init(&hmems, &busConfig);
 ```
 
 ### 4. Application Integration
@@ -200,12 +198,11 @@ int main(void) {
     SystemClock_Config();
     
     MEMS_HandleTypeDef hmems;
-    SPI_HandleTypeDef hspi5;
     
     // Initialize MEMS sensor
-    if (MEMS_Init(&hmems, &hspi5) == MEMS_OK) {
+    if (MEMS_Init(&hmems, NULL) == MEMS_OK) {
         // Run basic example
-        MEMS_ExampleResultTypeDef result = MEMS_Example_Basic(&hmems, &hspi5);
+        MEMS_ExampleResultTypeDef result = MEMS_Example_Basic(&hmems);
         MEMS_Example_PrintResult(&result);
         
         // Your application code here
@@ -346,7 +343,7 @@ The `mems_example.c` file provides comprehensive examples:
 
 Run examples with:
 ```c
-MEMS_ExampleResultTypeDef result = MEMS_Example_Basic(&hmems, &hspi5);
+MEMS_ExampleResultTypeDef result = MEMS_Example_Basic(&hmems);
 MEMS_Example_PrintResult(&result);
 ```
 

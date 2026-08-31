@@ -43,6 +43,16 @@ typedef struct {
     uint32_t CRCPolynomial;
 } SPI_ConfigTypeDef;
 
+/**
+ * @brief One device on the shared bus, owned by the driver that talks to it
+ * @note  The board has a single usable SPI bus but several devices on it, so
+ *        the settings belong to the device rather than to the peripheral.
+ */
+typedef struct {
+    SPI_ConfigTypeDef config;   /*!< Bus settings this device needs */
+    bool              ready;    /*!< Set once the config has been accepted */
+} SPI_Device_t;
+
 #ifdef __cplusplus
 }
 #endif

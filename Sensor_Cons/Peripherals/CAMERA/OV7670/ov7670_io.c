@@ -7,15 +7,16 @@
 
 #include "ov7670_io.h"
 #include "ov7670_regs.h"
+#include "i2c_transfer.h"
 
 OV7670_StatusTypeDef OV7670_WriteReg(OV7670_Handle_t *hov7670, uint8_t reg, uint8_t value)
 {
-    if (hov7670 == NULL || hov7670->hi2c == NULL) {
+    if (hov7670 == NULL || !I2C_DeviceIsReady(&hov7670->device)) {
         return OV7670_INVALID_PARAM;
     }
 
-    if (HAL_I2C_Mem_Write(hov7670->hi2c, OV7670_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT,
-                          &value, 1, OV7670_I2C_TIMEOUT) != HAL_OK) {
+    if (I2C_Mem_Write(&hov7670->device, reg, I2C_MEMADD_SIZE_8BIT,
+                      &value, 1, OV7670_I2C_TIMEOUT) != I2C_OK) {
         return OV7670_I2C_ERROR;
     }
 
@@ -24,12 +25,12 @@ OV7670_StatusTypeDef OV7670_WriteReg(OV7670_Handle_t *hov7670, uint8_t reg, uint
 
 OV7670_StatusTypeDef OV7670_ReadReg(OV7670_Handle_t *hov7670, uint8_t reg, uint8_t *value)
 {
-    if (hov7670 == NULL || hov7670->hi2c == NULL || value == NULL) {
+    if (hov7670 == NULL || !I2C_DeviceIsReady(&hov7670->device) || value == NULL) {
         return OV7670_INVALID_PARAM;
     }
 
-    if (HAL_I2C_Mem_Read(hov7670->hi2c, OV7670_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT,
-                         value, 1, OV7670_I2C_TIMEOUT) != HAL_OK) {
+    if (I2C_Mem_Read(&hov7670->device, reg, I2C_MEMADD_SIZE_8BIT,
+                     value, 1, OV7670_I2C_TIMEOUT) != I2C_OK) {
         return OV7670_I2C_ERROR;
     }
 

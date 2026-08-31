@@ -170,15 +170,15 @@ UART_Status_t UART_Interrupt_Receive(UART_Handle_t* handle, uint8_t* data, uint1
     return WaitForRingData(handle, data, size, timeout);
 }
 
-void UART_Interrupt_Rearm(UART_Handle_t* handle)
+bool UART_Interrupt_Rearm(UART_Handle_t* handle)
 {
-    StartReceive(handle);
+    return StartReceive(handle);
 }
 
-void UART_Interrupt_Recover(UART_Handle_t* handle)
+bool UART_Interrupt_Recover(UART_Handle_t* handle)
 {
     /* Interrupt mode needs the peripheral rebuilt before reception can restart. */
-    HAL_UART_Init(handle->huart);
+    return HAL_UART_Init(handle->huart) == HAL_OK;
 }
 
 /*

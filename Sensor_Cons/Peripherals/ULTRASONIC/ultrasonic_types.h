@@ -29,6 +29,9 @@ extern "C" {
 #define ULTRASONIC_TRIGGER_PULSE_WIDTH_US      10U
 #define ULTRASONIC_ECHO_TICK_HZ                1000000U /* capture timebase */
 #define ULTRASONIC_ECHO_PERIOD                 0xFFFFU  /* counter wrap point */
+/* Spins allowed per microsecond before the trigger delay gives up on a timer
+   that is not counting; generous enough never to cut a real pulse short. */
+#define ULTRASONIC_DELAY_GUARD_LOOPS           1000U
 
 /* Ambient temperature bounds accepted for the speed of sound correction */
 #define ULTRASONIC_MIN_TEMPERATURE             (-40)

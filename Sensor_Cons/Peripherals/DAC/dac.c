@@ -42,6 +42,15 @@ static bool DAC_ValidateConfig(const DAC_ConfigTypeDef *config)
         return false;
     }
 
+    switch (config->alignment) {
+        case DAC_ALIGN_12B_R:
+        case DAC_ALIGN_12B_L:
+        case DAC_ALIGN_8B_R:
+            break;
+        default:
+            return false;
+    }
+
     return true;
 }
 

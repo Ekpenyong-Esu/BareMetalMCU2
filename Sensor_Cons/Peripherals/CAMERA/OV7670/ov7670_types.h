@@ -73,7 +73,7 @@ typedef struct {
 } OV7670_Config_t;
 
 typedef struct {
-    I2C_HandleTypeDef *hi2c;
+    I2C_Device_t device;        /**< Address and bus settings for the SCCB port */
     DCMI_HandleTypeDef *hdcmi;
     OV7670_Config_t config;
     bool initialized;
@@ -88,7 +88,7 @@ static inline OV7670_StatusTypeDef OV7670_CheckReady(const OV7670_Handle_t *hov7
     if (hov7670 == NULL) {
         return OV7670_INVALID_PARAM;
     }
-    if (!hov7670->initialized || hov7670->hi2c == NULL) {
+    if (!hov7670->initialized || !I2C_DeviceIsReady(&hov7670->device)) {
         return OV7670_NOT_INITIALIZED;
     }
     return OV7670_OK;

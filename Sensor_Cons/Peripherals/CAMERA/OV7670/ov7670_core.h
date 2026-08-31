@@ -16,12 +16,13 @@ extern "C" {
 
 /**
  * @brief Detect the sensor, reset it and apply the default configuration.
- * @note  The I2C and DCMI peripherals are owned by the application; this driver
- *        only uses the handles it is given.
+ * @param busConfig SCCB bus settings to use, or NULL for I2C_ConfigDefault().
+ * @note  DCMI stays owned by the application; the SCCB port is registered here
+ *        so a slower device sharing I2C3 cannot impose its clock on the camera.
  */
 OV7670_StatusTypeDef OV7670_Init(OV7670_Handle_t *hov7670,
-                                 I2C_HandleTypeDef *hi2c,
-                                 DCMI_HandleTypeDef *hdcmi);
+                                 DCMI_HandleTypeDef *hdcmi,
+                                 const I2C_ConfigTypeDef *busConfig);
 
 OV7670_StatusTypeDef OV7670_DeInit(OV7670_Handle_t *hov7670);
 

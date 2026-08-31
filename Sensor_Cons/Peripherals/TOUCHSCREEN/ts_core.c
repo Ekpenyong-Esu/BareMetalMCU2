@@ -19,6 +19,8 @@
 #define TS_FIFO_THRESHOLD_SINGLE        0x01U   /*!< Interrupt after a single point */
 #define TS_TSC_FRACT_XYZ_DEFAULT        0x01U   /*!< Z pressure: 7 fractional, 1 whole */
 #define TS_TSC_DRIVE_50MA               0x01U   /*!< TSC pin driving capability */
+#define TS_PROBE_TRIALS                 3U      /*!< Address attempts when probing */
+#define TS_PROBE_TIMEOUT                100U    /*!< Probe timeout per attempt, ms */
 
 /** One entry of the fixed controller start-up sequence. */
 typedef struct {
@@ -51,8 +53,9 @@ static TS_HandleTypeDef *s_handle = NULL;   /*!< Handle the touch interrupt reso
  */
 static void TS_ResolveBus(TS_HandleTypeDef *hts)
 {
+    TS_IO_BusInit();
+
     if (hts->hi2c->Instance == NULL) {
-        I2C_Init();
         hts->hi2c = I2C_GetHandle();
     }
 }
@@ -64,7 +67,7 @@ static void TS_ResolveBus(TS_HandleTypeDef *hts)
  */
 static TS_StatusTypeDef TS_CheckDevice(TS_HandleTypeDef *hts)
 {
-    if (I2C_IsDeviceReady(STMPE811_I2C_ADDRESS, 3, 100) != I2C_OK) {
+    if (TS_IO_IsDeviceReady(TS_PROBE_TRIALS, TS_PROBE_TIMEOUT) != TS_OK) {
         log_debug("TS: Device not found on I2C bus");
         return TS_DEVICE_NOT_FOUND;
     }
@@ -114,7 +117,9 @@ static TS_StatusTypeDef TS_ClearRegisterBits(TS_HandleTypeDef *hts, uint8_t reg,
  */
 static TS_StatusTypeDef TS_ConfigureController(TS_HandleTypeDef *hts)
 {
-    TS_Reset(hts);
+    if (TS_Reset(hts) != TS_OK) {
+        return TS_COMMUNICATION_ERROR;
+    }
 
     /* Powering blocks up means clearing their OFF bits. */
     if (TS_ClearRegisterBits(hts, STMPE811_REG_SYS_CTRL2, STMPE811_SYS_CTRL2_GPIO_OFF) != TS_OK) {
@@ -180,9 +185,16 @@ TS_StatusTypeDef TS_Init(TS_HandleTypeDef *hts, I2C_HandleTypeDef *hi2c)
         return status;
     }
 
-    TS_EnableInterrupt(hts, hts->Config.InterruptEnable);
+    status = TS_EnableInterrupt(hts, hts->Config.InterruptEnable);
+    if (status != TS_OK) {
+        return status;
+    }
+
     if (hts->Config.InterruptEnable) {
-        TS_ITConfig(hts);
+        status = TS_ITConfig(hts);
+        if (status != TS_OK) {
+            return status;
+        }
     }
 
     hts->IsInitialized = true;
@@ -195,15 +207,21 @@ TS_StatusTypeDef TS_DeInit(TS_HandleTypeDef *hts)
         return TS_INVALID_PARAM;
     }
 
-    TS_EnableInterrupt(hts, false);
-    TS_WriteRegister(hts, STMPE811_REG_SYS_CTRL2, STMPE811_SYS_CTRL2_TSC_OFF);
+    /* Tear-down continues past a failure so the handle is always released, but
+       the first error is what the caller hears about. */
+    TS_StatusTypeDef status = TS_EnableInterrupt(hts, false);
+
+    if (TS_WriteRegister(hts, STMPE811_REG_SYS_CTRL2,
+                         STMPE811_SYS_CTRL2_TSC_OFF) != TS_OK && status == TS_OK) {
+        status = TS_COMMUNICATION_ERROR;
+    }
 
     hts->IsInitialized = false;
     if (s_handle == hts) {
         s_handle = NULL;
     }
 
-    return TS_OK;
+    return status;
 }
 
 TS_StatusTypeDef TS_Configure(TS_HandleTypeDef *hts, TS_ConfigTypeDef *config)

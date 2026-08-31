@@ -38,6 +38,9 @@ HAL_StatusTypeDef IR_Init(IR_Handle_t *handle, TIM_HandleTypeDef *htimCarrier,
     handle->config = *config;
 
     IR_TimingInit();
+    if (!IR_TimingIsRunning()) {
+        return HAL_ERROR;
+    }
 
     handle->state = IR_STATE_IDLE;
     handle->errorCode = IR_ERROR_NONE;

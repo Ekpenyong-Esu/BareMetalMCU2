@@ -50,7 +50,7 @@ static ILI9488_StatusTypeDef ILI9488_DrawGlyphOpaque(ILI9488_Handle_t *hili,
                                                      uint16_t color, uint16_t bgcolor)
 {
     uint16_t cell[ILI9488_GLYPH_PIXELS];
-    ILI9488_StatusTypeDef status;
+    ILI9488_StatusTypeDef status = ILI9488_OK;
 
     /* Row-major, matching the panel's scan order inside the window. */
     for (uint16_t row = 0U; row < ILI9488_FONT_HEIGHT; row++) {

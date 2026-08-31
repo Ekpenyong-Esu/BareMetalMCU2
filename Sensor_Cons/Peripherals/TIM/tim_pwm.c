@@ -49,7 +49,8 @@ HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim,
 
 HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim,
                                         uint32_t channel,
-                                        uint32_t pulse)
+                                        uint32_t pulse,
+                                        uint32_t polarity)
 {
     if (htim == NULL) {
         return HAL_ERROR;
@@ -58,7 +59,7 @@ HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim,
     TIM_OC_InitTypeDef sConfigOC = {0};
     sConfigOC.OCMode = TIM_OCMODE_PWM1;
     sConfigOC.Pulse = pulse;
-    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+    sConfigOC.OCPolarity = polarity;
     sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 
     return HAL_TIM_PWM_ConfigChannel(htim, &sConfigOC, channel);

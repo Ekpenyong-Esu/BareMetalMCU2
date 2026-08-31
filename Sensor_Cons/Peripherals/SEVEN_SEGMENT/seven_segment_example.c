@@ -69,7 +69,6 @@ void SevenSeg_Example_GPIO_CommonCathode(void)
     /* Digit select is active HIGH (using NPN transistors) */
     config.config.gpio.digitActiveHigh = true;
 
-    config.multiplexDelayUs = 2000;  /* 2ms per digit */
     config.leadingZeros = false;
 
     /* Initialize display */
@@ -133,7 +132,6 @@ void SevenSeg_Example_GPIO_CommonAnode(void)
     /* Digit select is active LOW (using PNP transistors) */
     config.config.gpio.digitActiveHigh = false;
 
-    config.multiplexDelayUs = 2000;
     config.leadingZeros = false;
 
     if (Seg_Init(&displayHandle, &config) == SEG_OK) {

@@ -19,6 +19,9 @@
 #define SSD1331_IO_PRESCALER      SPI_BAUDRATEPRESCALER_16
 #define SSD1331_IO_CRC_POLYNOMIAL 10U
 
+/* This panel's slot on the shared bus; it runs slower than the other devices. */
+static SPI_Device_t s_device;
+
 static SSD1331_StatusTypeDef SSD1331_IO_PinInit(GPIO_TypeDef *port, uint16_t pin)
 {
     GPIO_InitTypeDef gpioInit = {0};
@@ -67,21 +70,12 @@ static void SSD1331_IO_Reset(const SSD1331_Config_t *config)
 
 static SSD1331_StatusTypeDef SSD1331_IO_BusInit(void)
 {
-    const SPI_ConfigTypeDef busConfig = {
-        .Mode = SPI_MODE_MASTER,
-        .Direction = SPI_DIRECTION_2LINES,
-        .DataSize = SPI_DATASIZE_8BIT,
-        .CLKPolarity = SPI_POLARITY_LOW,
-        .CLKPhase = SPI_PHASE_1EDGE,
-        .NSS = SPI_NSS_SOFT,
-        .BaudRatePrescaler = SSD1331_IO_PRESCALER,
-        .FirstBit = SPI_FIRSTBIT_MSB,
-        .TIMode = SPI_TIMODE_DISABLE,
-        .CRCCalculation = SPI_CRCCALCULATION_DISABLE,
-        .CRCPolynomial = SSD1331_IO_CRC_POLYNOMIAL
-    };
+    SPI_ConfigTypeDef busConfig = SPI_ConfigDefault();
 
-    return (SPI_Init_Custom(&busConfig) == SPI_OK) ? SSD1331_OK : SSD1331_ERROR;
+    busConfig.BaudRatePrescaler = SSD1331_IO_PRESCALER;
+    busConfig.CRCPolynomial = SSD1331_IO_CRC_POLYNOMIAL;
+
+    return (SPI_DeviceInit(&s_device, &busConfig) == SPI_OK) ? SSD1331_OK : SSD1331_ERROR;
 }
 
 SSD1331_StatusTypeDef SSD1331_IO_Init(const SSD1331_Config_t *config)
@@ -133,7 +127,7 @@ SSD1331_StatusTypeDef SSD1331_IO_WriteCommand(const SSD1331_Config_t *config, ui
 
     SSD1331_IO_SetCommandMode(config);
     SSD1331_IO_Select(config);
-    spiStatus = SPI_Transmit(&frame, 1U, SPI_TIMEOUT_DEFAULT);
+    spiStatus = SPI_Transmit(&s_device, &frame, 1U, SPI_TIMEOUT_DEFAULT);
     SSD1331_IO_Deselect(config);
 
     if (spiStatus != SPI_OK) {
@@ -159,7 +153,7 @@ SSD1331_StatusTypeDef SSD1331_IO_WriteCommands(const SSD1331_Config_t *config,
 
     SSD1331_IO_SetCommandMode(config);
     SSD1331_IO_Select(config);
-    spiStatus = SPI_Transmit(frame, count, SPI_TIMEOUT_DEFAULT);
+    spiStatus = SPI_Transmit(&s_device, frame, count, SPI_TIMEOUT_DEFAULT);
     SSD1331_IO_Deselect(config);
 
     if (spiStatus != SPI_OK) {
@@ -181,7 +175,7 @@ SSD1331_StatusTypeDef SSD1331_IO_WriteData(const SSD1331_Config_t *config,
 
     SSD1331_IO_SetDataMode(config);
     SSD1331_IO_Select(config);
-    spiStatus = SPI_Transmit(data, size, SPI_TIMEOUT_LONG);
+    spiStatus = SPI_Transmit(&s_device, data, size, SPI_TIMEOUT_LONG);
     SSD1331_IO_Deselect(config);
 
     if (spiStatus != SPI_OK) {

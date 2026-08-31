@@ -14,8 +14,9 @@
 /**
  * @brief   Configure the LED pin as a push-pull output
  * @param   config Pointer to LED configuration
+ * @retval  bool True when the pin was configured
  */
-static void Led_GPIO_Init(const LedConfig_t* config)
+static bool Led_GPIO_Init(const LedConfig_t* config)
 {
     GPIO_InitTypeDef gpioInit = {0};
 
@@ -24,7 +25,7 @@ static void Led_GPIO_Init(const LedConfig_t* config)
     gpioInit.Speed = GPIO_SPEED_FREQ_LOW;
     gpioInit.Pull = GPIO_NOPULL;
 
-    GPIO_Driver_Pin_Init(config->port, &gpioInit);
+    return GPIO_Driver_Pin_Init(config->port, &gpioInit) == HAL_OK;
 }
 
 /**
@@ -88,7 +89,9 @@ bool Led_InitCustom(LedHandle_t* handle, const LedConfig_t* config)
     handle->initialized = false;
 
     /* Initialize GPIO */
-    Led_GPIO_Init(&handle->config);
+    if (!Led_GPIO_Init(&handle->config)) {
+        return false;
+    }
 
     /* Set initial state (off) */
     Led_SetPhysical(handle, LED_OFF);

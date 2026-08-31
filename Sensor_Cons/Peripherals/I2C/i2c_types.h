@@ -44,6 +44,18 @@ typedef struct {
     uint32_t NoStretchMode;
 } I2C_ConfigTypeDef;
 
+/**
+ * @brief One device on the shared bus, owned by the driver that talks to it
+ * @note  Carries the address as well as the bus settings, so a slow device and
+ *        a fast one can share the bus without either imposing its clock on the
+ *        other.
+ */
+typedef struct {
+    uint16_t          address;  /*!< Slave address, already shifted for the HAL */
+    I2C_ConfigTypeDef config;   /*!< Bus settings this device needs */
+    bool              ready;    /*!< Set once the config has been accepted */
+} I2C_Device_t;
+
 #ifdef __cplusplus
 }
 #endif

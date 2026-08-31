@@ -48,6 +48,20 @@ static uint16_t EEPROM_IO_DeviceAddress(const EEPROM_HandleTypeDef* handle,
     return (uint16_t)((handle->activeAddress | block) << 1);
 }
 
+/* One EEPROM part answers to several addresses when its memory is split into
+   blocks, so the device record travels with the block being addressed. */
+static I2C_Device_t s_device;
+
+/**
+ * @brief The bus device record, pointed at @p devAddr
+ */
+static I2C_Device_t *EEPROM_IO_Device(uint16_t devAddr)
+{
+    s_device.address = devAddr;
+
+    return &s_device;
+}
+
 /**
  * @brief Bytes left in the current block, i.e. the largest safe transfer
  */
@@ -77,10 +91,11 @@ static uint16_t EEPROM_IO_MemAddress(uint16_t address, uint8_t blockBits)
 
 void EEPROM_IO_Init(void)
 {
-    if (!I2C_IsReady())
-    {
-        I2C_Init();
-    }
+    const I2C_ConfigTypeDef config = I2C_ConfigDefault();
+
+    /* The address is filled in per transfer; registering here only fixes the
+       bus settings the part expects. */
+    I2C_DeviceInit(&s_device, 0U, &config);
 }
 
 EEPROM_StatusTypeDef EEPROM_IO_Write(const EEPROM_HandleTypeDef* handle,
@@ -98,7 +113,7 @@ EEPROM_StatusTypeDef EEPROM_IO_Write(const EEPROM_HandleTypeDef* handle,
         uint16_t devAddr = EEPROM_IO_DeviceAddress(handle, offset, blockBits);
         uint16_t memAddr = EEPROM_IO_MemAddress(offset, blockBits);
 
-        if (I2C_Mem_Write(devAddr,
+        if (I2C_Mem_Write(EEPROM_IO_Device(devAddr),
                           memAddr,
                           handle->config.addressSize,
                           (uint8_t*)(uintptr_t)(data + done),
@@ -130,7 +145,7 @@ EEPROM_StatusTypeDef EEPROM_IO_Read(const EEPROM_HandleTypeDef* handle,
         uint16_t memAddr = EEPROM_IO_MemAddress(offset, blockBits);
         uint8_t *readPos = (uint8_t *)(uintptr_t)(data + done);
 
-        if (I2C_Mem_Read(devAddr,
+        if (I2C_Mem_Read(EEPROM_IO_Device(devAddr),
                          memAddr,
                          handle->config.addressSize,
                          readPos,
@@ -150,7 +165,8 @@ EEPROM_StatusTypeDef EEPROM_IO_IsDeviceReady(const EEPROM_HandleTypeDef* handle)
 {
     const uint16_t devAddr = (uint16_t)(handle->activeAddress << 1);
 
-    if (I2C_IsDeviceReady(devAddr, EEPROM_MAX_TRIALS, EEPROM_TIMEOUT_DEFAULT) != I2C_OK)
+    if (I2C_IsDeviceReady(EEPROM_IO_Device(devAddr), EEPROM_MAX_TRIALS,
+                          EEPROM_TIMEOUT_DEFAULT) != I2C_OK)
     {
         return EEPROM_TIMEOUT;
     }

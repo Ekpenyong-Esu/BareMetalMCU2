@@ -47,7 +47,11 @@ bool LedPwmTimer_Init(LedPwmTimer_t* pwm, const LedPwmTimerConfig_t* config)
 
     pwm->channel = config->channel;
 
-    return ((TIM_PWM_ConfigChannel(&pwm->htim, pwm->channel, 0u) == HAL_OK) &&  // initialize the timer channel with a duty cycle of 0 (LED off) and start the PWM output
+    /* Duty 0 means the LED starts off; an active-low LED inverts in the driver
+       stage, so the polarity travels with the pin, not the brightness. */
+    const uint32_t polarity = config->activeLow ? TIM_OCPOLARITY_LOW : TIM_OCPOLARITY_HIGH;
+
+    return ((TIM_PWM_ConfigChannel(&pwm->htim, pwm->channel, 0u, polarity) == HAL_OK) &&
            (TIM_PWM_Start(&pwm->htim, pwm->channel) == HAL_OK)) != 0;
 }
 

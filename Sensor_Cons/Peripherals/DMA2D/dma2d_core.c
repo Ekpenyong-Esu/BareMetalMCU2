@@ -220,7 +220,7 @@ HAL_StatusTypeDef DMA2D_Abort(void)
     return result;
 }
 
-HAL_StatusTypeDef DMA2D_EnableLCDMode(void)
+HAL_StatusTypeDef DMA2D_EnableLCDMode(uint32_t color_mode)
 {
     log_info("Enabling DMA2D LCD mode");
 
@@ -229,8 +229,10 @@ HAL_StatusTypeDef DMA2D_EnableLCDMode(void)
         return HAL_ERROR;
     }
 
+    /* Writing straight into the framebuffer means consecutive pixels, so the
+       output offset has to go; the format stays the caller's decision. */
     s_device.hal.Init.OutputOffset = 0;
-    s_device.hal.Init.ColorMode = DMA2D_OUTPUT_RGB565;  /* Common LCD format */
+    s_device.hal.Init.ColorMode = color_mode;
 
     HAL_StatusTypeDef result = HAL_DMA2D_Init(&s_device.hal);
     if (result != HAL_OK) {

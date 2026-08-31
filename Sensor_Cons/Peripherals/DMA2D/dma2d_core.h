@@ -80,9 +80,12 @@ HAL_StatusTypeDef DMA2D_Abort(void);
 
 /**
  * @brief Reconfigure the output stage for direct LCD framebuffer writes
+ * @param color_mode One of DMA2D_OUTPUT_*, matching the LTDC layer's pixel
+ *                  format; a mismatch here shows up as wrong colours, not as
+ *                  an error.
  * @return HAL_OK on success, HAL_ERROR otherwise
  */
-HAL_StatusTypeDef DMA2D_EnableLCDMode(void);
+HAL_StatusTypeDef DMA2D_EnableLCDMode(uint32_t color_mode);
 
 /**
  * @brief DMA2D interrupt entry point

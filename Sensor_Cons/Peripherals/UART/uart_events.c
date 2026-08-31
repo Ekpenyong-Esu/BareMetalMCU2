@@ -27,7 +27,11 @@ static UART_Handle_t *OwnerOf(const UART_HandleTypeDef *huart)
 static void RestartReceive(UART_Handle_t *handle)
 {
     switch (handle->config.mode) {
-        case UART_MODE_INTERRUPT: UART_Interrupt_Rearm(handle); break;
+        case UART_MODE_INTERRUPT:
+            if (!UART_Interrupt_Rearm(handle)) {
+                log_error("UART: could not re-arm reception");
+            }
+            break;
         case UART_MODE_DMA:       UART_DMA_Rearm(handle); break;
         default:                  break;
     }
@@ -122,7 +126,11 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     huart->ErrorCode = HAL_UART_ERROR_NONE;
 
     if (handle->config.mode == UART_MODE_INTERRUPT) {
-        UART_Interrupt_Recover(handle);
+        /* Nothing here can act on a failure, but silently losing the port is
+           worse than saying so. */
+        if (!UART_Interrupt_Recover(handle)) {
+            log_error("UART: recovery failed; reception stays down");
+        }
     }
 
     RestartReceive(handle);

@@ -23,6 +23,9 @@
 #define XPT2046_CYCLES_PER_LOOP       4U      /**< Approximate cost of one delay iteration */
 #define XPT2046_HZ_PER_MHZ            1000000U
 
+/* This controller's slot on the shared bus. */
+static SPI_Device_t s_device;
+
 void XPT2046_IO_DelayUs(uint32_t microseconds)
 {
     volatile uint32_t count = (microseconds * (SystemCoreClock / XPT2046_HZ_PER_MHZ)) /
@@ -53,6 +56,11 @@ XPT2046_StatusTypeDef XPT2046_IO_ConfigurePins(const XPT2046_Config_t *config)
     init.Pull = GPIO_PULLUP;
     init.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_Driver_Pin_Init(config->irq_port, &init);
+
+    const SPI_ConfigTypeDef spiConfig = SPI_ConfigDefault();
+    if (SPI_DeviceInit(&s_device, &spiConfig) != SPI_OK) {
+        return XPT2046_ERROR;
+    }
 
     return XPT2046_OK;
 }
@@ -93,7 +101,7 @@ XPT2046_StatusTypeDef XPT2046_IO_ReadSample(const XPT2046_Config_t *config,
     HAL_GPIO_WritePin(config->cs_port, config->cs_pin, GPIO_PIN_RESET);
     XPT2046_IO_DelayUs(XPT2046_CS_SETUP_US);
 
-    spiStatus = SPI_TransmitReceive(tx, rx, XPT2046_SEQUENCE_BYTES, SPI_TIMEOUT_SHORT);
+    spiStatus = SPI_TransmitReceive(&s_device, tx, rx, XPT2046_SEQUENCE_BYTES, SPI_TIMEOUT_SHORT);
 
     HAL_GPIO_WritePin(config->cs_port, config->cs_pin, GPIO_PIN_SET);
 

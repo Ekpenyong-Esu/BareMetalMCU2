@@ -13,6 +13,20 @@ extern "C" {
 #include "ts_types.h"
 
 /**
+ * @brief Register the STMPE811 on the shared I2C bus
+ * @note  Must run before any register access; the address is fixed by the part.
+ */
+void TS_IO_BusInit(void);
+
+/**
+ * @brief Probe the bus for the STMPE811
+ * @param trials Number of address attempts
+ * @param timeout Timeout per attempt in ms
+ * @return TS_StatusTypeDef TS_DEVICE_NOT_FOUND when nothing answers
+ */
+TS_StatusTypeDef TS_IO_IsDeviceReady(uint32_t trials, uint32_t timeout);
+
+/**
  * @brief Read one 8-bit register
  * @param hts Touchscreen handle
  * @param reg Register address

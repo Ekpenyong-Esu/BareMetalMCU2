@@ -20,7 +20,7 @@
 /* Static flag to track if LCD IO is initialized (matches ST BSP pattern) */
 static uint8_t Is_LCD_IO_Initialized = 0;
 
-void ILI9341_MspInit(void)
+bool ILI9341_MspInit(void)
 {
     if (Is_LCD_IO_Initialized == 0)
     {
@@ -67,26 +67,16 @@ void ILI9341_MspInit(void)
          * configures control lines (CS/WRX/RDX) above.
          */
 
-        /* Configure SPI via central driver using ST BSP settings */
-        SPI_ConfigTypeDef cfg = {0};
-        cfg.Mode = SPI_MODE_MASTER;
-        cfg.Direction = SPI_DIRECTION_2LINES;
-        cfg.DataSize = SPI_DATASIZE_8BIT;
-        cfg.CLKPolarity = SPI_POLARITY_LOW;     /* CPOL=0 */
-        cfg.CLKPhase = SPI_PHASE_1EDGE;         /* CPHA=0 (Mode 0) */
-        cfg.NSS = SPI_NSS_SOFT;
-        /* ST BSP expects SPI SCLK ≈ 5.6 - 10 MHz. With current clocks (APB2 = 84 MHz)
-         * prescaler=8 => 10.5 MHz; prescaler=16 => 5.25 MHz (below 5.6). Use prescaler=8
-         * for better compliance with ST BSP recommendations. */
-        cfg.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;  /* SPI clock ≈ APB2 / 8 = 10.5 MHz */
-        cfg.FirstBit = SPI_FIRSTBIT_MSB;
-        cfg.TIMode = SPI_TIMODE_DISABLE;
-        cfg.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-        cfg.CRCPolynomial = SPI_CRC_POLY;
-
-        /* Use SPI_Init_Custom when available to apply board-specific config */
-        SPI_Init_Custom(&cfg);
+        /* Bus settings live with the transport, in ili9341_io.c */
+        if (ILI9341_IO_BusInit() != SPI_OK)
+        {
+            /* Let a later call retry rather than leaving the panel claimed. */
+            Is_LCD_IO_Initialized = 0;
+            return false;
+        }
     }
+
+    return true;
 }
 
 void ILI9341_MspDeInit(void)

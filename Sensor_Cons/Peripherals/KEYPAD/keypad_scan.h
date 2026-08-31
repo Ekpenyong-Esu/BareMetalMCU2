@@ -17,7 +17,7 @@ extern "C" {
  * @brief   Configure the row outputs and column inputs
  * @param   config Pin configuration
  */
-void Keypad_Scan_GpioInit(const KeypadConfig_t *config);
+bool Keypad_Scan_GpioInit(const KeypadConfig_t *config);
 
 /**
  * @brief   Release the rows and return every line to a high impedance input

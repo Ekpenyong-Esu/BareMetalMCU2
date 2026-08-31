@@ -85,6 +85,9 @@ static const AudioCodecWrite_t s_playbackSetup[] = {
 
 /* Private functions ---------------------------------------------------------*/
 
+/* The codec sits at a fixed address on the shared control bus. */
+static I2C_Device_t s_device;
+
 /**
  * @brief   Write one codec register over I2C
  * @param   reg   Register address
@@ -93,7 +96,7 @@ static const AudioCodecWrite_t s_playbackSetup[] = {
  */
 static AUDIO_StatusTypeDef Audio_CodecWrite(uint8_t reg, uint8_t value)
 {
-    if (I2C_Mem_Write(AUDIO_CODEC_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT,
+    if (I2C_Mem_Write(&s_device, reg, I2C_MEMADD_SIZE_8BIT,
                       &value, 1, AUDIO_CODEC_I2C_TIMEOUT) != I2C_OK) {
         return AUDIO_ERROR;
     }
@@ -112,7 +115,7 @@ static AUDIO_StatusTypeDef Audio_CodecRead(uint8_t reg, uint8_t* value)
         return AUDIO_INVALID_PARAM;
     }
 
-    if (I2C_Mem_Read(AUDIO_CODEC_I2C_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT,
+    if (I2C_Mem_Read(&s_device, reg, I2C_MEMADD_SIZE_8BIT,
                      value, 1, AUDIO_CODEC_I2C_TIMEOUT) != I2C_OK) {
         return AUDIO_ERROR;
     }
@@ -160,10 +163,15 @@ static AUDIO_StatusTypeDef Audio_CodecVerifyId(void)
 
 AUDIO_StatusTypeDef Audio_CodecInit(uint8_t volume)
 {
+    const I2C_ConfigTypeDef busConfig = I2C_ConfigDefault();
+
     Audio_CodecReleaseReset();
 
-    /* The control bus is shared; I2C_Init() is idempotent. */
-    I2C_Init();
+    /* The control bus is shared; registering only records what the codec needs
+       and the bus is programmed on the first transfer. */
+    if (I2C_DeviceInit(&s_device, AUDIO_CODEC_I2C_ADDRESS, &busConfig) != I2C_OK) {
+        return AUDIO_ERROR;
+    }
 
     AUDIO_StatusTypeDef status = Audio_CodecVerifyId();
     if (status != AUDIO_OK) {

@@ -47,13 +47,16 @@ HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim,
 
 /**
  * @brief  Configure PWM channel duty cycle
- * @param  htim    Timer handle
- * @param  channel TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, or TIM_CHANNEL_4
- * @param  pulse   Compare value (duty = pulse / period * 100%)
+ * @param  htim     Timer handle
+ * @param  channel  TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, or TIM_CHANNEL_4
+ * @param  pulse    Compare value (duty = pulse / period * 100%)
+ * @param  polarity TIM_OCPOLARITY_HIGH, or TIM_OCPOLARITY_LOW when the driver
+ *                 stage inverts the signal
  */
 HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim,
                                         uint32_t channel,
-                                        uint32_t pulse);
+                                        uint32_t pulse,
+                                        uint32_t polarity);
 
 /**
  * @brief  Start PWM output on channel

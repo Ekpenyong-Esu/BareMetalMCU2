@@ -76,7 +76,7 @@ SERVO_StatusTypeDef SERVO_PWM_Init(SERVO_Handle_t *hservo)
     /* Without this the channel keeps its reset output-compare mode and never
        produces a PWM waveform, however the compare register is written. */
     if (TIM_PWM_ConfigChannel(hservo->htim, hservo->channel,
-                              SERVO_DEFAULT_PULSE_WIDTH_US) != HAL_OK) {
+                              SERVO_DEFAULT_PULSE_WIDTH_US, TIM_OCPOLARITY_HIGH) != HAL_OK) {
         log_error("SERVO: PWM channel config failed");
         HAL_GPIO_DeInit(hservo->gpioPort, hservo->gpioPin);
         return SERVO_ERROR;

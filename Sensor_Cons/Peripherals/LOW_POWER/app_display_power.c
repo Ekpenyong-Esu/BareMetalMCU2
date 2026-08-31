@@ -64,7 +64,9 @@ static void APP_DimAnimReady_PowerOff(lv_anim_t *anim)
 {
     HAL_GPIO_WritePin(LCD_BL_GPIO_Port, LCD_BL_Pin, GPIO_PIN_RESET);
 
-    ili9341_SleepIn();
+    if (!ili9341_SleepIn()) {
+        log_error("APP: panel did not acknowledge sleep; powering down anyway");
+    }
 
     if (LTDC_GetHandle()->Instance != NULL) {
         __HAL_LTDC_DISABLE(LTDC_GetHandle());
@@ -161,7 +163,9 @@ void APP_Display_PowerOn(void)
 
     HAL_GPIO_WritePin(LCD_BL_GPIO_Port, LCD_BL_Pin, GPIO_PIN_SET);
 
-    ili9341_SleepOut();
+    if (!ili9341_SleepOut()) {
+        log_error("APP: panel did not wake; the backlight is on but the image may be stale");
+    }
 
     if (LTDC_GetHandle()->Instance != NULL) {
         __HAL_LTDC_ENABLE(LTDC_GetHandle());

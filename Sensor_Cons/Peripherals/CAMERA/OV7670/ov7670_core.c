@@ -100,21 +100,26 @@ OV7670_StatusTypeDef OV7670_Reset(OV7670_Handle_t *hov7670)
 }
 
 OV7670_StatusTypeDef OV7670_Init(OV7670_Handle_t *hov7670,
-                                 I2C_HandleTypeDef *hi2c,
-                                 DCMI_HandleTypeDef *hdcmi)
+                                 DCMI_HandleTypeDef *hdcmi,
+                                 const I2C_ConfigTypeDef *busConfig)
 {
     OV7670_StatusTypeDef status;
     OV7670_Config_t default_config;
+    I2C_ConfigTypeDef i2cConfig;
     uint16_t chip_id = 0;
 
-    if (hov7670 == NULL || hi2c == NULL || hdcmi == NULL) {
+    if (hov7670 == NULL || hdcmi == NULL) {
         return OV7670_INVALID_PARAM;
     }
 
-    hov7670->hi2c = hi2c;
     hov7670->hdcmi = hdcmi;
     hov7670->initialized = false;
     hov7670->chip_id = 0;
+
+    i2cConfig = (busConfig != NULL) ? *busConfig : I2C_ConfigDefault();
+    if (I2C_DeviceInit(&hov7670->device, OV7670_I2C_ADDRESS, &i2cConfig) != I2C_OK) {
+        return OV7670_I2C_ERROR;
+    }
 
     status = OV7670_GetChipID(hov7670, &chip_id);
     if (status != OV7670_OK) {

@@ -57,7 +57,9 @@ bool Keypad_Init(KeypadHandle_t *handle, const KeypadConfig_t *config)
     handle->currentKey = KEYPAD_NO_KEY;
     handle->lastKeyTime = HAL_GetTick();
 
-    Keypad_Scan_GpioInit(&handle->config);
+    if (!Keypad_Scan_GpioInit(&handle->config)) {
+        return false;
+    }
 
     handle->initialized = true;
 

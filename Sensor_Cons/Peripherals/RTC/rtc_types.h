@@ -21,6 +21,19 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 
 /**
+ * @brief RTC start-up configuration
+ * @note  The clock source is deliberately absent: the Discovery board has no
+ *        32.768 kHz crystal fitted, so LSE is not a choice the hardware could
+ *        honour. The prescalers are exposed instead, because LSI is only
+ *        accurate to a few percent and trimming them is the way to correct it.
+ */
+typedef struct {
+    uint32_t HourFormat;   /*!< RTC_HOURFORMAT_12 or RTC_HOURFORMAT_24 */
+    uint32_t AsynchPrediv; /*!< Asynchronous prescaler, 0..0x7F */
+    uint32_t SynchPrediv;  /*!< Synchronous prescaler, 0..0x7FFF */
+} RTC_ConfigTypeDef;
+
+/**
  * @brief RTC Time structure definition
  */
 typedef struct {

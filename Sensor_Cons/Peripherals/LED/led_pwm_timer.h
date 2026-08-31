@@ -48,6 +48,7 @@ typedef struct {
     TIM_TypeDef*  timer;           /**< Timer peripheral; must have output channels */
     uint32_t      channel;         /**< TIM_CHANNEL_1..4 */
     uint32_t      pwmFrequencyHz;  /**< Carrier frequency; keep above ~100 Hz to avoid flicker */
+    bool          activeLow;       /**< True when the LED lights on a low output */
 } LedPwmTimerConfig_t;
 
 typedef struct {

@@ -12,6 +12,22 @@
 
 #define ILI9341_MAX_READ_BYTES  4U
 
+/* ST BSP uses 7 for this panel. */
+#define ILI9341_SPI_CRC_POLY    7U
+
+/* The on-board panel's slot on the shared bus. ST BSP expects 5.6-10 MHz;
+   PCLK2/8 = 10.5 MHz is the closest the prescaler can get. */
+static SPI_Device_t s_device;
+
+SPI_StatusTypeDef ILI9341_IO_BusInit(void)
+{
+    SPI_ConfigTypeDef config = SPI_ConfigDefault();
+
+    config.CRCPolynomial = ILI9341_SPI_CRC_POLY;
+
+    return SPI_DeviceInit(&s_device, &config);
+}
+
 /* Private functions ---------------------------------------------------------*/
 
 static void ILI9341_Select(void)
@@ -36,20 +52,28 @@ static void ILI9341_SetDataMode(void)
 
 /* Exported functions --------------------------------------------------------*/
 
-void ili9341_WriteReg(uint8_t command)
+SPI_StatusTypeDef ili9341_WriteReg(uint8_t command)
 {
+    SPI_StatusTypeDef status = SPI_OK;
+
     ILI9341_SetCommandMode();
     ILI9341_Select();
-    SPI_Transmit(&command, 1U, SPI_TIMEOUT_LONG);
+    status = SPI_Transmit(&s_device, &command, 1U, SPI_TIMEOUT_LONG);
     ILI9341_Deselect();
+
+    return status;
 }
 
-void ili9341_WriteData(uint8_t data)
+SPI_StatusTypeDef ili9341_WriteData(uint8_t data)
 {
+    SPI_StatusTypeDef status = SPI_OK;
+
     ILI9341_SetDataMode();
     ILI9341_Select();
-    SPI_Transmit(&data, 1U, SPI_TIMEOUT_LONG);
+    status = SPI_Transmit(&s_device, &data, 1U, SPI_TIMEOUT_LONG);
     ILI9341_Deselect();
+
+    return status;
 }
 
 uint32_t ili9341_ReadData(uint16_t command, uint8_t readSize)
@@ -66,10 +90,20 @@ uint32_t ili9341_ReadData(uint16_t command, uint8_t readSize)
     /* Command and read phases share one chip-select assertion. */
     ILI9341_SetCommandMode();
     ILI9341_Select();
-    SPI_Transmit(&commandByte, 1U, SPI_TIMEOUT_LONG);
+
+    if (SPI_Transmit(&s_device, &commandByte, 1U, SPI_TIMEOUT_LONG) != SPI_OK) {
+        ILI9341_Deselect();
+        return 0U;
+    }
 
     ILI9341_SetDataMode();
-    SPI_TransmitReceive(transmitBuffer, responseBuffer, readSize, SPI_TIMEOUT_LONG);
+
+    if (SPI_TransmitReceive(&s_device, transmitBuffer, responseBuffer, readSize,
+                            SPI_TIMEOUT_LONG) != SPI_OK) {
+        ILI9341_Deselect();
+        return 0U;
+    }
+
     ILI9341_Deselect();
 
     for (uint8_t index = 0U; index < readSize; index++) {

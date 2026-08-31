@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 #include "stm32f4xx.h"
+#include "spi_core.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -103,11 +104,12 @@ typedef struct {
 
 /**
  * @brief Driver handle.
- * @note  The SPI peripheral itself is owned by the application; this driver
- *        only uses the handle it is given and never reconfigures it.
+ * @note  SPI5 also carries the display, so the bus settings travel with this
+ *        device and are reapplied before every transfer rather than being
+ *        inherited from whichever driver ran last.
  */
 typedef struct {
-    SPI_HandleTypeDef *hspi;
+    SPI_Device_t device;        /**< Bus settings this gyro needs */
     GPIO_TypeDef *CS_Port;      /**< NULL falls back to the board default CS */
     uint16_t CS_Pin;
     MEMS_GyroConfigTypeDef GyroConfig;
@@ -124,7 +126,7 @@ static inline MEMS_StatusTypeDef MEMS_CheckReady(const MEMS_HandleTypeDef *hmems
     if (hmems == NULL) {
         return MEMS_INVALID_PARAM;
     }
-    if (!hmems->IsInitialized || hmems->hspi == NULL) {
+    if (!hmems->IsInitialized || !SPI_DeviceIsReady(&hmems->device)) {
         return MEMS_NOT_INITIALIZED;
     }
     return MEMS_OK;

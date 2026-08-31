@@ -15,11 +15,10 @@ extern "C" {
 #include "mems_types.h"
 
 /**
- * @brief Bring up the sensor on an already-initialised SPI peripheral.
- * @note  The application owns the SPI (see Peripherals/SPI); this driver never
- *        configures or reconfigures it.
+ * @brief Bring up the sensor and register its settings on the shared SPI bus.
+ * @param config Bus settings to use, or NULL for SPI_ConfigDefault().
  */
-MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, SPI_HandleTypeDef *hspi);
+MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const SPI_ConfigTypeDef *config);
 
 MEMS_StatusTypeDef MEMS_DeInit(MEMS_HandleTypeDef *hmems);
 

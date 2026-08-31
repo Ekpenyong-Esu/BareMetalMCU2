@@ -20,10 +20,23 @@ extern "C" {
 /* Exported functions --------------------------------------------------------*/
 
 /**
- * @brief  Initialize the RTC peripheral and its clock source
+ * @brief  Board defaults: 24-hour format and prescalers that divide LSI to 1 Hz
+ * @retval RTC_ConfigTypeDef: Copy it and override only what differs
+ */
+RTC_ConfigTypeDef RTC_ConfigDefault(void);
+
+/**
+ * @brief  Initialize the RTC peripheral and its clock source with the defaults
  * @retval RTC_StatusTypeDef: Status of the operation
  */
 RTC_StatusTypeDef RTC_Init(void);
+
+/**
+ * @brief  Initialize the RTC peripheral with a caller-supplied configuration
+ * @param  config Hour format and prescalers to apply
+ * @retval RTC_StatusTypeDef: Status of the operation
+ */
+RTC_StatusTypeDef RTC_Init_Custom(const RTC_ConfigTypeDef *config);
 
 /**
  * @brief  Deinitialize the RTC peripheral

@@ -22,6 +22,12 @@ extern "C" {
 void IR_TimingInit(void);
 
 /**
+ * @brief Report whether the DWT cycle counter is actually advancing
+ * @note  IR_DelayUs() spins on it, so a stalled counter would hang the driver.
+ */
+bool IR_TimingIsRunning(void);
+
+/**
  * @brief Busy-wait for a number of microseconds
  * @note  IR pulses are tens of microseconds long, so HAL_Delay() with its 1 ms
  *        granularity cannot be used here.

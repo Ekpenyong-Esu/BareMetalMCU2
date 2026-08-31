@@ -95,11 +95,19 @@ HAL_StatusTypeDef LTDC_Driver_DeInit(LTDC_Driver_t *driver)
         return HAL_ERROR;
     }
 
+    /* Keep tearing down every layer even if one refuses, but remember the
+       first failure so the caller is not told the driver shut down cleanly. */
+    HAL_StatusTypeDef status = HAL_OK;
+
     for (uint8_t i = 0; i < LTDC_MAX_LAYERS; i++) {
-        LTDC_DisableLayer(driver, i);
+        if (LTDC_DisableLayer(driver, i) != HAL_OK && status == HAL_OK) {
+            status = HAL_ERROR;
+        }
     }
 
-    HAL_StatusTypeDef status = HAL_LTDC_DeInit(driver->hltdc);
+    if (HAL_LTDC_DeInit(driver->hltdc) != HAL_OK) {
+        status = HAL_ERROR;
+    }
 
     driver->initialized = false;
     driver->errorCode = LTDC_ERROR_NONE;

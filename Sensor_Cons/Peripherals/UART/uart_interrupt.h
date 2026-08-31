@@ -48,13 +48,13 @@ UART_Status_t UART_Interrupt_Receive(UART_Handle_t *handle, uint8_t *data, uint1
  * @brief  Re-arm one-shot reception after a completed transfer
  * @details Called by uart_events.c; not part of the app-facing API.
  */
-void UART_Interrupt_Rearm(UART_Handle_t *handle);
+bool UART_Interrupt_Rearm(UART_Handle_t *handle);
 
 /**
  * @brief  Rebuild the peripheral after a line error
  * @details Called by uart_events.c; not part of the app-facing API.
  */
-void UART_Interrupt_Recover(UART_Handle_t *handle);
+bool UART_Interrupt_Recover(UART_Handle_t *handle);
 
 #ifdef __cplusplus
 }
