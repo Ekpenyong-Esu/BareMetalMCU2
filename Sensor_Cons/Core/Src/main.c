@@ -2,7 +2,7 @@
 /**
  ******************************************************************************
  * @file           : main.c
- * @brief          : Application launcher (STM32F429I-DISC1)
+ * @brief          : Application 6, Tone Player (STM32F429I-DISC1)
  ******************************************************************************
  */
 /* USER CODE END Header */
