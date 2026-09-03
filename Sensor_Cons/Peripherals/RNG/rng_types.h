@@ -1,6 +1,14 @@
 /**
  * @file rng_types.h
- * @brief Shared vocabulary for the hardware RNG driver
+ * @brief Types for the random number generator (RNG)
+ * @details The RNG makes random numbers. Random numbers are useful for
+ *          security, like keys and passwords. The hardware makes true
+ *          random numbers, not fake ones from math.
+ *
+ * How it works (in simple words):
+ *  - Ask the hardware for a random number.
+ *  - It gives you a 32-bit random value.
+ *  - Use it for security or any place you need randomness.
  */
 
 #ifndef RNG_TYPES_H

@@ -1,11 +1,16 @@
 /**
-  ******************************************************************************
-  * @file    qspi_types.h
-  * @brief   Shared vocabulary for the serial NOR flash driver
-  * @note    The STM32F429 has no QUADSPI peripheral; this driver talks to the
-  *          flash over plain SPI with a software chip select.
-  ******************************************************************************
-  */
+ * @file qspi_types.h
+ * @brief Types for external flash memory (QSPI)
+ * @details This file is for talking to external flash memory. Flash is extra
+ *          storage outside the chip, like a tiny SD card. QSPI is a fast way
+ *          to read and write that flash. On this board there is no real QSPI
+ *          hardware, so we use normal SPI with a chip select pin.
+ *
+ * How it works (in simple words):
+ *  - Send a command to the flash chip over SPI.
+ *  - Read or write data in pages and sectors.
+ *  - Erase before you write again.
+ */
 
 #ifndef QSPI_TYPES_H
 #define QSPI_TYPES_H

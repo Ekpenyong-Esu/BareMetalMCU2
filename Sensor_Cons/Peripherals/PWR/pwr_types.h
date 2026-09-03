@@ -1,11 +1,15 @@
 /**
-  ******************************************************************************
-  * @file    pwr_types.h
-  * @brief   Power management vocabulary: status codes, modes and configuration
-  * @details Pure data definitions shared by every PWR module. Contains no
-  *          behaviour, so module headers can include it without cycles.
-  ******************************************************************************
-  */
+ * @file pwr_types.h
+ * @brief Types for power saving modes
+ * @details This file holds settings for saving power. The board can sleep
+ *          to save battery. Sleep is light and wakes fast. Stop saves more.
+ *          Standby saves the most but needs a wakeup signal.
+ *
+ * How it works (in simple words):
+ *  - Sleep: CPU naps, wakes up quickly.
+ *  - Stop: most clocks stop, uses less power.
+ *  - Standby: almost off, needs a button or alarm to wake up.
+ */
 
 #ifndef __PWR_TYPES_H__
 #define __PWR_TYPES_H__

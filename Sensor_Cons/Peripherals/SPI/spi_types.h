@@ -1,8 +1,10 @@
 /**
-  ******************************************************************************
   * @file    spi_types.h
-  * @brief   Shared vocabulary for the SPI bus driver
-  ******************************************************************************
+  * @brief   Shared types for the SPI driver
+  * @details SPI is a fast 4-wire bus. It talks to sensors, displays, and
+  *          memory chips. One main device controls the clock. Data goes
+  *          out and comes back at the same time. This file holds the
+  *          common settings and status codes used by the driver.
   */
 
 #ifndef SPI_TYPES_H

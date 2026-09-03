@@ -38,6 +38,10 @@ Small apps that exercise exactly one driver. Great starting points.
 | 18 | Seven-Segment Counter | `SEVEN_SEGMENT` | Multiplexed digit counter (0–9999). |
 | 19 | Keypad Reader | `KEYPAD` | Scan a matrix keypad and report pressed keys. |
 | 20 | System Info Dump | `SYS` | Report clocks, reset cause, and core status over UART. |
+| 51 | Running LED / LED Chaser | `LED`, `TIM` | Move a lit LED across several GPIO outputs with adjustable speed and direction. |
+| 52 | Joystick Reader | `ADC`, `GPIO` | Read analog X/Y axes and the push switch, then report position and direction. |
+| 53 | Rotary Encoder Reader | `TIM`, `GPIO` | Decode quadrature A/B signals and the push switch for menu navigation. |
+| 54 | RFID Tag Reader | `SPI` + RFID module | Read an RFID tag UID and display or transmit it. |
 
 ---
 
@@ -53,6 +57,10 @@ Read a sensor and do something with the value.
 | 24 | IR Proximity Switch | `IR_DISTANCE` / `IR` | Detect nearby objects and trigger an action. |
 | 25 | Laser ToF Distance | `LASER_DISTANCE` | Millimeter-accurate distance with a time-of-flight sensor. |
 | 26 | Microphone VU Meter | `MIC` | Sample audio level and visualize amplitude. |
+| 55 | IR Obstacle Avoidance | `IR_DISTANCE` / `IR` + `LED` | Detect obstacles and indicate the avoidance direction with LEDs. |
+| 56 | Sound Detection Switch | `MIC` / `ADC` + `LED` | Detect an adjustable sound threshold and toggle an LED or trigger an event. |
+| 57 | Six-Axis Motion Monitor | `ACCEL` / `MEMS` | Display three-axis acceleration and three-axis gyroscope data with tilt status. |
+| 58 | Female Audio Jack Monitor | `AUDIO` + `ADC` | Detect or sample an audio signal from an external female jack and show its level. |
 
 ---
 
@@ -84,6 +92,9 @@ Move data between chips or hosts.
 | 37 | CAN Node | `CAN` | Send/receive CAN frames between two boards. |
 | 38 | USB Device/Host | `USB` | Enumerate as a USB device or talk to a USB peripheral. |
 | 39 | Ethernet Ping/UDP | `ETH` | Bring up the MAC and exchange UDP packets. |
+| 59 | RS-485 Sensor Node | `RS_COMM` + `UART` | Exchange addressed sensor messages over an RS-485 transceiver; optionally use Modbus RTU. |
+| 60 | STM32 Camera to Arduino | `CAMERA` + `UART` / `SPI` | Capture a frame or stream pixel data to an Arduino using a defined packet protocol. |
+| 61 | STM32 Camera to Raspberry Pi | `CAMERA` + `UART` / `SPI` / `ETH` | Send frames, snapshots, or camera-control commands to a Raspberry Pi. |
 
 ---
 
@@ -94,6 +105,7 @@ Move data between chips or hosts.
 | 40 | SDRAM Test | `FMC` | Initialize external SDRAM and run a read/write pattern test. |
 | 41 | QSPI Flash Explorer | `QSPI` | Erase/program/read external QSPI flash; memory-mapped read. |
 | 42 | DMA Memory Copy | `DMA` | Benchmark memory-to-memory transfers vs. CPU copy. |
+| 62 | External Memory Card Logger | `SDIO` / `SPI` + `FATFS` | Mount an SD or microSD card and append timestamped sensor records. |
 
 ---
 

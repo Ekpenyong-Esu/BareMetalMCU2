@@ -1,22 +1,11 @@
-/*******************************************************************************
- * LVGL Input Device Port - Touchscreen Integration
- *******************************************************************************
- * This file connects LVGL to the touchscreen hardware on STM32F429I-Discovery.
- *
- * Supported Touch Controllers:
- * - FT6206: Capacitive touch (I2C address 0x38)
- * - STMPE811: Resistive touch (I2C address 0x41/0x82)
- *
- * What this does:
- * - Reads touch coordinates from hardware via I2C
- * - Reports touch state (pressed/released) to LVGL
- * - Handles coordinate translation and calibration
- *
- * For Beginners:
- * 1. This is currently a placeholder (returns "not touched")
- * 2. Implement touch_read() with your I2C touch driver
- * 3. See TOUCHSCREEN peripheral for hardware driver code
- ******************************************************************************/
+/**
+  ******************************************************************************
+  * @file    lv_port_indev.c
+  * @brief   LVGL touchscreen driver — connects LVGL to the touch hardware
+  * @details Reads touch coordinates over I2C and reports them to LVGL.
+  *          Supports FT6206 (capacitive, 0x38) and STMPE811 (resistive, 0x41).
+  ******************************************************************************
+  */
 
 #include <stdint.h>
 #include "lvgl.h"

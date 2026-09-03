@@ -73,6 +73,7 @@ if (voltage >= 0.0f) {
 
 - `ADC_RawToVoltage()` - Convert raw ADC value to voltage
 - `ADC_VoltageToRaw()` - Convert voltage to raw ADC value
+- `ADC_CalibrateVdda()` - Measure the real supply via VREFINT and scale against it
 - `ADC_ReadChannelVoltage()` - Read channel and return voltage
 
 ### Advanced Features
@@ -164,7 +165,7 @@ Individual examples can be called separately:
 1. **GPIO Configuration**: The driver automatically configures GPIO pins for analog input
 2. **Clock Configuration**: ADC clocks are enabled automatically
 3. **Calibration**: STM32F4 has limited calibration compared to newer STM32 series
-4. **Reference Voltage**: Assumes 3.3V reference voltage
+4. **Reference Voltage**: Counts are a ratio of VDDA, not of a fixed 3.3 V. The handle starts at the nominal 3.3 V; call `ADC_CalibrateVdda()` once after init to measure the real supply through VREFINT, since the board's VDDA is closer to 2.93 V
 5. **Error Values**: Functions return -1.0f or -273.15f on error for voltage/temperature
 
 ## HAL Library Usage

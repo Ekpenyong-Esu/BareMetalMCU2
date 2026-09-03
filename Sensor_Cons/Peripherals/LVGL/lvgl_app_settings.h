@@ -1,6 +1,9 @@
-/*******************************************************************************
- * LVGL Application - Settings screen
- ******************************************************************************/
+/**
+  ******************************************************************************
+  * @file    lvgl_app_settings.h
+  * @brief   Settings screen — lets the user change app options
+  ******************************************************************************
+  */
 
 #ifndef LVGL_APP_SETTINGS_H
 #define LVGL_APP_SETTINGS_H
@@ -9,6 +12,9 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Build the settings screen (toggles, options, layout)
+ */
 void LVGL_Settings_Create(void);
 
 #ifdef __cplusplus

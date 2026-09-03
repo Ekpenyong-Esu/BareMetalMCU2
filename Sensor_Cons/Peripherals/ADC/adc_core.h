@@ -1,9 +1,14 @@
 /**
  * @file    adc_core.h
- * @brief   ADC lifecycle, channel configuration and handle registry
- * @details Owns initialization and the instance to handle registry that lets
- *          the HAL callbacks find the right handle. Replaces the former global
- *          hadc1 instance, so ADC1, ADC2 and ADC3 can be used together.
+ * @brief   Start, stop and set up ADC
+ * @details This file handles starting and stopping the ADC and
+ *          picking which pins to read from.
+ *
+ * How it works (in simple words):
+ * - Init turns on the ADC, sets the pin to analog, and saves the handle.
+ * - You can read one pin or many pins in a row.
+ * - You can change how detailed the reading is or how long it samples.
+ * - You can ask if the ADC is ready or if a reading is done.
  */
 
 #ifndef ADC_CORE_H
@@ -16,38 +21,37 @@ extern "C" {
 #include "adc_types.h"
 
 /**
- * @brief   Initialize an ADC handle
- * @param   hadc Handle to initialize
- * @param   config Configuration to apply; config->instance selects the
- *          peripheral and defaults to ADC1 when NULL
- * @retval  HAL_StatusTypeDef Status of the operation
+ * @brief   Start the ADC and get it ready
+ * @param   hadc Empty handle to fill in
+ * @param   config Settings to use (pick ADC1/ADC2/ADC3, channel, etc.)
+ * @retval  HAL_OK if it worked, HAL_ERROR if not
  */
 HAL_StatusTypeDef ADC_Init(ADC_HandleStruct* hadc, const ADC_ConfigTypeDef* config);
 
 /**
- * @brief   Release an ADC handle and unregister it
- * @param   hadc Handle to release
- * @retval  HAL_StatusTypeDef Status of the operation
+ * @brief   Stop the ADC and clean up
+ * @param   hadc Handle to stop
+ * @retval  HAL_OK if it worked, HAL_ERROR if not
  */
 HAL_StatusTypeDef ADC_DeInit(ADC_HandleStruct* hadc);
 
 /**
- * @brief   Configure a single channel as the conversion sequence
- * @param   hadc ADC handle
- * @param   channel Channel to convert
- * @param   sampling_time Sampling time for that channel
- * @retval  HAL_StatusTypeDef Status of the operation
+ * @brief   Pick one pin to read from
+ * @param   hadc ADC handle (must be started)
+ * @param   channel Which pin/channel to read
+ * @param   sampling_time How long to sample that pin
+ * @retval  HAL_OK if it worked, HAL_ERROR if not
  */
 HAL_StatusTypeDef ADC_ConfigChannel(ADC_HandleStruct* hadc, uint32_t channel,
                                     uint32_t sampling_time);
 
 /**
- * @brief   Configure a scan sequence of several channels
- * @param   hadc ADC handle
- * @param   channels Channels in conversion order
- * @param   sampling_times Sampling time per channel
- * @param   num_channels Number of entries in both arrays
- * @retval  HAL_StatusTypeDef Status of the operation
+ * @brief   Pick many pins to read one after another
+ * @param   hadc ADC handle (must be started)
+ * @param   channels List of pins to read, in order
+ * @param   sampling_times How long to sample each pin
+ * @param   num_channels How many pins in the lists
+ * @retval  HAL_OK if it worked, HAL_ERROR if not
  */
 HAL_StatusTypeDef ADC_ConfigMultiChannel(ADC_HandleStruct* hadc,
                                          const uint32_t* channels,
@@ -55,62 +59,62 @@ HAL_StatusTypeDef ADC_ConfigMultiChannel(ADC_HandleStruct* hadc,
                                          uint32_t num_channels);
 
 /**
- * @brief   Change the conversion resolution
- * @param   hadc ADC handle
- * @param   resolution New resolution
- * @retval  HAL_StatusTypeDef Status of the operation
+ * @brief   Change how detailed the reading is
+ * @param   hadc ADC handle (must be started)
+ * @param   resolution New detail level (12, 10, 8 or 6 bit)
+ * @retval  HAL_OK if it worked, HAL_ERROR if not
  */
 HAL_StatusTypeDef ADC_SetResolution(ADC_HandleStruct* hadc, uint32_t resolution);
 
 /**
- * @brief   Change the sampling time of a channel
- * @param   hadc ADC handle
- * @param   channel Channel to adjust
- * @param   sampling_time New sampling time
- * @retval  HAL_StatusTypeDef Status of the operation
+ * @brief   Change how long to sample a pin
+ * @param   hadc ADC handle (must be started)
+ * @param   channel Which pin to change
+ * @param   sampling_time New sample time
+ * @retval  HAL_OK if it worked, HAL_ERROR if not
  */
 HAL_StatusTypeDef ADC_SetSamplingTime(ADC_HandleStruct* hadc, uint32_t channel,
                                       uint32_t sampling_time);
 
 /**
- * @brief   Current driver status
+ * @brief   Check the current status
  * @param   hadc ADC handle
- * @retval  HAL_StatusTypeDef HAL_OK, HAL_BUSY or HAL_ERROR
+ * @retval  HAL_OK if ready, HAL_BUSY if reading, HAL_ERROR if not ready
  */
 HAL_StatusTypeDef ADC_GetStatus(const ADC_HandleStruct* hadc);
 
 /**
- * @brief   Whether the handle is initialized
+ * @brief   Is the ADC ready to use?
  * @param   hadc ADC handle
- * @retval  bool true when usable
+ * @retval  true if ready, false if not
  */
 bool ADC_IsReady(const ADC_HandleStruct* hadc);
 
 /**
- * @brief   Whether a conversion has finished
+ * @brief   Has the reading finished?
  * @param   hadc ADC handle
- * @retval  bool true when the end-of-conversion flag is set
+ * @retval  true if a new reading is ready
  */
 bool ADC_IsConversionComplete(const ADC_HandleStruct* hadc);
 
 /**
- * @brief   Mark a handle unusable after a fatal error
+ * @brief   Mark the ADC as broken after an error
+ * @details After this, all other calls will fail until you start again.
  * @param   hadc ADC handle
  */
 void ADC_ErrorHandler(ADC_HandleStruct* hadc);
 
 /**
- * @brief   Resolve the driver handle that owns a HAL handle
- * @param   hal HAL handle supplied by a HAL callback
- * @retval  ADC_HandleStruct* Owning handle, or NULL when unregistered
- * @note    Used by the HAL callbacks and by Core/Src/stm32f4xx_it.c
+ * @brief   Find our handle from a low-level handle
+ * @param   hal Low-level handle given by the system
+ * @retval  Our handle, or NULL if not found
  */
 ADC_HandleStruct* ADC_GetHandleFor(const ADC_HandleTypeDef* hal);
 
 /**
- * @brief   Human readable form of a HAL status
- * @param   status Status to describe
- * @retval  const char* Status name
+ * @brief   Turn a status code into words
+ * @param   status Code to explain
+ * @retval  Text like "OK" or "ERROR"
  */
 const char* ADC_GetStatusString(HAL_StatusTypeDef status);
 

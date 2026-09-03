@@ -1,21 +1,11 @@
 /**
- * @file tim.h
- * @brief STM32F429I-DISC1 Timer Driver - public interface aggregator
- *
- * This header is the single public entry point for all timer features.
- * Each feature is implemented as its own single-responsibility module:
- * - tim_clock.h   Clock enable and rate query
- * - tim_base.h    Base timer (counting, delays)
- * - tim_pwm.h     PWM output (LED dimming, motor control)
- * - tim_ic.h      Input capture (frequency/pulse measurement)
- * - tim_oc.h      Output compare (timing events)
- * - tim_encoder.h Encoder interface (rotary encoder reading)
- *
- * Consumers may include tim.h (everything) or only the module header
- * they need.
- *
- * @note Enable the timer clock with TIM_Clock_Enable() before calling an init
- *       function. TIM_PWM_InitHz() does it for you.
+ * @file    tim.h
+ * @brief   Timer driver - main header for all timer features
+ * @details Timers count time. They can make delays, make PWM signals
+ *          to dim LEDs or move motors, and measure incoming pulses.
+ *          This file pulls in all timer parts. You can include this
+ *          one file to get everything, or include just one part
+ *          like tim_pwm.h if you only need PWM.
  */
 
 #ifndef TIM_H

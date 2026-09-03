@@ -1,12 +1,9 @@
 /**
-  ******************************************************************************
   * @file    audio_core.h
-  * @brief   Public audio subsystem API
-  * @details Owns the device record and the single place where an
-  *          AUDIO_InterfaceTypeDef is turned into an operations table. Callers
-  *          include this header for lifecycle and transport control, and
-  *          audio_buffer.h if they need the ring buffer directly.
-  ******************************************************************************
+  * @brief   Main audio control
+  * @details This file starts and controls audio play and record.
+  *          It uses I2S or SAI to send sound data. Use this file
+  *          to init, play, pause, and stop sound.
   */
 
 #ifndef AUDIO_CORE_H

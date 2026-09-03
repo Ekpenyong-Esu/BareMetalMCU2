@@ -1,9 +1,15 @@
 /**
  * @file iwdg_core.h
- * @brief Independent watchdog initialization
+ * @brief Start and control the watchdog timer
+ * @details Same guard dog as in iwdg_types.h. This file starts the dog
+ *          and lets you check its settings. Once started, the dog cannot
+ *          be stopped — only a board reset stops it. That is on purpose,
+ *          so a hung program always gets reset.
  *
- * @note Once started the IWDG cannot be stopped by software; only a reset
- *       clears it. There is deliberately no deinitialization entry point.
+ * How it works (in simple words):
+ *  - Call Init to start the watchdog.
+ *  - Keep refreshing it in your main loop.
+ *  - If you stop refreshing, the board restarts by itself.
  */
 
 #ifndef IWDG_CORE_H

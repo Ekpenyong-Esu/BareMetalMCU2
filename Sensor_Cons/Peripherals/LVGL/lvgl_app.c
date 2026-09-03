@@ -1,9 +1,11 @@
-/*******************************************************************************
- * LVGL Application Core - lifecycle and public update API
- *******************************************************************************
- * Builds the four screens and forwards the public update calls to whichever
- * screen module owns the widget.
- ******************************************************************************/
+/**
+  ******************************************************************************
+  * @file    lvgl_app.c
+  * @brief   LVGL app — builds the four screens and handles updates
+  * @details Creates the home, sensors, settings and info screens, then
+  *          forwards update calls (like SetTemperature) to the right screen.
+  ******************************************************************************
+  */
 
 #include "lvgl.h"
 #include "lvgl_app_core.h"

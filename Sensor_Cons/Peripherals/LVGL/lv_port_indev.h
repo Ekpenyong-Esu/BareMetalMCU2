@@ -1,14 +1,11 @@
-/*******************************************************************************
- * LVGL Input Device Port Header
- *******************************************************************************
- * This header declares the input device (touchscreen) initialization function.
- *
- * Typically you don't need to call this directly - use LVGL_App_Init() instead.
- *
- * For advanced users:
- * If you need custom input initialization, you can call lv_port_indev_init()
- * directly after lv_init().
- ******************************************************************************/
+/**
+  ******************************************************************************
+  * @file    lv_port_indev.h
+  * @brief   LVGL touchscreen driver for the STM32F429I
+  * @details Sets up the LVGL input device so touch events reach the GUI.
+  *          Normally you don't call this directly — use LVGL_App_Init() instead.
+  ******************************************************************************
+  */
 
 #ifndef LV_PORT_INDEV_H
 #define LV_PORT_INDEV_H
@@ -17,13 +14,11 @@
 extern "C" {
 #endif
 
-/*-----------------------------------------------------------------------------
- * Function: lv_port_indev_init
- * Description: Initialize LVGL touchscreen driver
- * Parameters: None
- * Returns: None
- * Notes: Called automatically by LVGL_App_Init()
- *---------------------------------------------------------------------------*/
+/**
+ * @brief Set up the LVGL touchscreen driver
+ * @note  Called automatically by LVGL_App_Init(); only call directly if you
+ *        need custom input setup after lv_init()
+ */
 void lv_port_indev_init(void);
 
 #ifdef __cplusplus

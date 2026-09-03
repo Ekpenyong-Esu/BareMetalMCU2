@@ -1,6 +1,14 @@
 /**
- * @file dac_types.h
- * @brief Data types and constants for the DAC driver
+ * @file    dac_types.h
+ * @brief   Shared types for the DAC driver
+ * @details This file holds the basic types and settings for DAC.
+ *
+ * How it works (in simple words):
+ * - DAC does the opposite of ADC: it turns a number into a voltage.
+ * - Give it 0 and you get 0V. Give it 4095 and you get about 3.3V.
+ * - In between gives a voltage in between.
+ * - This board only uses one DAC pin (PA4).
+ * - You can start the voltage by software or by a timer.
  */
 
 #ifndef DAC_TYPES_H
@@ -27,19 +35,22 @@ extern "C" {
 #define DAC_OUT1_PIN            GPIO_PIN_4
 
 /**
- * @brief DAC configuration
+ * @brief Settings for the DAC
+ * @details Pick which channel (only channel 1 is wired), how to start
+ *          (software or timer), if the output helper is on, and how
+ *          the number is lined up (12-bit or 8-bit).
  */
 typedef struct {
-    uint32_t channel;        /**< Channel to configure; only DAC_CHANNEL_1 is wired */
-    uint32_t trigger;        /**< DAC_TRIGGER_NONE, DAC_TRIGGER_SOFTWARE or a timer TRGO */
-    uint32_t output_buffer;  /**< DAC_OUTPUTBUFFER_ENABLE or DAC_OUTPUTBUFFER_DISABLE */
-    uint32_t alignment;      /**< DAC_ALIGN_12B_R, DAC_ALIGN_12B_L or DAC_ALIGN_8B_R */
+    uint32_t channel;        /**< Which DAC channel (only channel 1 is wired) */
+    uint32_t trigger;        /**< How to start: software or timer */
+    uint32_t output_buffer;  /**< Helper that makes the output stronger (on/off) */
+    uint32_t alignment;      /**< How the number is lined up (12-bit or 8-bit) */
 } DAC_ConfigTypeDef;
 
 /**
- * @brief Largest code the given alignment can carry
- * @note  8-bit mode ignores the low nibble, so accepting a 12-bit code there
- *        would silently truncate it.
+ * @brief   Biggest number allowed for the chosen mode
+ * @param   alignment How the number is lined up (12-bit or 8-bit)
+ * @retval  Biggest valid number (255 for 8-bit, 4095 for 12-bit)
  */
 static inline uint32_t DAC_MaxValueFor(uint32_t alignment)
 {
@@ -47,12 +58,13 @@ static inline uint32_t DAC_MaxValueFor(uint32_t alignment)
 }
 
 /**
- * @brief DAC handle
+ * @brief Handle that keeps all DAC info in one place
+ * @details Holds the low-level handle, settings, and if it is ready.
  */
 typedef struct DAC_HandleStruct {
-    DAC_HandleTypeDef hal_handle;  /**< HAL DAC handle */
-    DAC_ConfigTypeDef config;      /**< Configuration in force */
-    bool initialized;              /**< Initialization status */
+    DAC_HandleTypeDef hal_handle;  /**< Low-level DAC handle */
+    DAC_ConfigTypeDef config;      /**< Settings in use */
+    bool initialized;              /**< True if ready to use */
 } DAC_HandleStruct;
 
 #ifdef __cplusplus

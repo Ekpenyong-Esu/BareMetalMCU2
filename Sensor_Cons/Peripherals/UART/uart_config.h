@@ -4,6 +4,16 @@
  *
  * Values a board bring-up may want to change. Behaviour lives in the driver
  * modules; this header only holds numbers.
+ *
+ * Default Configuration:
+ * - 115200 baud, 8N1, TX+RX enabled
+ * - 5000 ms default timeout for blocking operations
+ *
+ * DMA Wiring (USART1):
+ * - TX: DMA2 Stream 7, Channel 4
+ * - RX: DMA2 Stream 5, Channel 4
+ * These are consumed by HAL_UART_MspInit() in Core/Src/stm32f4xx_hal_msp.c
+ * and must match the CubeMX / hardware configuration.
  */
 
 #ifndef UART_CONFIG_H

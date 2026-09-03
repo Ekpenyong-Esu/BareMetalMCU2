@@ -1,7 +1,10 @@
 /**
   ******************************************************************************
   * @file    i2c_types.h
-  * @brief   Shared vocabulary for the I2C driver
+  * @brief   Shared types for the I2C driver
+  * @details I2C is a two-wire bus. Many sensors share the same two wires
+  *          to talk to the MCU. This file holds common types and settings
+  *          for I2C.
   ******************************************************************************
   */
 
@@ -24,36 +27,42 @@ extern "C" {
 #define I2C_ADDR_MIN            0x08U
 #define I2C_ADDR_MAX            0x77U
 
+/**
+ * @brief Result of an I2C action
+ */
 typedef enum {
-    I2C_OK = 0,
-    I2C_ERROR,
-    I2C_BUSY,
-    I2C_TIMEOUT,
-    I2C_NACK,
-    I2C_INVALID_PARAM
+    I2C_OK = 0,        /* All good */
+    I2C_ERROR,         /* Something went wrong */
+    I2C_BUSY,          /* Bus is busy, try later */
+    I2C_TIMEOUT,       /* Took too long, no answer */
+    I2C_NACK,          /* Device said no (no ack) */
+    I2C_INVALID_PARAM  /* Bad setting given */
 } I2C_StatusTypeDef;
 
+/**
+ * @brief Settings for the I2C bus
+ * @details Tells the bus how fast to run and how to address devices.
+ */
 typedef struct {
-    uint32_t ClockSpeed;
-    uint32_t DutyCycle;
-    uint32_t AddressingMode;
-    uint32_t OwnAddress1;
-    uint32_t DualAddressMode;
-    uint32_t OwnAddress2;
-    uint32_t GeneralCallMode;
-    uint32_t NoStretchMode;
+    uint32_t ClockSpeed;      /* Bus speed in Hz, e.g. 100000 for 100 kHz */
+    uint32_t DutyCycle;       /* High/low time ratio for fast mode */
+    uint32_t AddressingMode;  /* 7-bit or 10-bit address */
+    uint32_t OwnAddress1;     /* Our own address on the bus */
+    uint32_t DualAddressMode; /* Use second address or not */
+    uint32_t OwnAddress2;     /* Second own address if used */
+    uint32_t GeneralCallMode; /* Listen to broadcast or not */
+    uint32_t NoStretchMode;   /* Allow device to pause clock or not */
 } I2C_ConfigTypeDef;
 
 /**
- * @brief One device on the shared bus, owned by the driver that talks to it
- * @note  Carries the address as well as the bus settings, so a slow device and
- *        a fast one can share the bus without either imposing its clock on the
- *        other.
+ * @brief One sensor or chip on the shared I2C bus
+ * @details Each device has its own address and bus speed. This lets a slow
+ *          sensor and a fast sensor share the same two wires.
  */
 typedef struct {
-    uint16_t          address;  /*!< Slave address, already shifted for the HAL */
-    I2C_ConfigTypeDef config;   /*!< Bus settings this device needs */
-    bool              ready;    /*!< Set once the config has been accepted */
+    uint16_t          address;  /*!< Address of the device on the bus */
+    I2C_ConfigTypeDef config;   /*!< Bus speed and settings for this device */
+    bool              ready;    /*!< True if the device is set up and ready */
 } I2C_Device_t;
 
 #ifdef __cplusplus

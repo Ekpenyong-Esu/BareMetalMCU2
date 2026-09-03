@@ -273,11 +273,19 @@ endif()
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Application: the UART blocking example
     ${CMAKE_SOURCE_DIR}/Applications/uart_app/uart_blocking_app.c
+
+    # Application 6: the tone player
+    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/note.c
+    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/melody.c
+    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/tone_player.c
+    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/tone_console.c
+    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/tone_player_app.c
 )
 
 # Make application headers available to the build
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Applications/uart_app
+    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app
 )
 
 # ------------------------------------------------------------------------------

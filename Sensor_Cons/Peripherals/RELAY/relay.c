@@ -1,3 +1,11 @@
+/**
+  ******************************************************************************
+  * @file    relay.c
+  * @brief   Relay driver — simple on/off control for a relay
+  * @details Drives one GPIO pin to switch a relay. Handles both active-high
+  *          and active-low boards. Starts with the relay off for safety.
+  */
+
 #include "relay.h"
 #include "gpio.h"
 

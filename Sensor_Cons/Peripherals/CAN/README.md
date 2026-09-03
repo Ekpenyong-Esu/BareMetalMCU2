@@ -30,6 +30,10 @@ The CAN driver is split into focused modules:
 ```c
 // Basic CAN configuration
 CAN_Config config = {
+    .pins = {  // no default: see Pin Configuration for what you give up
+        .tx_port = GPIOB, .tx_pin = GPIO_PIN_9,
+        .rx_port = GPIOB, .rx_pin = GPIO_PIN_8,
+    },
     .mode = CAN_MODE_NORMAL,
     .baud_rate = CAN_BAUD_500KBPS,
     .auto_retransmission = true,
@@ -140,6 +144,10 @@ CAN_EnableInterrupts();
 
 // Initialize CAN
 CAN_Config config = {
+    .pins = {
+        .tx_port = GPIOB, .tx_pin = GPIO_PIN_9,
+        .rx_port = GPIOB, .rx_pin = GPIO_PIN_8,
+    },
     .mode = CAN_MODE_NORMAL,
     .baud_rate = CAN_BAUD_500KBPS
 };
@@ -193,10 +201,44 @@ The CAN peripheral uses specific pins on STM32F429:
 - CAN2_RX: PB5 or PB12
 - CAN2_TX: PB6 or PB13
 
+### On this board there is no free pair
+
+The STM32F429I-DISC1 carries an LQFP144 part, which has 114 I/Os: ports A-G plus
+PH0 and PH1. **PH13 and PI9 do not exist on this package**, and every remaining
+option is already committed:
+
+| Pin | Taken by |
+|-----|----------|
+| PA11 / PA12 | LTDC R4 / R5 |
+| PB8 / PB9 | LTDC B6 / B7 |
+| PD0 / PD1 | FMC D2 / D3 (SDRAM) |
+| PB5 / PB6 | FMC SDCKE1 / SDNE1 (SDRAM) |
+| PB12 / PB13 | USB OTG HS ID / VBUS |
+
+So CAN costs you the display, the SDRAM, or USB. Because that is a trade the
+driver must not make on your behalf, `CAN_Config` has no default pins: supply
+them and `CAN_Init()` will configure them, or omit them and it fails with a log
+line rather than silently bringing up a peripheral that is wired to nothing.
+
+```c
+CAN_Config config = {
+    .instance = CAN1,                /* NULL also selects CAN1 */
+    .pins = {
+        .tx_port = GPIOB, .tx_pin = GPIO_PIN_9,   /* giving up LTDC B7 */
+        .rx_port = GPIOB, .rx_pin = GPIO_PIN_8,   /* giving up LTDC B6 */
+    },
+    .mode = CAN_MODE_NORMAL,
+    .baud_rate = CAN_BAUD_500KBPS,
+};
+```
+
+There is also no CAN transceiver on the board, so an external one
+(TJA1050, MCP2551, SN65HVD230) is required regardless.
+
 ## Integration Notes
 
-1. **Clock Configuration**: Ensure CAN peripheral clock is enabled
-2. **GPIO Setup**: Configure CAN pins as alternate function
+1. **Clock Configuration**: Handled by the driver's `HAL_CAN_MspInit`
+2. **GPIO Setup**: Driven from `CAN_Config.pins`; AF9 is applied for you
 3. **NVIC Setup**: Enable CAN interrupts if using interrupt mode
 4. **Transceiver**: Connect appropriate CAN transceiver to STM32 pins
 

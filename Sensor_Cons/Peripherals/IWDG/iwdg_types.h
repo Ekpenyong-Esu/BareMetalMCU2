@@ -1,6 +1,15 @@
 /**
  * @file iwdg_types.h
- * @brief Data types and constants for the independent watchdog driver
+ * @brief Types for the watchdog timer (IWDG)
+ * @details The watchdog is like a guard dog. It watches your program.
+ *          You must "feed" it (refresh) on time. If your program hangs
+ *          and forgets to feed it, the dog barks and resets the board.
+ *          This file holds the settings and numbers for that guard dog.
+ *
+ * How it works (in simple words):
+ *  - You set a timeout (how long the dog waits).
+ *  - Your code must refresh before time runs out.
+ *  - If not refreshed, the board restarts automatically.
  */
 
 #ifndef IWDG_TYPES_H

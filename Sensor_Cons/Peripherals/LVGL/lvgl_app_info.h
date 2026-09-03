@@ -1,6 +1,9 @@
-/*******************************************************************************
- * LVGL Application - System info screen
- ******************************************************************************/
+/**
+  ******************************************************************************
+  * @file    lvgl_app_info.h
+  * @brief   System info screen — shows device and firmware details
+  ******************************************************************************
+  */
 
 #ifndef LVGL_APP_INFO_H
 #define LVGL_APP_INFO_H
@@ -9,6 +12,9 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Build the info screen (version, device details, layout)
+ */
 void LVGL_Info_Create(void);
 
 #ifdef __cplusplus

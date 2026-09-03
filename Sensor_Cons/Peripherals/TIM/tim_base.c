@@ -1,6 +1,16 @@
 /**
  * @file tim_base.c
- * @brief Timer base mode driver (counting, delays)
+ * @brief Timer base mode driver implementation (counting, delays, time-base generation)
+ *
+ * This module implements basic timer counting functionality on STM32F4 timers.
+ * It wraps the HAL base timer functions with a simpler API.
+ *
+ * Key Implementation Details:
+ * - Uses up-counting mode (CNT counts 0..ARR, then overflows to 0)
+ * - Auto-reload preload disabled (ARR changes take effect immediately)
+ * - Clock division = DIV1 (no additional divider)
+ * - All functions validate htim != NULL before calling HAL.
+ * - Logging via log.h for initialization status.
  */
 
 #include "tim_base.h"

@@ -1,6 +1,12 @@
 /**
- * @file dma_types.h
- * @brief Data types and constants for the DMA driver
+ * @file    dma_types.h
+ * @brief   Shared types for the DMA driver
+ * @details This file holds the basic types and settings for DMA.
+ *
+ * How it works (in simple words):
+ * - DMA moves data from one place to another without using the CPU.
+ * - For example, it can move sensor data to memory while the CPU does other work.
+ * - You pick the source, the destination, how much to move, and how big each piece is.
  */
 
 #ifndef DMA_TYPES_H
@@ -28,31 +34,34 @@ extern "C" {
 #define DMA_MAX_TRANSFER_ITEMS   65535U
 
 /**
- * @brief DMA stream configuration
+ * @brief Settings for one DMA move
+ * @details Pick which stream, which channel, which way data goes,
+ *          how it repeats, and how big each piece is.
  */
 typedef struct {
-    DMA_Stream_TypeDef *stream;  /**< Stream instance, for example DMA2_Stream0 */
-    uint32_t channel;            /**< DMA_CHANNEL_0 to DMA_CHANNEL_7 */
-    uint32_t direction;          /**< DMA_PERIPH_TO_MEMORY, DMA_MEMORY_TO_PERIPH or DMA_MEMORY_TO_MEMORY */
-    uint32_t mode;               /**< DMA_NORMAL, DMA_CIRCULAR or DMA_PFCTRL */
-    uint32_t priority;           /**< DMA_PRIORITY_* */
-    uint32_t dataSize;           /**< DMA_DATA_SIZE_BYTE, HALFWORD or WORD */
-    uint32_t memInc;             /**< DMA_MINC_ENABLE or DMA_MINC_DISABLE */
-    uint32_t periphInc;          /**< DMA_PINC_ENABLE or DMA_PINC_DISABLE */
-    uint32_t fifoMode;           /**< DMA_FIFOMODE_ENABLE or DMA_FIFOMODE_DISABLE */
-    uint32_t fifoThreshold;      /**< DMA_FIFO_THRESHOLD_* , used only with the FIFO enabled */
+    DMA_Stream_TypeDef *stream;  /**< Which DMA stream to use (e.g. DMA2_Stream0) */
+    uint32_t channel;            /**< Which channel (0 to 7) */
+    uint32_t direction;          /**< Where data goes (to memory, from memory, or memory to memory) */
+    uint32_t mode;               /**< How it runs (once, repeat, or other) */
+    uint32_t priority;           /**< How important this move is */
+    uint32_t dataSize;           /**< Size of each piece (byte, half-word, word) */
+    uint32_t memInc;             /**< Should the memory address move forward? */
+    uint32_t periphInc;          /**< Should the device address move forward? */
+    uint32_t fifoMode;           /**< Use the small buffer inside DMA? */
+    uint32_t fifoThreshold;      /**< When to send from that buffer */
 } DMA_Config_t;
 
 /**
- * @brief DMA driver handle
+ * @brief Handle that keeps all DMA info in one place
+ * @details Holds the settings, status, and if a move is in progress.
  */
 typedef struct {
-    DMA_HandleTypeDef hdma;      /**< HAL DMA handle */
-    DMA_Config_t config;         /**< Configuration in force */
-    bool initialized;            /**< Initialization status */
-    volatile bool busy;          /**< A transfer has been started and not yet finished */
-    volatile bool transferStarted; /**< At least one transfer has been started */
-    IRQn_Type irqn;              /**< Interrupt line of the configured stream */
+    DMA_HandleTypeDef hdma;      /**< Low-level DMA handle */
+    DMA_Config_t config;         /**< Settings in use */
+    bool initialized;            /**< True if ready to use */
+    volatile bool busy;          /**< True while data is still moving */
+    volatile bool transferStarted; /**< True after the first move has started */
+    IRQn_Type irqn;              /**< Which interrupt line this stream uses */
 } DMA_Handle_t;
 
 #ifdef __cplusplus

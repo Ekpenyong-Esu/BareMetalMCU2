@@ -1,6 +1,10 @@
 /**
- * @file wwdg_core.h
- * @brief Window Watchdog lifetime, handle ownership and reset-source reporting
+ * @file    wwdg_core.h
+ * @brief   Window watchdog control
+ * @details This file starts and controls the window watchdog. You must
+ *          feed the watchdog inside the time window. If you feed too
+ *          early or too late, the board resets. This keeps stuck
+ *          programs from running forever.
  */
 
 #ifndef WWDG_CORE_H

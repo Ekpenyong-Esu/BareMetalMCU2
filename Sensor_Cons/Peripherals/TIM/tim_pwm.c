@@ -1,6 +1,20 @@
 /**
  * @file tim_pwm.c
- * @brief Timer PWM output driver (LED dimming, motor control)
+ * @brief Timer PWM output driver implementation (LED dimming, motor control, buzzer tones)
+ *
+ * This module implements PWM output on STM32F4 timers. It wraps the HAL
+ * PWM functions with a simpler API that computes prescalers from real
+ * timer clock frequencies.
+ *
+ * Key Implementation Details:
+ * - Uses PWM mode 1 (up-counting, channel active when CNT < CCR)
+ * - Auto-reload preload disabled by default (changes take effect next period)
+ * - TIM_PWM_InitHz() enables the timer clock and computes prescaler from
+ *   TIM_Clock_GetHz(), so callers don't need to know the clock tree.
+ * - The divider calculation: divider = timer_clk / (frequencyHz * steps)
+ *   This gives (prescaler + 1) * (period + 1) = divider
+ *   We set prescaler = divider - 1, period = steps - 1
+ * - All functions validate htim != NULL before calling HAL.
  */
 
 #include "tim_pwm.h"
@@ -38,6 +52,10 @@ HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim,
         return HAL_ERROR;
     }
 
+    /* Compute the total divider needed: timer_clk / (frequencyHz * steps)
+     * This equals (prescaler + 1) * (period + 1).
+     * We set period = steps - 1, so prescaler + 1 = divider / steps.
+     * divider must fit in 16 bits (prescaler is 16-bit). */
     uint32_t divider = TIM_Clock_GetHz(instance) / (frequencyHz * steps);
 
     if (divider == 0u || divider > 0x10000u) {

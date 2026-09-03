@@ -1,10 +1,19 @@
+/**
+  ******************************************************************************
+  * @file    dht.c
+  * @brief   DHT11 / DHT22 driver — how the sensor is read
+  * @details Talks to the sensor over one wire. Uses the DWT cycle counter
+  *          for precise microsecond timing. The 40-bit reply is read with
+  *          interrupts disabled so the timing stays accurate.
+  */
+
 #include "dht.h"
 #include "gpio.h"
 
-// A data bit longer than this is a '1' (0-bits are ~27us, 1-bits ~70us)
+/* A data bit longer than this is a '1' (0-bits are ~27us, 1-bits ~70us) */
 #define DHT_BIT_ONE_THRESHOLD_US  40U
 
-// DWT-based microsecond delay helpers
+/* Simple helpers for microsecond timing using the CPU cycle counter */
 static inline uint32_t dht_us_to_ticks(uint32_t us)
 {
     return (SystemCoreClock / 1000000U) * us;

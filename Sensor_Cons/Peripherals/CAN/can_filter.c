@@ -1,12 +1,24 @@
 /**
   ******************************************************************************
   * @file    can_filter.c
-  * @brief   CAN filter bank configuration
-  ******************************************************************************
+  * @brief   CAN filter bank configuration implementation
+  *
+  * This module packs driver filter configs into bxCAN register layout:
+  * - CAN_PackFilter32: 32-bit scale — one filter per bank
+  * - CAN_PackFilter16: 16-bit scale — two filters per bank (mirrored)
+  * - CAN_ConfigFilter: Validate, pack and program via HAL_CAN_ConfigFilter()
+  *
+  * Key Design Points:
+  * - Filter bank count and slave split come from the handle's config, not
+  *   a compile-time constant (varies single- vs dual-CAN parts)
+  * - 16-bit banks hold two independent filters; this API mirrors one pair
+  * - IDs are shifted into register position — raw values match nothing
   */
 
 #include "can_filter.h"
 #include "can_core.h"
+
+/* Private constants ---------------------------------------------------------*/
 
 /*
  * bxCAN filter register layout, 32-bit scale:
@@ -22,21 +34,29 @@
  *   bit  3       IDE
  *   bits 2..0    EXID[17:15]
  */
-#define CAN_FILTER32_STID_SHIFT      21U
-#define CAN_FILTER32_EXID_SHIFT      3U
-#define CAN_FILTER32_IDE_BIT         (1UL << 2)
+#define CAN_FILTER32_STID_SHIFT      21U   /*!< Standard ID shift in 32-bit filter */
+#define CAN_FILTER32_EXID_SHIFT      3U    /*!< Extended ID shift in 32-bit filter */
+#define CAN_FILTER32_IDE_BIT         (1UL << 2) /*!< IDE flag in 32-bit filter */
 
-#define CAN_FILTER16_STID_SHIFT      5U
-#define CAN_FILTER16_IDE_BIT         (1U << 3)
-#define CAN_FILTER16_EXID_SHIFT      15U
-#define CAN_FILTER16_EXID_MASK       0x07U
+#define CAN_FILTER16_STID_SHIFT      5U    /*!< Standard ID shift in 16-bit filter */
+#define CAN_FILTER16_IDE_BIT         (1U << 3) /*!< IDE flag in 16-bit filter */
+#define CAN_FILTER16_EXID_SHIFT      15U   /*!< Extended ID high bits shift */
+#define CAN_FILTER16_EXID_MASK       0x07U /*!< Extended ID high bits mask (3 bits) */
 
-#define CAN_ID_HIGH_SHIFT            16U
-#define CAN_ID_LOW_MASK              0xFFFFU
+#define CAN_ID_HIGH_SHIFT            16U     /*!< Split 32-bit filter word into halves */
+#define CAN_ID_LOW_MASK              0xFFFFU /*!< Low half mask */
 
-#define CAN_STD_ID_MAX               0x7FFU
-#define CAN_EXT_ID_MAX               0x1FFFFFFFU
+#define CAN_STD_ID_MAX               0x7FFU       /*!< 11-bit standard ID limit */
+#define CAN_EXT_ID_MAX               0x1FFFFFFFU /*!< 29-bit extended ID limit */
 
+/* Private functions ---------------------------------------------------------*/
+
+/**
+ * @brief Pack an identifier into 32-bit filter register layout
+ * @param id Identifier (11-bit standard or 29-bit extended)
+ * @param frame_type Standard vs extended
+ * @retval uint32_t Packed filter word
+ */
 static uint32_t CAN_PackFilter32(uint32_t id, CAN_FrameType frame_type)
 {
     if (frame_type == CAN_FRAME_EXTENDED) {
@@ -46,6 +66,12 @@ static uint32_t CAN_PackFilter32(uint32_t id, CAN_FrameType frame_type)
     return id << CAN_FILTER32_STID_SHIFT;
 }
 
+/**
+ * @brief Pack an identifier into 16-bit filter register layout
+ * @param id Identifier (11-bit standard or 29-bit extended)
+ * @param frame_type Standard vs extended
+ * @retval uint16_t Packed filter half-word
+ */
 static uint16_t CAN_PackFilter16(uint32_t id, CAN_FrameType frame_type)
 {
     if (frame_type == CAN_FRAME_EXTENDED) {
@@ -56,12 +82,22 @@ static uint16_t CAN_PackFilter16(uint32_t id, CAN_FrameType frame_type)
     return (uint16_t)((id & CAN_STD_ID_MAX) << CAN_FILTER16_STID_SHIFT);
 }
 
-HAL_StatusTypeDef CAN_ConfigFilter(const CAN_FilterConfig *filter_config)
+/* Exported functions --------------------------------------------------------*/
+
+/**
+ * @brief Program one filter bank
+ * @param hcan Handle (must be initialized)
+ * @param filter_config Filter to program
+ * @retval HAL_StatusTypeDef HAL_OK on success, HAL_ERROR on invalid params
+ */
+
+HAL_StatusTypeDef CAN_ConfigFilter(CAN_Handle_t *hcan, const CAN_FilterConfig *filter_config)
 {
     CAN_FilterTypeDef filter = {0};
-    uint32_t idMax;
+    uint32_t idMax = 0U;
 
-    if (filter_config == NULL || filter_config->filter_bank >= CAN_MAX_FILTER_BANKS) {
+    if (hcan == NULL || filter_config == NULL ||
+        filter_config->filter_bank >= hcan->config.filter_bank_count) {
         return HAL_ERROR;
     }
 
@@ -106,8 +142,7 @@ HAL_StatusTypeDef CAN_ConfigFilter(const CAN_FilterConfig *filter_config)
 
     /* Leaving this at 0 hands every bank to CAN2, so CAN1 would never accept a
        frame. Banks below the split belong to CAN1. */
-    filter.SlaveStartFilterBank = CAN_MAX_FILTER_BANKS;
+    filter.SlaveStartFilterBank = hcan->config.slave_start_bank;
 
-    CAN_HandleTypeDef *handle = CAN_GetHandle();
-    return HAL_CAN_ConfigFilter(handle, &filter);
+    return HAL_CAN_ConfigFilter(&hcan->hal, &filter);
 }

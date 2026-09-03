@@ -1,6 +1,10 @@
 /**
- * @file wwdg_types.h
- * @brief Data types and constants for the Window Watchdog driver
+ * @file    wwdg_types.h
+ * @brief   Shared types for the window watchdog driver
+ * @details The window watchdog is a safety timer. You must feed it
+ *          at the right time. Not too early and not too late.
+ *          If you miss the time window, the board resets itself.
+ *          This file holds the common types and settings.
  */
 
 #ifndef WWDG_TYPES_H

@@ -1,13 +1,10 @@
 /**
-  ******************************************************************************
   * @file    audio_types.h
-  * @brief   Shared vocabulary for the audio subsystem
-  * @details Declares the enums, configuration/statistics structures, the audio
-  *          interface operations table and the device record that every audio
-  *          module operates on. This header contains no behaviour; it exists so
-  *          that the backends (SAI/I2S), the codec, the ring buffer and the core
-  *          all speak the same language without depending on each other.
-  ******************************************************************************
+  * @brief   Shared types for the audio system
+  * @details This file holds the common types for playing and recording
+  *          sound. Sound goes through I2S or SAI. These are fast buses
+  *          made for audio. This file has the settings and status codes
+  *          used by the audio driver.
   */
 
 #ifndef AUDIO_TYPES_H

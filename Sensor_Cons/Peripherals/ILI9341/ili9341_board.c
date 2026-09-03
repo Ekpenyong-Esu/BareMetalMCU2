@@ -1,9 +1,12 @@
-/* ili9341_board.c - Board-specific MSP for ILI9341 on STM32F429I-DISC1
- * Configures GPIOs and SPI5 to the board's preferred settings and exposes
- * the concrete implementation of the weak ILI9341_MspInit/DeInit hooks.
- *
- * Based on ST BSP stm32f429i_discovery.c LCD_IO_Init() and SPIx_MspInit()
- */
+/**
+  ******************************************************************************
+  * @file    ili9341_board.c
+  * @brief   Board wiring for the ILI9341 display on STM32F429I-DISC1
+  * @details Sets up the GPIOs and SPI5 exactly as the ST board support
+  *          package does. Provides the real ILI9341_MspInit/DeInit that the
+  *          display driver calls. In simple words: this file connects the
+  *          display's control pins and SPI bus to the right MCU pins.
+  */
 
 #include "ili9341.h"
 #include "spi.h"

@@ -1,14 +1,11 @@
-/*******************************************************************************
- * LVGL Display Port Header
- *******************************************************************************
- * This header declares the display driver initialization function.
- *
- * Typically you don't need to call this directly - use LVGL_App_Init() instead.
- *
- * For advanced users:
- * If you need custom display initialization, you can call lv_port_disp_init()
- * directly after lv_init().
- ******************************************************************************/
+/**
+  ******************************************************************************
+  * @file    lv_port_disp.h
+  * @brief   LVGL display driver for the STM32F429I LCD
+  * @details Sets up the LVGL display so it can draw on the board's LCD.
+  *          Normally you don't call this directly — use LVGL_App_Init() instead.
+  ******************************************************************************
+  */
 
 #ifndef LV_PORT_DISP_H
 #define LV_PORT_DISP_H
@@ -19,13 +16,11 @@
 extern "C" {
 #endif
 
-/*-----------------------------------------------------------------------------
- * Function: lv_port_disp_init
- * Description: Initialize LVGL display driver for STM32F429I LCD
- * Parameters: None
- * Returns: None
- * Notes: Called automatically by LVGL_App_Init()
- *---------------------------------------------------------------------------*/
+/**
+ * @brief Set up the LVGL display driver for the STM32F429I LCD
+ * @note  Called automatically by LVGL_App_Init(); only call directly if you
+ *        need custom display setup after lv_init()
+ */
 void lv_port_disp_init(void);
 
 

@@ -2,24 +2,28 @@
 /**
  ******************************************************************************
  * @file           : main.c
- * @brief          : UART showcase (STM32F429I-DISC1)
+ * @brief          : Application launcher (STM32F429I-DISC1)
  ******************************************************************************
  */
 /* USER CODE END Header */
 
 #include "main.h"
 #include "sys.h"
-#include "uart_blocking_app.h"
+#include "tone_player_app.h"
 
 /**
- * @brief  Program entry point: bring up the system, then run the UART app.
+ * @brief  Program entry point: bring up the system, then run one application.
+ * @note   Swap the call below for another *App_Run() to flash a different one.
  */
 int main(void)
 {
-    SYS_Init();              /* HAL init, system clock, SysTick */
-    UartBlockingApp_Run();   /* Echoes whatever is typed over USART1, forever */
+    SYS_Init(); /* HAL init, system clock, SysTick */
 
-    /* Only reached if the UART failed to open. main() must never return. */
+    /* Pass BUZZER_MODE_ACTIVE_GPIO instead to drive an active buzzer on PE6,
+       which reproduces the rhythm but not the pitch. */
+    TonePlayerApp_Run(BUZZER_MODE_PASSIVE_PWM);
+
+    /* Only reached if the buzzer failed to start. main() must never return. */
     for (;;) {
     }
 }

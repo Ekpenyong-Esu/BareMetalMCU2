@@ -1,9 +1,14 @@
 /**
- ******************************************************************************
- * @file    rtc_types.h
- * @author  Mahonri
- * @brief   RTC data types shared by every RTC module
- ******************************************************************************
+ * @file rtc_types.h
+ * @brief Types for the real-time clock (RTC)
+ * @details The RTC is like a small clock inside the board. It keeps time
+ *          and date even when the board sleeps. It can also wake the board
+ *          up with an alarm.
+ *
+ * How it works (in simple words):
+ *  - Set the time and date once.
+ *  - The clock keeps ticking on its own.
+ *  - Read time/date anytime, or set an alarm to wake up.
  */
 
 #ifndef __RTC_TYPES_H

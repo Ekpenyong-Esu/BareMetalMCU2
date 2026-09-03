@@ -1,12 +1,13 @@
 /**
- * @file dma2d_types.h
- * @brief Shared vocabulary for the DMA2D (Chrom-Art Accelerator) driver
+ * @file    dma2d_types.h
+ * @brief   Shared types for the DMA2D graphics helper
+ * @details This file holds the basic types and settings for DMA2D.
  *
- * @details
- * Declares the constants, configuration structures, callback signatures and the
- * device record used by every DMA2D module. It contains no behaviour, so the
- * validation, colour, transfer and event modules can all depend on it without
- * depending on each other.
+ * How it works (in simple words):
+ * - DMA2D is a helper that draws and moves pictures very fast.
+ * - It can fill a rectangle with one color, copy an image, or blend two images.
+ * - It works without the CPU, so the screen updates quickly.
+ * - You give it a color, a size, and where to draw.
  */
 
 #ifndef DMA2D_TYPES_H
@@ -75,51 +76,50 @@
 
 /* Structures ----------------------------------------------------------------*/
 
-/** @brief Runtime counters and last known peripheral state */
+/** @brief Keeps track of how DMA2D is doing */
 typedef struct {
-    bool initialized;                      /**< DMA2D initialization status */
-    uint32_t last_error;                   /**< Last error code from HAL */
-    uint32_t transfer_count;               /**< Number of successful transfers */
-    uint32_t error_count;                  /**< Number of errors occurred */
-    uint32_t state;                        /**< Current DMA2D state */
-    uint32_t total_bytes_transferred;      /**< Total bytes transferred */
+    bool initialized;                      /**< True if ready to use */
+    uint32_t last_error;                   /**< Last error code */
+    uint32_t transfer_count;               /**< How many draws worked */
+    uint32_t error_count;                  /**< How many draws failed */
+    uint32_t state;                        /**< What it is doing now */
+    uint32_t total_bytes_transferred;      /**< Total bytes moved so far */
 } DMA2D_Status;
 
-/** @brief Peripheral configuration */
+/** @brief Settings for how to draw */
 typedef struct {
-    uint32_t mode;                        /**< Operating mode (R2M, M2M, etc.) */
-    uint32_t color_mode;                  /**< Output color format */
-    uint32_t output_offset;               /**< Output line offset (pixels to skip per line) */
-    uint32_t red_value;                   /**< Red component for R2M mode (0-255) */
-    uint32_t green_value;                 /**< Green component for R2M mode (0-255) */
-    uint32_t blue_value;                  /**< Blue component for R2M mode (0-255) */
-    uint32_t alpha_value;                 /**< Alpha component for R2M mode (0-255) */
+    uint32_t mode;                        /**< What to do (fill color, copy, blend) */
+    uint32_t color_mode;                  /**< Color type for the output */
+    uint32_t output_offset;               /**< Extra pixels to skip at end of each line */
+    uint32_t red_value;                   /**< Red amount (0-255) for fill mode */
+    uint32_t green_value;                 /**< Green amount (0-255) for fill mode */
+    uint32_t blue_value;                  /**< Blue amount (0-255) for fill mode */
+    uint32_t alpha_value;                 /**< See-through amount (0-255) for fill mode */
 } DMA2D_Config;
 
-/** @brief Input layer configuration */
+/** @brief Settings for one picture layer */
 typedef struct {
-    uint32_t input_color_mode;            /**< Input color format */
-    uint32_t input_alpha_mode;            /**< Alpha mode for input */
-    uint32_t input_alpha;                 /**< Alpha value for input (0-255) */
-    uint32_t input_offset;                /**< Input line offset (pixels to skip per line) */
+    uint32_t input_color_mode;            /**< Color type of this layer */
+    uint32_t input_alpha_mode;            /**< How to handle see-through */
+    uint32_t input_alpha;                 /**< See-through amount (0-255) */
+    uint32_t input_offset;                /**< Extra pixels to skip at end of each line */
 } DMA2D_LayerConfig;
 
-/** @brief Rectangle for area operations */
+/** @brief A box on the screen */
 typedef struct {
-    uint32_t x;                           /**< X coordinate of top-left corner */
-    uint32_t y;                           /**< Y coordinate of top-left corner */
-    uint32_t width;                       /**< Rectangle width in pixels */
-    uint32_t height;                      /**< Rectangle height in pixels */
+    uint32_t x;                           /**< Left side of the box */
+    uint32_t y;                           /**< Top side of the box */
+    uint32_t width;                       /**< How wide the box is */
+    uint32_t height;                      /**< How tall the box is */
 } DMA2D_Rectangle;
 
 /**
- * @brief Everything the driver owns
- * @details Keeping the HAL handle and the bookkeeping together means the whole
- *          driver state is one object, and no module needs a global symbol.
+ * @brief Everything the driver keeps in one place
+ * @details Holds the low-level handle and the counters.
  */
 typedef struct {
-    DMA2D_HandleTypeDef hal;              /**< HAL handle for the single DMA2D unit */
-    DMA2D_Status status;                  /**< Initialization flag and counters */
+    DMA2D_HandleTypeDef hal;              /**< Low-level handle for DMA2D */
+    DMA2D_Status status;                  /**< Status and counters */
 } DMA2D_Device;
 
 /* Callback signatures -------------------------------------------------------*/

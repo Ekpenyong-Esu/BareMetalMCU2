@@ -1,10 +1,11 @@
 /**
   ******************************************************************************
   * @file    i2c_core.h
-  * @brief   Bus lifecycle and per-device registration for the I2C driver
-  * @details The board exposes one usable I2C bus (I2C3) but several devices sit
-  *          on it. Each driver registers its own I2C_Device_t, and the bus is
-  *          reprogrammed to that device's settings when a transfer starts.
+  * @brief   Setup and sharing of the I2C bus
+  * @details I2C is a two-wire bus for sensors. This board has one I2C bus
+  *          (I2C3) shared by many devices. Each device signs up with its
+  *          own address and speed. The bus switches to that device's
+  *          settings when it talks to it.
   ******************************************************************************
   */
 
@@ -18,45 +19,56 @@ extern "C" {
 #include "i2c_types.h"
 
 /**
- * @brief Board defaults: 100 kHz standard mode, 7-bit addressing, no stretching
- * @note  Copy this and override only the fields the device disagrees with.
+ * @brief  Get default I2C settings: 100 kHz, 7-bit address, no clock stretch
+ * @note   Copy this and change only what your device needs.
+ * @retval Default settings ready to use
  */
 I2C_ConfigTypeDef I2C_ConfigDefault(void);
 
 /**
- * @brief Register a device on the bus
- * @param device  Storage owned by the calling driver, valid for its lifetime
- * @param address Slave address, already shifted the way the HAL expects it
- * @param config  Bus settings this device needs
+ * @brief  Add a device to the shared I2C bus
+ * @param  device: Place to store device info, kept by the caller
+ * @param  address: Address of the device on the bus
+ * @param  config: Bus speed and settings for this device
+ * @retval I2C_OK if added, error code if not
  */
 I2C_StatusTypeDef I2C_DeviceInit(I2C_Device_t *device, uint16_t address,
                                  const I2C_ConfigTypeDef *config);
 
 /**
- * @brief Hand the bus to a device, reprogramming it only if the owner changed
- * @note  Called by every transfer, so back-to-back reads on one device cost
- *        nothing extra.
+ * @brief  Give the bus to a device so it can talk
+ * @param  device: Device that wants to use the bus
+ * @note   Only changes bus settings if a different device was last used.
+ *         So two reads in a row on the same device are fast.
+ * @retval I2C_OK if ok, error code if not
  */
 I2C_StatusTypeDef I2C_Select(I2C_Device_t *device);
 
 /**
- * @brief Release the bus; devices stay registered and reclaim it on next use.
+ * @brief  Turn off the I2C bus
+ * @note   Devices stay saved and can use the bus again later.
+ * @retval I2C_OK if ok, error code if not
  */
 I2C_StatusTypeDef I2C_BusDeInit(void);
 
 /**
- * @brief True if the device has been registered and its config was accepted.
+ * @brief  Check if a device is ready to use
+ * @param  device: Device to check
+ * @retval true if ready, false if not
  */
 bool I2C_DeviceIsReady(const I2C_Device_t *device);
 
 /**
- * @brief Map a HAL result onto the driver's status enum.
+ * @brief  Turn a HAL result into an I2C driver result
+ * @param  halStatus: Result from HAL call
+ * @retval Matching I2C status code
  */
 I2C_StatusTypeDef I2C_ConvertHALStatus(HAL_StatusTypeDef halStatus);
 
 /**
- * @brief Access the HAL handle, for consumers that must pass it to their own
- *        init. Select a device first, or the settings are whoever ran last.
+ * @brief  Get the low-level HAL handle for the I2C bus
+ * @note   Pick a device with I2C_Select first, or you get the last device's settings.
+ * @retval Pointer to the HAL handle
  */
 I2C_HandleTypeDef *I2C_GetHandle(void);
 

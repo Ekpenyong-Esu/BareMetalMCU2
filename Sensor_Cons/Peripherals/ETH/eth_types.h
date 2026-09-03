@@ -1,6 +1,12 @@
 /**
- * @file eth_types.h
- * @brief Data types and constants for the Ethernet driver
+ * @file    eth_types.h
+ * @brief   Shared types for the Ethernet driver
+ * @details This file holds the basic types and settings for Ethernet.
+ *
+ * How it works (in simple words):
+ * - Ethernet sends data as small packets called frames over a network cable.
+ * - Each frame has a sender address, a receiver address, a type, and the data.
+ * - The driver sets up the network chip, sends frames, and reads frames that arrive.
  */
 
 #ifndef ETH_TYPES_H
@@ -37,33 +43,36 @@ extern "C" {
 #define ETH_TX_TIMEOUT_MS        100U
 
 /**
- * @brief Ethernet configuration
+ * @brief Settings for Ethernet
+ * @details Pick the board address (MAC), speed, and cable type.
  */
 typedef struct {
-    uint8_t macAddr[ETH_ADDR_LEN];   /**< Station MAC address */
-    uint32_t speed;                  /**< ETH_SPEED_10M or ETH_SPEED_100M */
-    uint32_t duplexMode;             /**< ETH_FULLDUPLEX_MODE or ETH_HALFDUPLEX_MODE */
-    uint32_t mediaInterface;         /**< ETH_MEDIA_INTERFACE_RMII or ETH_MEDIA_INTERFACE_MII */
+    uint8_t macAddr[ETH_ADDR_LEN];   /**< Board address on the network (6 bytes) */
+    uint32_t speed;                  /**< Speed: 10M or 100M */
+    uint32_t duplexMode;             /**< Send and receive at same time or not */
+    uint32_t mediaInterface;         /**< Cable type: RMII or MII */
 } ETH_Config_t;
 
 /**
- * @brief Ethernet handle
+ * @brief Handle that keeps all Ethernet info in one place
+ * @details Holds the low-level handle, settings, and if it is ready.
  */
 typedef struct {
-    ETH_HandleTypeDef heth;          /**< HAL ETH handle */
-    ETH_Config_t config;             /**< Configuration in force */
-    bool initialized;                /**< Initialization status */
+    ETH_HandleTypeDef heth;          /**< Low-level Ethernet handle */
+    ETH_Config_t config;             /**< Settings in use */
+    bool initialized;                /**< True if ready to use */
 } ETH_Handle_t;
 
 /**
- * @brief Parsed Ethernet frame
+ * @brief One network packet (frame)
+ * @details Has who it is for, who sent it, what kind it is, and the data.
  */
 typedef struct {
-    uint8_t destination[ETH_ADDR_LEN];  /**< Destination MAC address */
-    uint8_t source[ETH_ADDR_LEN];       /**< Source MAC address */
-    uint16_t type;                      /**< EtherType in host order */
-    uint8_t *payload;                   /**< Payload data */
-    uint32_t payloadLength;             /**< Payload length in bytes */
+    uint8_t destination[ETH_ADDR_LEN];  /**< Who should receive it */
+    uint8_t source[ETH_ADDR_LEN];       /**< Who sent it */
+    uint16_t type;                      /**< What kind of data it is */
+    uint8_t *payload;                   /**< The actual data */
+    uint32_t payloadLength;             /**< How many bytes of data */
 } ETH_Frame_t;
 
 #ifdef __cplusplus
