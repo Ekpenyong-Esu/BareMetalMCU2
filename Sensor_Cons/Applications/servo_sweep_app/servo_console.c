@@ -1,19 +1,20 @@
 /**
- * @file tone_console.c
- * @brief Says over the serial port what the tone player is doing
+ * @file servo_console.c
+ * @brief Says over the serial port what the servo sweep is doing
  */
 
-#include "tone_console.h"
+#include "servo_console.h"
 
 #include "uart_blocking.h"
 #include "uart_config.h"
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
-/* One handle per link, static so the driver's pointer stays valid for the
-   whole program rather than pointing into a dead stack frame. */
+#define SERVO_CONSOLE_LINE_SIZE 32U
+
 static UART_HandleTypeDef s_halHandle;
 static UART_Handle_t s_uart;
 
@@ -21,7 +22,7 @@ static UART_Handle_t s_uart;
 static bool s_portOpen = false;
 
 /** @brief Put one string on the wire, or nothing if there is no port */
-static void ToneConsole_Send(const char *text)
+static void ServoConsole_Send(const char *text)
 {
     if (!s_portOpen || text == NULL) {
         return;
@@ -31,7 +32,7 @@ static void ToneConsole_Send(const char *text)
                            (uint16_t)strlen(text), UART_TIMEOUT);
 }
 
-void ToneConsole_Init(void)
+void ServoConsole_Init(void)
 {
     const UART_Config_t config = {
         .instance   = USART1,
@@ -46,28 +47,25 @@ void ToneConsole_Init(void)
     s_portOpen = (UART_Blocking_Init(&s_uart, &config) == UART_OK);
 }
 
-void ToneConsole_ReportReady(const char *outputDescription)
+void ServoConsole_ReportReady(const char *outputDescription)
 {
-    ToneConsole_Send("\r\nTone player started.\r\n");
-    ToneConsole_Send("Output: ");
-    ToneConsole_Send(outputDescription);
-    ToneConsole_Send("\r\n");
+    ServoConsole_Send("\r\nServo sweep started.\r\n");
+    ServoConsole_Send("Output: ");
+    ServoConsole_Send(outputDescription);
+    ServoConsole_Send("\r\n");
 }
 
-void ToneConsole_ReportMelody(const Melody_t *melody)
+void ServoConsole_ReportAngle(uint16_t angleDeg)
 {
-    if (melody == NULL) {
-        return;
-    }
+    char line[SERVO_CONSOLE_LINE_SIZE];
 
-    ToneConsole_Send("Now playing: ");
-    ToneConsole_Send(melody->title);
-    ToneConsole_Send("\r\n");
+    snprintf(line, sizeof(line), "angle: %u deg\r\n", (unsigned)angleDeg);
+    ServoConsole_Send(line);
 }
 
-void ToneConsole_ReportError(const char *reason)
+void ServoConsole_ReportError(const char *reason)
 {
-    ToneConsole_Send("\r\nTone player stopped: ");
-    ToneConsole_Send(reason);
-    ToneConsole_Send("\r\n");
+    ServoConsole_Send("\r\nServo sweep stopped: ");
+    ServoConsole_Send(reason);
+    ServoConsole_Send("\r\n");
 }

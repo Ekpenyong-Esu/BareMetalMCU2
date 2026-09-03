@@ -9,7 +9,7 @@
 
 #include "main.h"
 #include "sys.h"
-#include "tone_player_app.h"
+#include "servo_sweep_app.h"
 
 /**
  * @brief  Program entry point: bring up the system, then run one application.
@@ -19,11 +19,9 @@ int main(void)
 {
     SYS_Init(); /* HAL init, system clock, SysTick */
 
-    /* Pass BUZZER_MODE_ACTIVE_GPIO instead to drive an active buzzer on PE6,
-       which reproduces the rhythm but not the pitch. */
-    TonePlayerApp_Run(BUZZER_MODE_PASSIVE_PWM);
+    ServoSweepApp_Run();
 
-    /* Only reached if the buzzer failed to start. main() must never return. */
+    /* Only reached if the servo failed to start. main() must never return. */
     for (;;) {
     }
 }

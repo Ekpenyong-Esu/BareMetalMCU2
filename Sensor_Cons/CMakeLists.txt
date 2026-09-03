@@ -271,21 +271,15 @@ endif()
 # Add your custom application .c files that aren't in Peripherals/
 # Example: target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/my_app.c)
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Application: the UART blocking example
-    ${CMAKE_SOURCE_DIR}/Applications/uart_app/uart_blocking_app.c
-
-    # Application 6: the tone player
-    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/note.c
-    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/melody.c
-    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/tone_player.c
-    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/tone_console.c
-    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app/tone_player_app.c
+    # Application 7: the servo sweep
+    ${CMAKE_SOURCE_DIR}/Applications/servo_sweep_app/servo_sweep.c
+    ${CMAKE_SOURCE_DIR}/Applications/servo_sweep_app/servo_console.c
+    ${CMAKE_SOURCE_DIR}/Applications/servo_sweep_app/servo_sweep_app.c
 )
 
 # Make application headers available to the build
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    ${CMAKE_SOURCE_DIR}/Applications/uart_app
-    ${CMAKE_SOURCE_DIR}/Applications/tone_player_app
+    ${CMAKE_SOURCE_DIR}/Applications/servo_sweep_app
 )
 
 # ------------------------------------------------------------------------------
