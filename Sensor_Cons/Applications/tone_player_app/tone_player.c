@@ -15,8 +15,15 @@
 #define TONE_PLAYER_DUTY_PERCENT 50U
 
 /* Silence at the end of every step, so two identical notes in a row are heard
-   as two notes rather than one long one. */
-#define TONE_PLAYER_NOTE_GAP_MS 20U
+   as two notes rather than one long one. Passive PWM stops instantly so 20 ms
+   is enough; an active buzzer's internal oscillator rings down slowly so it
+   needs a longer gap to sound regular. */
+#define TONE_PLAYER_PASSIVE_GAP_MS 20U
+#define TONE_PLAYER_ACTIVE_GAP_MS  60U
+
+/* Active buzzers need time for the internal oscillator to start up; shorter
+   blips never reach full volume and sound uneven. */
+#define TONE_PLAYER_ACTIVE_MIN_ON_MS 80U
 
 /* The value does not matter: Buzzer_Tone rewrites the prescaler and the reload
    for every note. This only gets the channel into PWM mode with a compare of
@@ -57,7 +64,11 @@ void TonePlayer_Beep(Buzzer_t *buzzer, uint32_t frequencyHz, uint32_t durationMs
 
     if (buzzer->mode == BUZZER_MODE_ACTIVE_GPIO) {
         /* Its oscillator is built in, so the pitch is fixed and the pin only
-           decides whether it is heard. */
+           decides whether it is heard. Short blips never reach full volume,
+           so stretch them to the minimum stable on-time. */
+        if (durationMs < TONE_PLAYER_ACTIVE_MIN_ON_MS) {
+            durationMs = TONE_PLAYER_ACTIVE_MIN_ON_MS;
+        }
         Buzzer_On(buzzer);
     } else if (Buzzer_Tone(buzzer, frequencyHz, TONE_PLAYER_DUTY_PERCENT) != HAL_OK) {
         /* Out of the timer's reach; stay silent instead of playing a pitch
@@ -95,15 +106,21 @@ void TonePlayer_PlayMelody(Buzzer_t *buzzer, const Melody_t *melody)
         const MelodyStep_t *step = &melody->steps[i];
         uint32_t durationMs = Melody_StepDurationMs(melody, step->length);
 
+        /* Active buzzers ring down slowly, so they need a longer gap than
+           passive PWM to keep repeated notes distinct and regular. */
+        uint32_t gapMs = (buzzer->mode == BUZZER_MODE_ACTIVE_GPIO)
+                             ? TONE_PLAYER_ACTIVE_GAP_MS
+                             : TONE_PLAYER_PASSIVE_GAP_MS;
+
         /* Take the gap out of the note rather than adding it to the beat, so
            the tempo stays right however many notes the tune has. */
-        if (durationMs > TONE_PLAYER_NOTE_GAP_MS) {
-            durationMs -= TONE_PLAYER_NOTE_GAP_MS;
+        if (durationMs > gapMs) {
+            durationMs -= gapMs;
         }
 
         TonePlayer_PlayNote(buzzer, step->name, step->octave, durationMs);
 
         Buzzer_Off(buzzer);
-        HAL_Delay(TONE_PLAYER_NOTE_GAP_MS);
+        HAL_Delay(gapMs);
     }
 }

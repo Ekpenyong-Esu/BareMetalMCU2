@@ -14,8 +14,8 @@
  *
  * Active buzzers have a built-in oscillator. The MCU only needs to gate
  * power to the buzzer with a GPIO pin. This function configures the pin
- * as push-pull output, no pull resistor, low speed, and drives it low
- * (silent) initially.
+ * as push-pull output, no pull resistor, high speed for sharp switching,
+ * and drives it low (silent) initially.
  *
  * @param buzzer  Buzzer instance to initialize (must not be NULL).
  * @param port    GPIO port (e.g., GPIOE).
@@ -38,7 +38,7 @@ HAL_StatusTypeDef Buzzer_InitActive(Buzzer_t *buzzer, GPIO_TypeDef *port, uint16
     GPIO_InitStruct.Pin = pin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     if (GPIO_Driver_Pin_Init(port, &GPIO_InitStruct) != HAL_OK) {
         return HAL_ERROR;
     }

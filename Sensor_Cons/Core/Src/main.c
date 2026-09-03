@@ -8,6 +8,7 @@
 /* USER CODE END Header */
 
 #include "main.h"
+#include "buzzer.h"
 #include "sys.h"
 #include "tone_player_app.h"
 
