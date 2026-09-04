@@ -20,7 +20,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_tim.h"
-#include "lvgl.h"  /* For lv_tick_inc() */
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -141,6 +140,10 @@ void HAL_ResumeTick(void)
   * @note   This function is called when TIM6 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
   * a global variable "uwTick" used as application time base.
+  * @note   Nothing application-specific belongs here. A library that needs a
+  * millisecond count should read HAL_GetTick(), which this callback feeds;
+  * calling into one from here links it into every firmware built from this
+  * tree, whether that firmware uses it or not.
   * @param  htim : TIM handle
   * @retval None
   */
@@ -148,7 +151,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM6) {
     HAL_IncTick();
-    lv_tick_inc(1);  /* LVGL tick - called every 1ms */
   }
   else if (htim->Instance == TIM2) {
         HAL_IncTick();
