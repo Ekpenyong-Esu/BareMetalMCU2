@@ -1,92 +1,94 @@
 /**
-  ******************************************************************************
-  * @file    nokia5110_draw.c
-  * @brief   Framebuffer drawing primitives
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    nokia5110_draw.c
+ * @brief   Framebuffer drawing primitives
+ ******************************************************************************
+ */
 
 #include "nokia5110_draw.h"
 #include "nokia5110_font.h"
 #include <stdlib.h>
 
 /** Write a pixel, discarding anything outside the panel. */
-static void NOKIA5110_SetPixel(NOKIA5110_Handle_t *hnok, int16_t x, int16_t y, uint8_t color)
-{
+static void NOKIA5110_SetPixel(NOKIA5110_Handle_t *hnok, int16_t posX, int16_t posY,
+                               uint8_t color) {
     uint8_t row = 0U;
     uint8_t bit = 0U;
 
-    if (x < 0 || x >= NOKIA5110_WIDTH || y < 0 || y >= NOKIA5110_HEIGHT) {
+    if (posX < 0 || posX >= NOKIA5110_WIDTH || posY < 0 || posY >= NOKIA5110_HEIGHT) {
         return;
     }
 
-    row = (uint8_t)(y / NOKIA5110_ROW_HEIGHT);
-    bit = (uint8_t)(y % NOKIA5110_ROW_HEIGHT);
+    row = (uint8_t)(posY / NOKIA5110_ROW_HEIGHT);
+    bit = (uint8_t)(posY % NOKIA5110_ROW_HEIGHT);
 
     if (color != 0U) {
-        hnok->Buffer[row][x] |= (uint8_t)(1U << bit);
-    } else {
-        hnok->Buffer[row][x] &= (uint8_t)~(1U << bit);
+        hnok->Buffer[row][posX] |= (uint8_t)(1U << bit);
+    }
+    else {
+        hnok->Buffer[row][posX] &= (uint8_t) ~(1U << bit);
     }
 }
 
-NOKIA5110_StatusTypeDef NOKIA5110_DrawPixel(NOKIA5110_Handle_t *hnok, uint8_t x, uint8_t y,
-                                            uint8_t color)
-{
+NOKIA5110_StatusTypeDef NOKIA5110_DrawPixel(NOKIA5110_Handle_t *hnok, uint8_t posX, uint8_t posY,
+                                            uint8_t color) {
     NOKIA5110_CHECK_HANDLE(hnok);
 
-    if (x >= NOKIA5110_WIDTH || y >= NOKIA5110_HEIGHT) {
+    if (posX >= NOKIA5110_WIDTH || posY >= NOKIA5110_HEIGHT) {
         return NOKIA5110_INVALID_PARAM;
     }
 
-    NOKIA5110_SetPixel(hnok, (int16_t)x, (int16_t)y, color);
+    NOKIA5110_SetPixel(hnok, (int16_t)posX, (int16_t)posY, color);
 
     return NOKIA5110_OK;
 }
 
-NOKIA5110_StatusTypeDef NOKIA5110_DrawLine(NOKIA5110_Handle_t *hnok, int16_t x0, int16_t y0,
-                                           int16_t x1, int16_t y1, uint8_t color)
-{
-    int16_t dx;
-    int16_t dy;
-    int16_t sx;
-    int16_t sy;
-    int16_t err;
+NOKIA5110_StatusTypeDef NOKIA5110_DrawLine(NOKIA5110_Handle_t *hnok, int16_t startX, int16_t startY,
+                                           int16_t endX, int16_t endY, uint8_t color) {
+    /* The Bresenham terms are kept 32-bit: a difference of two int16_t
+       coordinates does not fit an int16_t. */
+    int32_t deltaX = 0;
+    int32_t deltaY = 0;
+    int32_t stepX = 0;
+    int32_t stepY = 0;
+    int32_t err = 0;
 
     NOKIA5110_CHECK_HANDLE(hnok);
 
-    dx = (int16_t)abs(x1 - x0);
-    dy = (int16_t)abs(y1 - y0);
-    sx = (x0 < x1) ? 1 : -1;
-    sy = (y0 < y1) ? 1 : -1;
-    err = dx - dy;
+    deltaX = abs(endX - startX);
+    deltaY = abs(endY - startY);
+    stepX = (startX < endX) ? 1 : -1;
+    stepY = (startY < endY) ? 1 : -1;
+    err = deltaX - deltaY;
 
     for (;;) {
-        NOKIA5110_SetPixel(hnok, x0, y0, color);
+        NOKIA5110_SetPixel(hnok, startX, startY, color);
 
-        if (x0 == x1 && y0 == y1) {
+        if (startX == endX && startY == endY) {
             break;
         }
 
-        int16_t e2 = (int16_t)(2 * err);
+        const int32_t doubleErr = 2 * err;
 
-        if (e2 > -dy) {
-            err -= dy;
-            x0 += sx;
+        /* The cursor only ever moves towards the end point, so it stays
+           within the int16_t range of the coordinates. */
+        if (doubleErr > -deltaY) {
+            err -= deltaY;
+            startX = (int16_t)(startX + stepX);
         }
-        if (e2 < dx) {
-            err += dx;
-            y0 += sy;
+        if (doubleErr < deltaX) {
+            err += deltaX;
+            startY = (int16_t)(startY + stepY);
         }
     }
 
     return NOKIA5110_OK;
 }
 
-NOKIA5110_StatusTypeDef NOKIA5110_DrawRect(NOKIA5110_Handle_t *hnok, int16_t x, int16_t y,
-                                           uint8_t width, uint8_t height, uint8_t color)
-{
-    int16_t right;
-    int16_t bottom;
+NOKIA5110_StatusTypeDef NOKIA5110_DrawRect(NOKIA5110_Handle_t *hnok, int16_t posX, int16_t posY,
+                                           uint8_t width, uint8_t height, uint8_t color) {
+    int16_t right = 0;
+    int16_t bottom = 0;
 
     NOKIA5110_CHECK_HANDLE(hnok);
 
@@ -95,20 +97,19 @@ NOKIA5110_StatusTypeDef NOKIA5110_DrawRect(NOKIA5110_Handle_t *hnok, int16_t x, 
         return NOKIA5110_INVALID_PARAM;
     }
 
-    right = (int16_t)(x + width - 1);
-    bottom = (int16_t)(y + height - 1);
+    right = (int16_t)(posX + width - 1);
+    bottom = (int16_t)(posY + height - 1);
 
-    (void)NOKIA5110_DrawLine(hnok, x, y, right, y, color);
-    (void)NOKIA5110_DrawLine(hnok, x, bottom, right, bottom, color);
-    (void)NOKIA5110_DrawLine(hnok, x, y, x, bottom, color);
-    (void)NOKIA5110_DrawLine(hnok, right, y, right, bottom, color);
+    (void)NOKIA5110_DrawLine(hnok, posX, posY, right, posY, color);
+    (void)NOKIA5110_DrawLine(hnok, posX, bottom, right, bottom, color);
+    (void)NOKIA5110_DrawLine(hnok, posX, posY, posX, bottom, color);
+    (void)NOKIA5110_DrawLine(hnok, right, posY, right, bottom, color);
 
     return NOKIA5110_OK;
 }
 
-NOKIA5110_StatusTypeDef NOKIA5110_FillRect(NOKIA5110_Handle_t *hnok, int16_t x, int16_t y,
-                                           uint8_t width, uint8_t height, uint8_t color)
-{
+NOKIA5110_StatusTypeDef NOKIA5110_FillRect(NOKIA5110_Handle_t *hnok, int16_t posX, int16_t posY,
+                                           uint8_t width, uint8_t height, uint8_t color) {
     NOKIA5110_CHECK_HANDLE(hnok);
 
     if (width == 0U || height == 0U) {
@@ -116,65 +117,64 @@ NOKIA5110_StatusTypeDef NOKIA5110_FillRect(NOKIA5110_Handle_t *hnok, int16_t x, 
     }
 
     for (uint8_t i = 0U; i < height; i++) {
-        (void)NOKIA5110_DrawLine(hnok, x, (int16_t)(y + i), (int16_t)(x + width - 1),
-                                 (int16_t)(y + i), color);
+        (void)NOKIA5110_DrawLine(hnok, posX, (int16_t)(posY + i), (int16_t)(posX + width - 1),
+                                 (int16_t)(posY + i), color);
     }
 
     return NOKIA5110_OK;
 }
 
-NOKIA5110_StatusTypeDef NOKIA5110_DrawCircle(NOKIA5110_Handle_t *hnok, int16_t x0, int16_t y0,
-                                             uint8_t radius, uint8_t color)
-{
-    int16_t x;
-    int16_t y = 0;
-    int16_t err = 0;
+NOKIA5110_StatusTypeDef NOKIA5110_DrawCircle(NOKIA5110_Handle_t *hnok, int16_t centerX,
+                                             int16_t centerY, uint8_t radius, uint8_t color) {
+    int16_t offsetX = 0;
+    int16_t offsetY = 0;
+    int32_t err = 0;
 
     NOKIA5110_CHECK_HANDLE(hnok);
 
-    x = (int16_t)radius;
+    offsetX = (int16_t)radius;
 
-    while (x >= y) {
-        NOKIA5110_SetPixel(hnok, (int16_t)(x0 + x), (int16_t)(y0 + y), color);
-        NOKIA5110_SetPixel(hnok, (int16_t)(x0 + y), (int16_t)(y0 + x), color);
-        NOKIA5110_SetPixel(hnok, (int16_t)(x0 - y), (int16_t)(y0 + x), color);
-        NOKIA5110_SetPixel(hnok, (int16_t)(x0 - x), (int16_t)(y0 + y), color);
-        NOKIA5110_SetPixel(hnok, (int16_t)(x0 - x), (int16_t)(y0 - y), color);
-        NOKIA5110_SetPixel(hnok, (int16_t)(x0 - y), (int16_t)(y0 - x), color);
-        NOKIA5110_SetPixel(hnok, (int16_t)(x0 + y), (int16_t)(y0 - x), color);
-        NOKIA5110_SetPixel(hnok, (int16_t)(x0 + x), (int16_t)(y0 - y), color);
+    while (offsetX >= offsetY) {
+        NOKIA5110_SetPixel(hnok, (int16_t)(centerX + offsetX), (int16_t)(centerY + offsetY), color);
+        NOKIA5110_SetPixel(hnok, (int16_t)(centerX + offsetY), (int16_t)(centerY + offsetX), color);
+        NOKIA5110_SetPixel(hnok, (int16_t)(centerX - offsetY), (int16_t)(centerY + offsetX), color);
+        NOKIA5110_SetPixel(hnok, (int16_t)(centerX - offsetX), (int16_t)(centerY + offsetY), color);
+        NOKIA5110_SetPixel(hnok, (int16_t)(centerX - offsetX), (int16_t)(centerY - offsetY), color);
+        NOKIA5110_SetPixel(hnok, (int16_t)(centerX - offsetY), (int16_t)(centerY - offsetX), color);
+        NOKIA5110_SetPixel(hnok, (int16_t)(centerX + offsetY), (int16_t)(centerY - offsetX), color);
+        NOKIA5110_SetPixel(hnok, (int16_t)(centerX + offsetX), (int16_t)(centerY - offsetY), color);
 
-        y += 1;
-        err += 1 + 2 * y;
-        if ((2 * (err - x) + 1) > 0) {
-            x -= 1;
-            err += 1 - 2 * x;
+        offsetY += 1;
+        err += 1 + 2 * offsetY;
+        if ((2 * (err - offsetX) + 1) > 0) {
+            offsetX -= 1;
+            err += 1 - 2 * offsetX;
         }
     }
 
     return NOKIA5110_OK;
 }
 
-NOKIA5110_StatusTypeDef NOKIA5110_DrawText(NOKIA5110_Handle_t *hnok, uint8_t x, uint8_t y,
-                                           const char *text, uint8_t color)
-{
-    int16_t cursorX;
-    int16_t cursorY;
+NOKIA5110_StatusTypeDef NOKIA5110_DrawText(NOKIA5110_Handle_t *hnok, uint8_t posX, uint8_t textRow,
+                                           const char *text, uint8_t color) {
+    int16_t cursorX = 0;
+    int16_t cursorY = 0;
 
     NOKIA5110_CHECK_HANDLE(hnok);
 
-    if (text == NULL || y >= NOKIA5110_ROWS) {
+    if (text == NULL || textRow >= NOKIA5110_ROWS) {
         return NOKIA5110_INVALID_PARAM;
     }
 
-    cursorX = (int16_t)x;
-    cursorY = (int16_t)(y * NOKIA5110_ROW_HEIGHT);
+    cursorX = (int16_t)posX;
+    cursorY = (int16_t)(textRow * NOKIA5110_ROW_HEIGHT);
 
     while (*text != '\0') {
         if (*text == '\n') {
-            cursorX = (int16_t)x;
+            cursorX = (int16_t)posX;
             cursorY += NOKIA5110_ROW_HEIGHT;
-        } else {
+        }
+        else {
             const uint8_t *glyph = NOKIA5110_FONT_GetGlyph(*text);
 
             if (glyph != NULL) {
@@ -183,8 +183,8 @@ NOKIA5110_StatusTypeDef NOKIA5110_DrawText(NOKIA5110_Handle_t *hnok, uint8_t x, 
 
                     for (uint8_t j = 0U; j < NOKIA5110_FONT_HEIGHT; j++) {
                         if ((column & (1U << j)) != 0U) {
-                            NOKIA5110_SetPixel(hnok, (int16_t)(cursorX + i),
-                                               (int16_t)(cursorY + j), color);
+                            NOKIA5110_SetPixel(hnok, (int16_t)(cursorX + i), (int16_t)(cursorY + j),
+                                               color);
                         }
                     }
                 }

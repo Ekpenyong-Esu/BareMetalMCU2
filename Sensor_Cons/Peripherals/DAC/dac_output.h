@@ -42,7 +42,7 @@ extern "C" {
  * Clamps value to the maximum for the configured alignment.
  *
  * @param   hdac Handle (must be initialized)
- * @param   channel Channel, must match the initialized channel (DAC_CHANNEL_1)
+ * @param   channel Channel, must match the channel the handle was opened with
  * @param   value Code from 0 to DAC_MAX_VALUE_12BIT (or 255 for 8-bit alignment)
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR on invalid args or HAL failure
  */

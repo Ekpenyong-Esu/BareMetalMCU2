@@ -10,36 +10,39 @@
 /* NOR Flash command sequence (AMD/Spansion CFI standard), byte addresses for a
    16-bit device: the unlock cycles always target the base of the device, not
    the sector being erased. */
-#define NOR_CMD_UNLOCK_ADDR1    0x0AAAU
-#define NOR_CMD_UNLOCK_ADDR2    0x0554U
-#define NOR_CMD_UNLOCK1         0xAAU
-#define NOR_CMD_UNLOCK2         0x55U
-#define NOR_CMD_ERASE           0x80U
-#define NOR_CMD_ERASE_SECTOR    0x30U
+#define NOR_CMD_UNLOCK_ADDR1 0x0AAAU
+#define NOR_CMD_UNLOCK_ADDR2 0x0554U
+#define NOR_CMD_UNLOCK1 0xAAU
+#define NOR_CMD_UNLOCK2 0x55U
+#define NOR_CMD_ERASE 0x80U
+#define NOR_CMD_ERASE_SECTOR 0x30U
 
 /* A NOR cell reads back all-ones once the sector erase has finished */
-#define NOR_ERASED_VALUE        0xFFFFU
+#define NOR_ERASED_VALUE 0xFFFFU
 
-uint32_t FMC_Driver_NOR_GetBase(const FMC_Driver_NOR_Config_t *config)
-{
+uint32_t FMC_Driver_NOR_GetBase(const FMC_Driver_NOR_Config_t *config) {
     if (config == NULL) {
         return 0U;
     }
 
     switch (config->bank) {
-        case FMC_NORSRAM_BANK1: return NOR_BANK1_BASE_ADDR;
-        case FMC_NORSRAM_BANK2: return NOR_BANK1_BASE_ADDR + NOR_SUBBANK_SIZE;
-        case FMC_NORSRAM_BANK3: return NOR_BANK1_BASE_ADDR + 2U * NOR_SUBBANK_SIZE;
-        case FMC_NORSRAM_BANK4: return NOR_BANK1_BASE_ADDR + 3U * NOR_SUBBANK_SIZE;
-        default:                return 0U;
+        case FMC_NORSRAM_BANK1:
+            return NOR_BANK1_BASE_ADDR;
+        case FMC_NORSRAM_BANK2:
+            return NOR_BANK1_BASE_ADDR + NOR_SUBBANK_SIZE;
+        case FMC_NORSRAM_BANK3:
+            return NOR_BANK1_BASE_ADDR + 2U * NOR_SUBBANK_SIZE;
+        case FMC_NORSRAM_BANK4:
+            return NOR_BANK1_BASE_ADDR + 3U * NOR_SUBBANK_SIZE;
+        default:
+            return 0U;
     }
 }
 
 HAL_StatusTypeDef FMC_Driver_NOR_Init(FMC_Driver_Handle_t *handle,
-                                      const FMC_Driver_NOR_Config_t *config)
-{
+                                      const FMC_Driver_NOR_Config_t *config) {
     FMC_NORSRAM_TimingTypeDef timing = {0};
-    uint32_t base;
+    uint32_t base = 0;
 
     if (handle == NULL || config == NULL) {
         return HAL_ERROR;
@@ -53,7 +56,8 @@ HAL_StatusTypeDef FMC_Driver_NOR_Init(FMC_Driver_Handle_t *handle,
 
     /* HAL_SRAM_Init dereferences ExtTiming as soon as extended mode is on. */
     if (config->extendedMode == FMC_EXTENDED_MODE_ENABLE) {
-        log_error("FMC: NOR extended mode needs a second timing set, which this driver does not take");
+        log_error(
+            "FMC: NOR extended mode needs a second timing set, which this driver does not take");
         return HAL_ERROR;
     }
 
@@ -102,10 +106,8 @@ HAL_StatusTypeDef FMC_Driver_NOR_Init(FMC_Driver_Handle_t *handle,
 /**
  * @brief Common guard for the 16-bit wide NOR transfers
  */
-static HAL_StatusTypeDef FMC_Driver_NOR_CheckTransfer(FMC_Driver_Handle_t *handle,
-                                                      uint32_t address, const void *data,
-                                                      uint32_t size)
-{
+static HAL_StatusTypeDef FMC_Driver_NOR_CheckTransfer(FMC_Driver_Handle_t *handle, uint32_t address,
+                                                      const void *data, uint32_t size) {
     if (handle == NULL || data == NULL || !handle->initialized ||
         handle->memoryType != FMC_DRIVER_MEMORY_NOR) {
         return HAL_ERROR;
@@ -128,39 +130,34 @@ static HAL_StatusTypeDef FMC_Driver_NOR_CheckTransfer(FMC_Driver_Handle_t *handl
 }
 
 HAL_StatusTypeDef FMC_Driver_NOR_Write(FMC_Driver_Handle_t *handle, uint32_t address,
-                                       const uint8_t *data, uint32_t size)
-{
+                                       const uint8_t *data, uint32_t size) {
     HAL_StatusTypeDef status = FMC_Driver_NOR_CheckTransfer(handle, address, data, size);
 
     if (status != HAL_OK) {
         return status;
     }
 
-    return HAL_SRAM_Write_16b(&handle->hsram, (uint32_t *)address,
-                              (uint16_t *)(uintptr_t)data, size / 2U);
+    return HAL_SRAM_Write_16b(&handle->hsram, (uint32_t *)address, (uint16_t *)(uintptr_t)data,
+                              size / 2U);
 }
 
-HAL_StatusTypeDef FMC_Driver_NOR_Read(FMC_Driver_Handle_t *handle, uint32_t address,
-                                      uint8_t *data, uint32_t size)
-{
+HAL_StatusTypeDef FMC_Driver_NOR_Read(FMC_Driver_Handle_t *handle, uint32_t address, uint8_t *data,
+                                      uint32_t size) {
     HAL_StatusTypeDef status = FMC_Driver_NOR_CheckTransfer(handle, address, data, size);
 
     if (status != HAL_OK) {
         return status;
     }
 
-    return HAL_SRAM_Read_16b(&handle->hsram, (uint32_t *)address,
-                             (uint16_t *)data, size / 2U);
+    return HAL_SRAM_Read_16b(&handle->hsram, (uint32_t *)address, (uint16_t *)data, size / 2U);
 }
 
-HAL_StatusTypeDef FMC_Driver_NOR_EraseSector(FMC_Driver_Handle_t *handle, uint32_t address)
-{
-    volatile uint16_t *pAddr;
-    uint32_t deviceBase;
-    uint32_t startTick;
+HAL_StatusTypeDef FMC_Driver_NOR_EraseSector(FMC_Driver_Handle_t *handle, uint32_t address) {
+    volatile uint16_t *pAddr = NULL;
+    uint32_t deviceBase = 0;
+    uint32_t startTick = 0;
 
-    if (handle == NULL || !handle->initialized ||
-        handle->memoryType != FMC_DRIVER_MEMORY_NOR) {
+    if (handle == NULL || !handle->initialized || handle->memoryType != FMC_DRIVER_MEMORY_NOR) {
         return HAL_ERROR;
     }
 

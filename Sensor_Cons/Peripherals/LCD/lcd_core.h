@@ -3,8 +3,8 @@
  * @brief   Character LCD lifecycle, geometry and raw bus access
  */
 
-#ifndef __LCD_CORE_H__
-#define __LCD_CORE_H__
+#ifndef LCD_CORE_H
+#define LCD_CORE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
  * @param   config Pointer to configuration structure
  * @retval  LCD_StatusTypeDef Operation status
  */
-LCD_StatusTypeDef LCD_Init(LCD_HandleTypeDef* handle, const LCD_ConfigTypeDef* config);
+LCD_StatusTypeDef LCD_Init(LCD_HandleTypeDef *handle, const LCD_ConfigTypeDef *config);
 
 /**
  * @brief   Initialize LCD with a default 16x2, 4-bit configuration
@@ -29,14 +29,14 @@ LCD_StatusTypeDef LCD_Init(LCD_HandleTypeDef* handle, const LCD_ConfigTypeDef* c
  * @param   pins   Pointer to pin assignments
  * @retval  LCD_StatusTypeDef Operation status
  */
-LCD_StatusTypeDef LCD_InitDefault(LCD_HandleTypeDef* handle, const LCD_PinsTypeDef* pins);
+LCD_StatusTypeDef LCD_InitDefault(LCD_HandleTypeDef *handle, const LCD_PinsTypeDef *pins);
 
 /**
  * @brief   Deinitialize LCD
  * @param   handle Pointer to LCD handle
  * @retval  LCD_StatusTypeDef Operation status
  */
-LCD_StatusTypeDef LCD_DeInit(LCD_HandleTypeDef* handle);
+LCD_StatusTypeDef LCD_DeInit(LCD_HandleTypeDef *handle);
 
 /**
  * @brief   Send a raw command byte to the panel
@@ -44,7 +44,7 @@ LCD_StatusTypeDef LCD_DeInit(LCD_HandleTypeDef* handle);
  * @param   cmd    Command byte
  * @retval  LCD_StatusTypeDef Operation status
  */
-LCD_StatusTypeDef LCD_SendCommand(LCD_HandleTypeDef* handle, uint8_t cmd);
+LCD_StatusTypeDef LCD_SendCommand(LCD_HandleTypeDef *handle, uint8_t cmd);
 
 /**
  * @brief   Send a raw data byte to the panel
@@ -52,14 +52,14 @@ LCD_StatusTypeDef LCD_SendCommand(LCD_HandleTypeDef* handle, uint8_t cmd);
  * @param   data   Data byte
  * @retval  LCD_StatusTypeDef Operation status
  */
-LCD_StatusTypeDef LCD_SendData(LCD_HandleTypeDef* handle, uint8_t data);
+LCD_StatusTypeDef LCD_SendData(LCD_HandleTypeDef *handle, uint8_t data);
 
 /**
  * @brief   Re-send the display control command from the handle's state flags
  * @note    Internal to the driver; used by the display and cursor modules.
  * @param   handle Pointer to LCD handle
  */
-void LCD_UpdateDisplayControl(LCD_HandleTypeDef* handle);
+void LCD_UpdateDisplayControl(LCD_HandleTypeDef *handle);
 
 /**
  * @brief   DDRAM start address of each row for the configured display size
@@ -67,10 +67,10 @@ void LCD_UpdateDisplayControl(LCD_HandleTypeDef* handle);
  * @param   size Display size type
  * @retval  Pointer to the row offset table
  */
-const uint8_t* LCD_GetRowOffsets(LCD_SizeTypeDef size);
+const uint8_t *LCD_GetRowOffsets(LCD_SizeTypeDef size);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __LCD_CORE_H__ */
+#endif /* LCD_CORE_H */

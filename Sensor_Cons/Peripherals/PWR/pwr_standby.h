@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    pwr_standby.h
-  * @brief   Standby mode entry, WKUP pin control and standby wakeup detection
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    pwr_standby.h
+ * @brief   Standby mode entry, WKUP pin control and standby wakeup detection
+ ******************************************************************************
+ */
 
 #ifndef __PWR_STANDBY_H__
 #define __PWR_STANDBY_H__

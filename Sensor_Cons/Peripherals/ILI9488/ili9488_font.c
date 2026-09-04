@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ili9488_font.c
-  * @brief   6x8 ASCII font for the ILI9488 driver
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ili9488_font.c
+ * @brief   6x8 ASCII font for the ILI9488 driver
+ ******************************************************************************
+ */
 
 #include "ili9488_font.h"
 #include <stddef.h>
@@ -108,11 +108,10 @@ static const uint8_t font6x8[ILI9488_FONT_CHAR_COUNT][ILI9488_FONT_WIDTH] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}  // DEL
 };
 
-const uint8_t *ILI9488_FONT_GetGlyph(char c)
-{
+const uint8_t *ILI9488_FONT_GetGlyph(char chr) {
     /* Read through unsigned char: a plain char may be signed, which would turn
        a byte above 0x7F into a negative index. */
-    uint8_t code = (uint8_t)c;
+    uint8_t code = (uint8_t)chr;
 
     if (code < ILI9488_FONT_FIRST_CHAR ||
         (uint32_t)(code - ILI9488_FONT_FIRST_CHAR) >= ILI9488_FONT_CHAR_COUNT) {

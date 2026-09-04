@@ -1,28 +1,26 @@
 /**
-  ******************************************************************************
-  * @file    mems_diag.c
-  * @brief   Device identity, status, temperature and self-test
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mems_diag.c
+ * @brief   Device identity, status, temperature and self-test
+ ******************************************************************************
+ */
 
 #include "mems_diag.h"
 #include "mems_io.h"
 #include "mems_gyro.h"
 #include "mems_l3gd20.h"
 
-#define MEMS_DEVICE_VERSION             1U
-#define MEMS_SELF_TEST_SETTLE_MS        100U
+#define MEMS_DEVICE_VERSION 1U
+#define MEMS_SELF_TEST_SETTLE_MS 100U
 
-static bool MEMS_SelfTestShiftValid(int32_t diff)
-{
+static bool MEMS_SelfTestShiftValid(int32_t diff) {
     int32_t magnitude = (diff < 0) ? -diff : diff;
 
     return (magnitude > MEMS_SELF_TEST_DIFF_MIN) && (magnitude < MEMS_SELF_TEST_DIFF_MAX);
 }
 
-MEMS_StatusTypeDef MEMS_GetDeviceInfo(MEMS_HandleTypeDef *hmems, MEMS_DeviceInfoTypeDef *info)
-{
-    MEMS_StatusTypeDef status;
+MEMS_StatusTypeDef MEMS_GetDeviceInfo(MEMS_HandleTypeDef *hmems, MEMS_DeviceInfoTypeDef *info) {
+    MEMS_StatusTypeDef status = MEMS_OK;
 
     if (hmems == NULL || info == NULL) {
         return MEMS_INVALID_PARAM;
@@ -40,8 +38,7 @@ MEMS_StatusTypeDef MEMS_GetDeviceInfo(MEMS_HandleTypeDef *hmems, MEMS_DeviceInfo
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_ReadStatus(MEMS_HandleTypeDef *hmems, uint8_t *status_reg)
-{
+MEMS_StatusTypeDef MEMS_ReadStatus(MEMS_HandleTypeDef *hmems, uint8_t *status_reg) {
     MEMS_StatusTypeDef status = MEMS_CheckReady(hmems);
 
     if (status != MEMS_OK) {
@@ -54,8 +51,7 @@ MEMS_StatusTypeDef MEMS_ReadStatus(MEMS_HandleTypeDef *hmems, uint8_t *status_re
     return MEMS_ReadRegister(hmems, L3GD20_STATUS_REG_ADDR, status_reg);
 }
 
-MEMS_StatusTypeDef MEMS_ReadTemperature(MEMS_HandleTypeDef *hmems, float *temperature)
-{
+MEMS_StatusTypeDef MEMS_ReadTemperature(MEMS_HandleTypeDef *hmems, float *temperature) {
     MEMS_StatusTypeDef status = MEMS_CheckReady(hmems);
     uint8_t temp_raw = 0U;
 
@@ -76,10 +72,9 @@ MEMS_StatusTypeDef MEMS_ReadTemperature(MEMS_HandleTypeDef *hmems, float *temper
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_SelfTest(MEMS_HandleTypeDef *hmems, bool *result)
-{
+MEMS_StatusTypeDef MEMS_SelfTest(MEMS_HandleTypeDef *hmems, bool *result) {
     MEMS_StatusTypeDef status = MEMS_CheckReady(hmems);
-    MEMS_StatusTypeDef disable_status;
+    MEMS_StatusTypeDef disable_status = MEMS_OK;
     MEMS_AxesRawTypeDef data_normal;
     MEMS_AxesRawTypeDef data_test;
 
@@ -97,8 +92,8 @@ MEMS_StatusTypeDef MEMS_SelfTest(MEMS_HandleTypeDef *hmems, bool *result)
         return status;
     }
 
-    status = MEMS_UpdateRegister(hmems, L3GD20_CTRL_REG4_ADDR,
-                                 L3GD20_CTRL_REG4_SELF_TEST, L3GD20_CTRL_REG4_SELF_TEST);
+    status = MEMS_UpdateRegister(hmems, L3GD20_CTRL_REG4_ADDR, L3GD20_CTRL_REG4_SELF_TEST,
+                                 L3GD20_CTRL_REG4_SELF_TEST);
     if (status != MEMS_OK) {
         return status;
     }
@@ -109,8 +104,8 @@ MEMS_StatusTypeDef MEMS_SelfTest(MEMS_HandleTypeDef *hmems, bool *result)
        through the disable below - leaving it on would corrupt all later reads. */
     status = MEMS_GyroReadRaw(hmems, &data_test);
 
-    disable_status = MEMS_UpdateRegister(hmems, L3GD20_CTRL_REG4_ADDR,
-                                         L3GD20_CTRL_REG4_SELF_TEST, 0U);
+    disable_status =
+        MEMS_UpdateRegister(hmems, L3GD20_CTRL_REG4_ADDR, L3GD20_CTRL_REG4_SELF_TEST, 0U);
 
     if (status != MEMS_OK) {
         return status;

@@ -1,20 +1,20 @@
 /**
-  ******************************************************************************
-  * @file    can_transfer.c
-  * @brief   CAN frame transmit and receive implementation
-  *
-  * This module implements the CAN data path:
-  * - Frame conversion between driver CAN_Frame and HAL Tx/Rx headers
-  * - Transmit with optional blocking wait and timeout abort
-  * - Receive with FIFO selection, polling and callback dispatch
-  * - Mailbox and FIFO status queries
-  *
-  * Key Design Points:
-  * - CAN_FillFrameFromRxHeader() centralizes Rx header -> frame conversion
-  * - Transmit aborts the mailbox on timeout so it does not stay occupied
-  * - Receive checks both FIFOs and prefers FIFO0 when both have data
-  * - All functions are handle-based; no file-scope state
-  */
+ ******************************************************************************
+ * @file    can_transfer.c
+ * @brief   CAN frame transmit and receive implementation
+ *
+ * This module implements the CAN data path:
+ * - Frame conversion between driver CAN_Frame and HAL Tx/Rx headers
+ * - Transmit with optional blocking wait and timeout abort
+ * - Receive with FIFO selection, polling and callback dispatch
+ * - Mailbox and FIFO status queries
+ *
+ * Key Design Points:
+ * - CAN_FillFrameFromRxHeader() centralizes Rx header -> frame conversion
+ * - Transmit aborts the mailbox on timeout so it does not stay occupied
+ * - Receive checks both FIFOs and prefers FIFO0 when both have data
+ * - All functions are handle-based; no file-scope state
+ */
 
 #include "can_transfer.h"
 #include "can_core.h"
@@ -31,8 +31,7 @@
  * @param frame Output driver frame
  * @param rx_header HAL Rx header from HAL_CAN_GetRxMessage()
  */
-static void CAN_FillFrameFromRxHeader(CAN_Frame *frame, const CAN_RxHeaderTypeDef *rx_header)
-{
+static void CAN_FillFrameFromRxHeader(CAN_Frame *frame, const CAN_RxHeaderTypeDef *rx_header) {
     frame->id = (rx_header->IDE == CAN_ID_STD) ? rx_header->StdId : rx_header->ExtId;
     frame->frame_type = (rx_header->IDE == CAN_ID_STD) ? CAN_FRAME_STANDARD : CAN_FRAME_EXTENDED;
     frame->data_length = rx_header->DLC;
@@ -56,8 +55,7 @@ static void CAN_FillFrameFromRxHeader(CAN_Frame *frame, const CAN_RxHeaderTypeDe
  * @retval HAL_StatusTypeDef HAL_OK, HAL_ERROR or HAL_TIMEOUT
  */
 
-HAL_StatusTypeDef CAN_Transmit(CAN_Handle_t *hcan, const CAN_Frame *frame, uint32_t timeout)
-{
+HAL_StatusTypeDef CAN_Transmit(CAN_Handle_t *hcan, const CAN_Frame *frame, uint32_t timeout) {
     CAN_TxHeaderTypeDef tx_header = {0};
     uint32_t tx_mailbox = 0;
 
@@ -101,8 +99,7 @@ HAL_StatusTypeDef CAN_Transmit(CAN_Handle_t *hcan, const CAN_Frame *frame, uint3
  * @param timeout Max wait in ms; 0 = non-blocking poll
  * @retval HAL_StatusTypeDef HAL_OK, HAL_ERROR or HAL_TIMEOUT
  */
-HAL_StatusTypeDef CAN_Receive(CAN_Handle_t *hcan, CAN_Frame *frame, uint32_t timeout)
-{
+HAL_StatusTypeDef CAN_Receive(CAN_Handle_t *hcan, CAN_Frame *frame, uint32_t timeout) {
     CAN_RxHeaderTypeDef rx_header;
 
     if (hcan == NULL || frame == NULL) {
@@ -139,8 +136,7 @@ HAL_StatusTypeDef CAN_Receive(CAN_Handle_t *hcan, CAN_Frame *frame, uint32_t tim
  * @param hcan Handle
  * @retval bool true when at least one mailbox is free
  */
-bool CAN_IsTransmitMailboxAvailable(CAN_Handle_t *hcan)
-{
+bool CAN_IsTransmitMailboxAvailable(CAN_Handle_t *hcan) {
     if (hcan == NULL) {
         return false;
     }
@@ -154,8 +150,7 @@ bool CAN_IsTransmitMailboxAvailable(CAN_Handle_t *hcan)
  * @param fifo_number FIFO index (0 or 1)
  * @retval bool true when at least one frame is waiting
  */
-bool CAN_IsReceivePending(CAN_Handle_t *hcan, uint8_t fifo_number)
-{
+bool CAN_IsReceivePending(CAN_Handle_t *hcan, uint8_t fifo_number) {
     uint32_t fifo = 0U;
 
     if (hcan == NULL || fifo_number > 1U) {
@@ -172,8 +167,7 @@ bool CAN_IsReceivePending(CAN_Handle_t *hcan, uint8_t fifo_number)
  * @param fifo_number FIFO index (0 or 1)
  * @retval uint8_t Number of frames waiting (0 if invalid FIFO)
  */
-uint8_t CAN_GetReceivePendingCount(CAN_Handle_t *hcan, uint8_t fifo_number)
-{
+uint8_t CAN_GetReceivePendingCount(CAN_Handle_t *hcan, uint8_t fifo_number) {
     uint32_t fifo = 0U;
 
     if (hcan == NULL || fifo_number > 1U) {
@@ -190,16 +184,16 @@ uint8_t CAN_GetReceivePendingCount(CAN_Handle_t *hcan, uint8_t fifo_number)
  * @param mailbox_number Mailbox index (0..2)
  * @retval HAL_StatusTypeDef HAL_OK on success, HAL_ERROR on invalid mailbox
  */
-HAL_StatusTypeDef CAN_AbortTransmit(CAN_Handle_t *hcan, uint8_t mailbox_number)
-{
+HAL_StatusTypeDef CAN_AbortTransmit(CAN_Handle_t *hcan, uint8_t mailbox_number) {
     uint32_t mailbox = 0U;
 
     if (hcan == NULL || mailbox_number >= CAN_MAX_MAILBOXES) {
         return HAL_ERROR;
     }
 
-    mailbox = (mailbox_number == 0U) ? CAN_TX_MAILBOX0 :
-              (mailbox_number == 1U) ? CAN_TX_MAILBOX1 : CAN_TX_MAILBOX2;
+    mailbox = (mailbox_number == 0U)   ? CAN_TX_MAILBOX0
+              : (mailbox_number == 1U) ? CAN_TX_MAILBOX1
+                                       : CAN_TX_MAILBOX2;
 
     return HAL_CAN_AbortTxRequest(&hcan->hal, mailbox);
 }

@@ -1,186 +1,103 @@
-# I2C Driver for STM32F429
+# I2C Driver
 
-This directory contains a comprehensive I2C (Inter-Integrated Circuit) driver implementation for the STM32F429 microcontroller, providing both basic and advanced communication capabilities.
+A bus-and-device model for the STM32F4 I2C peripherals. The application owns
+the bus and says which peripheral and pins carry it. Device drivers register
+on that bus with their address and the speed their chip needs. The peripheral
+is reprogrammed whenever a different device is selected, so a 100 kHz sensor
+and a 400 kHz display can share the same two wires.
 
-## Files Overview
+## Files
 
-- **`i2c.h`** - Header file containing function prototypes, type definitions, and constants
-- **`i2c.c`** - Main implementation file with all I2C communication functions
-- **`i2c_example.c`** - Example code demonstrating various I2C operations
+| File | Holds |
+|------|-------|
+| `i2c_types.h` | `I2C_BusConfig_t`, `I2C_Bus_t`, `I2C_Device_t`, `I2C_ConfigTypeDef`, status codes |
+| `i2c_core.[ch]` | Bus open/close, pin and clock setup, device registration, bus ownership |
+| `i2c_transfer.[ch]` | Master transmit/receive, register (memory) read/write, probe, scan, stuck-bus recovery |
+| `i2c.h` | Umbrella include |
 
-## Features
+## Who owns what
 
-### Core Functionality
-- **Basic Communication**: Master transmit and receive operations
-- **Memory Operations**: Read/write to I2C memory devices (EEPROM, etc.)
-- **Device Management**: Device readiness checking and bus scanning
-- **Error Handling**: Comprehensive error detection and reporting
-- **Custom Configuration**: Flexible I2C parameter configuration
+| Owner | Owns | Type |
+|-------|------|------|
+| Application | The peripheral (I2C1..I2C3), SCL/SDA pins | `I2C_Bus_t` |
+| Device driver | The chip's address and bus speed | `I2C_Device_t` inside its handle |
 
-### Supported Operations
-- `I2C_Master_Transmit()` - Send data to I2C slave devices
-- `I2C_Master_Receive()` - Receive data from I2C slave devices
-- `I2C_Master_TransmitReceive()` - Combined transmit/receive operations
-- `I2C_Mem_Write()` / `I2C_Mem_Read()` - Memory device operations
-- `I2C_IsDeviceReady()` - Check if device is responding
-- `I2C_ScanBus()` - Scan for connected I2C devices
-- `I2C_GetError()` - Get detailed error information
+The driver never picks an instance or a pin on its own. Nothing in this
+directory names a board or includes `main.h`.
 
-## Usage Examples
+## Opening a bus (application code)
 
-### Basic Initialization
 ```c
 #include "i2c.h"
 
-// Initialize I2C with default settings (100 kHz, standard mode)
-I2C_Init();
-```
+static I2C_Bus_t s_i2c3;
 
-### Custom Configuration
-```c
-I2C_ConfigTypeDef customConfig = {
-    .ClockSpeed = 400000,                      // 400 kHz (fast mode)
-    .DutyCycle = I2C_DUTYCYCLE_16_9,          // 16:9 duty cycle
-    .AddressingMode = I2C_ADDRESSINGMODE_7BIT, // 7-bit addressing
-    .OwnAddress1 = 0x00,                       // Master mode
-    .DualAddressMode = I2C_DUALADDRESS_DISABLE,
-    .GeneralCallMode = I2C_GENERALCALL_DISABLE,
-    .NoStretchMode = I2C_NOSTRETCH_DISABLE
+const I2C_BusConfig_t wiring = {
+    .instance  = I2C3,
+    .sclPort   = GPIOA, .sclPin = GPIO_PIN_8,
+    .sdaPort   = GPIOC, .sdaPin = GPIO_PIN_9,
+    .alternate = 0,     /* 0 means AF4, which every I2C pin uses bar a few */
 };
 
-I2C_Init_Custom(&customConfig);
-```
-
-### Communicating with Devices
-```c
-// Transmit data to a device
-uint8_t txData[] = {0x01, 0x02, 0x03};
-I2C_StatusTypeDef status = I2C_Master_Transmit(DEVICE_ADDR << 1, txData,
-                                             sizeof(txData), I2C_TIMEOUT_DEFAULT);
-
-// Receive data from a device
-uint8_t rxData[4];
-status = I2C_Master_Receive(DEVICE_ADDR << 1, rxData,
-                           sizeof(rxData), I2C_TIMEOUT_DEFAULT);
-```
-
-### EEPROM Operations
-```c
-// Write to EEPROM
-uint8_t data[] = {0xAA, 0xBB, 0xCC};
-I2C_Mem_Write(EEPROM_ADDR << 1, 0x0000, I2C_MEMADD_SIZE_16BIT,
-              data, sizeof(data), I2C_TIMEOUT_LONG);
-
-// Read from EEPROM
-uint8_t readData[3];
-I2C_Mem_Read(EEPROM_ADDR << 1, 0x0000, I2C_MEMADD_SIZE_16BIT,
-             readData, sizeof(readData), I2C_TIMEOUT_DEFAULT);
-```
-
-### Device Scanning
-```c
-// Scan for connected devices
-uint8_t devices[16];
-uint8_t count = I2C_ScanBus(devices, 16, I2C_TIMEOUT_SHORT);
-
-printf("Found %d devices:\n", count);
-for(uint8_t i = 0; i < count; i++) {
-    printf("Device at 0x%02X\n", devices[i]);
+if (I2C_BusInit(&s_i2c3, &wiring) != I2C_OK) {
+    /* wrong instance or missing pin */
 }
 ```
 
-## Configuration Constants
+`I2C_BusInit` enables and resets the peripheral clock and configures both
+pins as open-drain alternate function with pull-ups. It does not program the
+peripheral yet: the speed belongs to whichever device is selected first.
 
-### Timeout Values
-- `I2C_TIMEOUT_DEFAULT` - 1000ms (standard operations)
-- `I2C_TIMEOUT_SHORT` - 100ms (quick operations)
-- `I2C_TIMEOUT_LONG` - 5000ms (memory operations)
+A handful of pins use a different alternate function (PB4 as I2C3_SDA is
+AF9). Pass the right `GPIO_AFx_I2Cx` in `alternate` for those.
 
-### Clock Speeds
-- `I2C_CLOCK_SPEED_STANDARD` - 100 kHz (standard mode)
-- `I2C_CLOCK_SPEED_FAST` - 400 kHz (fast mode)
-
-### Address Ranges
-- `I2C_ADDR_MIN` - 0x08 (minimum valid address)
-- `I2C_ADDR_MAX` - 0x77 (maximum valid address)
-
-## Error Handling
-
-The driver provides comprehensive error handling with the following status codes:
-
-- `I2C_OK` - Operation successful
-- `I2C_ERROR` - General error
-- `I2C_BUSY` - Bus is busy
-- `I2C_TIMEOUT` - Operation timed out
-- `I2C_NACK` - No acknowledge received
-- `I2C_INVALID_PARAM` - Invalid parameter
-
-Use `I2C_GetStatusString()` to convert status codes to human-readable strings.
-
-## Hardware Configuration
-
-The driver is configured for **I2C3** peripheral with the following default settings:
-
-- **Clock Speed**: 100 kHz (standard mode)
-- **Duty Cycle**: 2:1 (50% duty cycle)
-- **Addressing**: 7-bit mode
-- **Clock Stretching**: Enabled
-- **General Call**: Disabled
-
-### Pin Configuration (STM32F429-Discovery)
-- **SCL**: PC9 (AF4)
-- **SDA**: PA8 (AF4)
-
-## Running Examples
-
-To run the comprehensive examples:
+## Registering a device (driver code)
 
 ```c
-#include "i2c_example.h"
+typedef struct {
+    I2C_Device_t device;
+} MYSENSOR_Handle_t;
 
-// Run all I2C examples
-I2C_RunExamples();
+MYSENSOR_Status MYSENSOR_Init(MYSENSOR_Handle_t *h, I2C_Bus_t *bus)
+{
+    I2C_ConfigTypeDef settings = I2C_ConfigDefault();  /* 100 kHz, 7-bit */
+    settings.ClockSpeed = 400000U;
+
+    /* HAL addresses are the 7-bit address shifted left by one. */
+    if (I2C_DeviceInit(&h->device, bus, 0x48U << 1, &settings) != I2C_OK) {
+        return MYSENSOR_ERROR;   /* bus not open */
+    }
+    ...
+}
 ```
 
-This will demonstrate:
-1. Basic transmit/receive operations
-2. Memory read/write operations
-3. Device scanning
-4. Error handling scenarios
-5. Custom configuration
+Transfers name the device. They select it onto the bus, then use its address:
 
-## Integration Notes
+```c
+uint8_t who;
+I2C_Mem_Read(&h->device, WHO_AM_I_REG, I2C_MEMADD_SIZE_8BIT, &who, 1, I2C_TIMEOUT_DEFAULT);
+I2C_Master_Transmit(&h->device, payload, sizeof payload, I2C_TIMEOUT_DEFAULT);
+```
 
-### Dependencies
-- STM32F4xx HAL Library
-- System error handler (`Error_Handler()`)
-- Standard C libraries (`string.h`, `stdint.h`)
+`I2C_IsDeviceReady(&device, trials, timeout)` probes the chip's address.
+`I2C_ScanBus(&device, list, max, timeout)` walks 0x08..0x77 on that device's
+bus and fills `list` with the 7-bit addresses that answered.
 
-### Thread Safety
-The driver is not thread-safe. Implement mutex protection for multi-threaded applications.
+## Error recovery
 
-### Power Management
-Consider I2C peripheral clock gating for low-power applications.
+A NACK is a normal reply from an absent chip and comes back as `I2C_NACK`
+without touching the bus. Any other failure resets the peripheral, bit-bangs
+the configured SCL/SDA pins free (nine clocks then a STOP), puts the pins
+back into alternate-function mode, and drops the bus owner. The next transfer
+reprograms the peripheral. `I2C_GetError(&device)` returns the HAL error code
+of the last transfer on that device's bus.
 
-## Troubleshooting
+## Closing
 
-### Common Issues
-1. **No Acknowledge (NACK)**: Check device address and connections
-2. **Timeout Errors**: Verify pull-up resistors and bus capacitance
-3. **Busy Errors**: Ensure proper bus arbitration and timing
+`I2C_BusDeInit(&bus)` stops the peripheral, releases the pins, and gates the
+clock. Devices stay registered; reopen the bus and they work again.
 
-### Debug Tips
-- Use `I2C_ScanBus()` to verify device connectivity
-- Check `I2C_GetError()` for detailed HAL error codes
-- Verify I2C pin configurations in STM32CubeMX
+## Status codes
 
-## Performance Considerations
-
-- **Standard Mode (100 kHz)**: Suitable for most applications
-- **Fast Mode (400 kHz)**: Higher throughput but requires better signal integrity
-- **Memory Operations**: Include write cycle delays for EEPROM devices
-- **Bus Loading**: Limit bus capacitance for reliable high-speed operation
-
----
-
-For more detailed information, refer to the STM32F429 Reference Manual and I2C specification.
+`I2C_OK`, `I2C_ERROR`, `I2C_BUSY`, `I2C_TIMEOUT`, `I2C_NACK`,
+`I2C_INVALID_PARAM`. `I2C_GetStatusString()` describes them.

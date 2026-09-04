@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ili9488_font.h
-  * @brief   6x8 ASCII font for the ILI9488 driver
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ili9488_font.h
+ * @brief   6x8 ASCII font for the ILI9488 driver
+ ******************************************************************************
+ */
 
 #ifndef ILI9488_FONT_H
 #define ILI9488_FONT_H
@@ -16,9 +16,9 @@ extern "C" {
 
 /**
  * @brief  Column bitmap for a character.
- * @return NULL when @p c has no glyph, so callers must check.
+ * @return NULL when @p chr has no glyph, so callers must check.
  */
-const uint8_t *ILI9488_FONT_GetGlyph(char c);
+const uint8_t *ILI9488_FONT_GetGlyph(char chr);
 
 #ifdef __cplusplus
 }

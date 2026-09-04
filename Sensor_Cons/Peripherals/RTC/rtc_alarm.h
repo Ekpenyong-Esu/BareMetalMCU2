@@ -6,8 +6,8 @@
  ******************************************************************************
  */
 
-#ifndef __RTC_ALARM_H
-#define __RTC_ALARM_H
+#ifndef RTC_ALARM_H
+#define RTC_ALARM_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,7 +23,7 @@ extern "C" {
  * @param  sAlarm: Pointer to Alarm structure
  * @retval RTC_StatusTypeDef: Status of the operation
  */
-RTC_StatusTypeDef RTC_SetAlarm(const RTC_Alarm_t* sAlarm);
+RTC_StatusTypeDef RTC_SetAlarm(const RTC_Alarm_t *sAlarm);
 
 /**
  * @brief  Get the specified RTC Alarm
@@ -31,7 +31,7 @@ RTC_StatusTypeDef RTC_SetAlarm(const RTC_Alarm_t* sAlarm);
  * @param  Alarm: Specifies the Alarm. Can be RTC_ALARM_A or RTC_ALARM_B
  * @retval RTC_StatusTypeDef: Status of the operation
  */
-RTC_StatusTypeDef RTC_GetAlarm(RTC_Alarm_t* sAlarm, uint32_t Alarm);
+RTC_StatusTypeDef RTC_GetAlarm(RTC_Alarm_t *sAlarm, uint32_t Alarm);
 
 /**
  * @brief  Disable the specified RTC Alarm
@@ -61,4 +61,4 @@ void RTC_ISR_Dispatch(void);
 }
 #endif
 
-#endif /* __RTC_ALARM_H */
+#endif /* RTC_ALARM_H */

@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    spi_transfer.h
-  * @brief   SPI transfer operations and utilities
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    spi_transfer.h
+ * @brief   SPI transfer operations and utilities
+ ******************************************************************************
+ */
 
 #ifndef SPI_TRANSFER_H
 #define SPI_TRANSFER_H
@@ -15,7 +15,7 @@ extern "C" {
 #include "spi_types.h"
 
 /**
- * @brief   Send bytes to a device, selecting it onto the bus first
+ * @brief   Send bytes to a device, selecting it onto its bus first
  * @param   device Device to talk to
  * @param   pData Bytes to send
  * @param   Size Number of bytes
@@ -26,7 +26,7 @@ SPI_StatusTypeDef SPI_Transmit(SPI_Device_t *device, uint8_t *pData, uint16_t Si
                                uint32_t Timeout);
 
 /**
- * @brief   Read bytes from a device, selecting it onto the bus first
+ * @brief   Read bytes from a device, selecting it onto its bus first
  * @param   device Device to talk to
  * @param   pData Destination buffer
  * @param   Size Number of bytes
@@ -45,13 +45,13 @@ SPI_StatusTypeDef SPI_Receive(SPI_Device_t *device, uint8_t *pData, uint16_t Siz
  * @param   Timeout Timeout in milliseconds
  * @retval  SPI_StatusTypeDef Status of the operation
  */
-SPI_StatusTypeDef SPI_TransmitReceive(SPI_Device_t *device, uint8_t *pTxData,
-                                      uint8_t *pRxData, uint16_t Size, uint32_t Timeout);
+SPI_StatusTypeDef SPI_TransmitReceive(SPI_Device_t *device, uint8_t *pTxData, uint8_t *pRxData,
+                                      uint16_t Size, uint32_t Timeout);
 
 /**
- * @brief   HAL error code from the last transfer
+ * @brief   HAL error code from the last transfer on the device's bus
  */
-uint32_t SPI_GetError(void);
+uint32_t SPI_GetError(const SPI_Device_t *device);
 
 /**
  * @brief   Human readable form of a driver status

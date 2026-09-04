@@ -59,7 +59,8 @@ UART_Status_t UART_Blocking_Init(UART_Handle_t *handle, const UART_Config_t *con
  * @param  timeout Milliseconds to wait for transfer to complete
  * @retval UART_OK on success, UART_ERROR on invalid args, UART_TIMEOUT_ERROR on timeout
  */
-UART_Status_t UART_Blocking_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size, uint32_t timeout);
+UART_Status_t UART_Blocking_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size,
+                                     uint32_t timeout);
 
 /**
  * @brief  Receive data, waiting for it to arrive

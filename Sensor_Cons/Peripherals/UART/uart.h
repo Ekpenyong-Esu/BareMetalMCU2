@@ -1,6 +1,6 @@
 /**
  * @file uart.h
- * @brief Shared UART utilities: teardown, active-link lookup, flag waits
+ * @brief Shared UART utilities: teardown, instance registry, vector dispatch, flag waits
  *
  * Not a dispatcher: each transfer mode (uart_blocking.h/uart_interrupt.h/
  * uart_dma.h) is an independent, directly-callable API, the same way
@@ -10,7 +10,9 @@
  * Architecture:
  * - Each UART link is a UART_Handle_t containing HAL handle, config, and state
  * - Modes are independent: blocking, interrupt, DMA - no vtable dispatch
- * - Active handle registry allows MSP/ISR to find the right link
+ * - A registry keyed on the USART instance lets the MSP, the HAL callbacks
+ *   and the interrupt vectors find the owning link, so several UARTs can be
+ *   open at once without mis-routing
  * - Ring buffer (uart_ring_buffer) decouples ISR reception from application reads
  */
 
@@ -27,8 +29,8 @@ extern "C" {
  * @brief  Close a UART link and release its hardware resources
  *
  * Disables all UART interrupts, calls HAL_UART_DeInit() to release MSP
- * resources (GPIO, clocks, DMA), and clears the handle state. If this
- * handle was the active one, the active handle registry is cleared.
+ * resources (GPIO, clocks, DMA), removes the link from the registry and
+ * clears the handle state.
  *
  * @param  handle UART handle to deinitialize
  * @retval UART_OK on success, UART_ERROR if handle/huart is NULL or HAL fails
@@ -36,22 +38,54 @@ extern "C" {
 UART_Status_t UART_DeInit(UART_Handle_t *handle);
 
 /**
- * @brief  Publish the link an Init() just brought up
+ * @brief  Register a link under its instance before HAL_UART_Init()
  *
- * Interrupt vectors and HAL_UART_MspInit() run without a caller-supplied
- * handle, so each mode's Init() calls this before HAL_UART_Init() so that
- * the MSP and ISR callbacks can find the link via UART_GetActiveHandle().
+ * HAL_UART_MspInit() and the interrupt vectors run without a caller-supplied
+ * handle, so each mode's Init() registers the link first. Registration also
+ * checks that the hardware binding in `handle->config` is complete: a known
+ * instance, at least one wired direction, and both DMA streams in DMA mode.
  *
- * @param  handle Handle to publish, or NULL to clear the active handle
+ * @param  handle Handle whose config has already been filled in
+ * @retval UART_OK when registered, UART_ERROR when the binding is invalid or
+ *         the instance is already owned by another open link
  */
-void UART_SetActiveHandle(UART_Handle_t *handle);
+UART_Status_t UART_Register(UART_Handle_t *handle);
 
 /**
- * @brief  Get the handle of the most recently initialized UART link
+ * @brief  Remove a link from the registry
  *
- * @retval Active handle, or NULL if no link is open
+ * @param  handle Handle to remove; a handle that is not registered is ignored
  */
-UART_Handle_t *UART_GetActiveHandle(void);
+void UART_Unregister(UART_Handle_t *handle);
+
+/**
+ * @brief  Resolve the link that owns a USART instance
+ *
+ * @param  instance USART1..USART6 / UART4 / UART5
+ * @retval Owning handle, or NULL when that instance is not open
+ */
+UART_Handle_t *UART_FromInstance(const USART_TypeDef *instance);
+
+/**
+ * @brief  Service the USART interrupt vector for one instance
+ *
+ * Called from the USARTx_IRQHandler() in Core; routes to HAL_UART_IRQHandler()
+ * on the registered link, or does nothing when the instance is not open.
+ *
+ * @param  instance USART instance whose vector fired
+ */
+void UART_IRQHandler(USART_TypeDef *instance);
+
+/**
+ * @brief  Service a DMA stream interrupt vector on behalf of a UART link
+ *
+ * Called from the DMAx_StreamN_IRQHandler() in Core; finds the open link whose
+ * TX or RX stream is @p stream and routes to HAL_DMA_IRQHandler(), or does
+ * nothing when no UART owns that stream.
+ *
+ * @param  stream DMA stream whose vector fired
+ */
+void UART_DmaStreamIRQHandler(const DMA_Stream_TypeDef *stream);
 
 /**
  * @brief  Spin until a completion flag is raised
@@ -64,7 +98,7 @@ UART_Handle_t *UART_GetActiveHandle(void);
  *                 the flag is already raised
  * @retval UART_OK once raised, UART_TIMEOUT_ERROR if the wait expired
  */
-UART_Status_t UART_WaitForFlag(volatile bool *flag, uint32_t timeout);
+UART_Status_t UART_WaitForFlag(const volatile bool *flag, uint32_t timeout);
 
 #ifdef __cplusplus
 }

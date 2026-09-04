@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mems_calibration.h
-  * @brief   Gyroscope zero-rate offset calibration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mems_calibration.h
+ * @brief   Gyroscope zero-rate offset calibration
+ ******************************************************************************
+ */
 
 #ifndef MEMS_CALIBRATION_H
 #define MEMS_CALIBRATION_H

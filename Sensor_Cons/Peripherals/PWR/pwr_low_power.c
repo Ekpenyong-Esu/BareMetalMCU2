@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    pwr_low_power.c
-  * @brief   Low power orchestration built on the sleep/stop/standby modules
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    pwr_low_power.c
+ * @brief   Low power orchestration built on the sleep/stop/standby modules
+ ******************************************************************************
+ */
 
 /* Includes ------------------------------------------------------------------*/
 #include "pwr_low_power.h"
@@ -16,7 +16,9 @@
 
 /* Private defines -----------------------------------------------------------*/
 /** Below this expected wait, Stop mode entry/exit costs more than it saves */
-#define PWR_AUTO_SLEEP_THRESHOLD_MS     10U
+#define PWR_AUTO_SLEEP_THRESHOLD_MS 10U
+/** Wake-up interval handed out by PWR_GetDefaultLowPowerConfig() */
+#define PWR_DEFAULT_WAKEUP_TIME_MS 1000U
 
 /* Private variables ---------------------------------------------------------*/
 static PWR_LowPowerModeTypeDef s_lastMode = PWR_LOW_POWER_MODE_LIGHT;
@@ -29,12 +31,10 @@ static PWR_WakeupSourceTypeDef s_lastSources = PWR_SRC_NONE;
  */
 static PWR_StatusTypeDef PWR_PrepareLowPower(PWR_LowPowerModeTypeDef mode,
                                              PWR_WakeupSourceTypeDef wakeupSources,
-                                             bool keepPeripherals)
-{
+                                             bool keepPeripherals) {
     PWR_StatusTypeDef status = PWR_ConfigureWakeupSources(wakeupSources);
 
-    if (status != PWR_OK)
-    {
+    if (status != PWR_OK) {
         log_error("PWR: Failed to configure wakeup sources");
         return status;
     }
@@ -49,15 +49,13 @@ static PWR_StatusTypeDef PWR_PrepareLowPower(PWR_LowPowerModeTypeDef mode,
 
 /* Public functions ----------------------------------------------------------*/
 
-PWR_StatusTypeDef PWR_GetDefaultLowPowerConfig(PWR_LowPowerConfigTypeDef* config)
-{
-    if (config == NULL)
-    {
+PWR_StatusTypeDef PWR_GetDefaultLowPowerConfig(PWR_LowPowerConfigTypeDef *config) {
+    if (config == NULL) {
         return PWR_INVALID_PARAM;
     }
 
     config->mode = PWR_LOW_POWER_MODE_AUTO;
-    config->wakeupTimeMs = 1000;
+    config->wakeupTimeMs = PWR_DEFAULT_WAKEUP_TIME_MS;
     config->keepPeripherals = false;
     config->wakeupSources = PWR_SRC_WAKEUP_PIN;
     config->optimizeVoltage = true;
@@ -65,24 +63,20 @@ PWR_StatusTypeDef PWR_GetDefaultLowPowerConfig(PWR_LowPowerConfigTypeDef* config
     return PWR_OK;
 }
 
-PWR_StatusTypeDef PWR_EnterLowPowerMode(const PWR_LowPowerConfigTypeDef* config)
-{
-    PWR_StatusTypeDef status  = PWR_OK;
+PWR_StatusTypeDef PWR_EnterLowPowerMode(const PWR_LowPowerConfigTypeDef *config) {
+    PWR_StatusTypeDef status = PWR_OK;
 
-    if (config == NULL)
-    {
+    if (config == NULL) {
         return PWR_INVALID_PARAM;
     }
 
     log_debug("PWR: Entering low power mode %d", config->mode);
 
-    if (config->optimizeVoltage)
-    {
+    if (config->optimizeVoltage) {
         PWR_EnableLowPowerMode();
     }
 
-    switch (config->mode)
-    {
+    switch (config->mode) {
         case PWR_LOW_POWER_MODE_LIGHT:
             status = PWR_EnterLightLowPower(config->wakeupSources, config->keepPeripherals);
             break;
@@ -96,7 +90,8 @@ PWR_StatusTypeDef PWR_EnterLowPowerMode(const PWR_LowPowerConfigTypeDef* config)
             break;
 
         case PWR_LOW_POWER_MODE_AUTO:
-            status = PWR_AutoLowPowerMode(config->wakeupTimeMs, config->keepPeripherals, config->wakeupSources);
+            status = PWR_AutoLowPowerMode(config->wakeupTimeMs, config->keepPeripherals,
+                                          config->wakeupSources);
             break;
 
         default:
@@ -107,12 +102,12 @@ PWR_StatusTypeDef PWR_EnterLowPowerMode(const PWR_LowPowerConfigTypeDef* config)
     return status;
 }
 
-PWR_StatusTypeDef PWR_EnterLightLowPower(PWR_WakeupSourceTypeDef wakeupSources, bool keepPeripherals)
-{
-    PWR_StatusTypeDef status = PWR_PrepareLowPower(PWR_LOW_POWER_MODE_LIGHT, wakeupSources, keepPeripherals);
+PWR_StatusTypeDef PWR_EnterLightLowPower(PWR_WakeupSourceTypeDef wakeupSources,
+                                         bool keepPeripherals) {
+    PWR_StatusTypeDef status =
+        PWR_PrepareLowPower(PWR_LOW_POWER_MODE_LIGHT, wakeupSources, keepPeripherals);
 
-    if (status != PWR_OK)
-    {
+    if (status != PWR_OK) {
         return status;
     }
 
@@ -128,28 +123,27 @@ PWR_StatusTypeDef PWR_EnterLightLowPower(PWR_WakeupSourceTypeDef wakeupSources, 
     return PWR_OK;
 }
 
-PWR_StatusTypeDef PWR_EnterDeepLowPower(PWR_WakeupSourceTypeDef wakeupSources, bool keepPeripherals)
-{
-    PWR_StatusTypeDef status = PWR_PrepareLowPower(PWR_LOW_POWER_MODE_DEEP, wakeupSources, keepPeripherals);
+PWR_StatusTypeDef PWR_EnterDeepLowPower(PWR_WakeupSourceTypeDef wakeupSources,
+                                        bool keepPeripherals) {
+    PWR_StatusTypeDef status =
+        PWR_PrepareLowPower(PWR_LOW_POWER_MODE_DEEP, wakeupSources, keepPeripherals);
 
-    if (status != PWR_OK)
-    {
+    if (status != PWR_OK) {
         return status;
     }
 
     HAL_SuspendTick();
 
     /* The WKUP pin wakes through an interrupt; EXTI events are cheaper via WFE */
-    PWR_StopEntryTypeDef stopEntry = (wakeupSources & PWR_SRC_WAKEUP_PIN) ?
-                                     PWR_STOP_ENTRY_WFI : PWR_STOP_ENTRY_WFE;
+    PWR_StopEntryTypeDef stopEntry =
+        (wakeupSources & PWR_SRC_WAKEUP_PIN) ? PWR_STOP_ENTRY_WFI : PWR_STOP_ENTRY_WFE;
 
     PWR_EnterStopMode(PWR_REGULATOR_LOW_POWER, stopEntry);
 
     HAL_ResumeTick();
 
     status = PWR_ConfigureAfterStop();
-    if (status != PWR_OK)
-    {
+    if (status != PWR_OK) {
         log_error("PWR: Failed to restore after Stop mode");
         return status;
     }
@@ -161,12 +155,11 @@ PWR_StatusTypeDef PWR_EnterDeepLowPower(PWR_WakeupSourceTypeDef wakeupSources, b
     return PWR_OK;
 }
 
-PWR_StatusTypeDef PWR_EnterStandbyLowPower(PWR_WakeupSourceTypeDef wakeupSources)
-{
-    PWR_StatusTypeDef status = PWR_PrepareLowPower(PWR_LOW_POWER_MODE_STANDBY, wakeupSources, false);
+PWR_StatusTypeDef PWR_EnterStandbyLowPower(PWR_WakeupSourceTypeDef wakeupSources) {
+    PWR_StatusTypeDef status =
+        PWR_PrepareLowPower(PWR_LOW_POWER_MODE_STANDBY, wakeupSources, false);
 
-    if (status != PWR_OK)
-    {
+    if (status != PWR_OK) {
         return status;
     }
 
@@ -176,10 +169,9 @@ PWR_StatusTypeDef PWR_EnterStandbyLowPower(PWR_WakeupSourceTypeDef wakeupSources
     return PWR_ERROR;
 }
 
-PWR_StatusTypeDef PWR_AutoLowPowerMode(uint32_t wakeupTimeMs, bool keepPeripherals, PWR_WakeupSourceTypeDef wakeupSources)
-{
-    if (wakeupTimeMs < PWR_AUTO_SLEEP_THRESHOLD_MS || keepPeripherals)
-    {
+PWR_StatusTypeDef PWR_AutoLowPowerMode(uint32_t wakeupTimeMs, bool keepPeripherals,
+                                       PWR_WakeupSourceTypeDef wakeupSources) {
+    if (wakeupTimeMs < PWR_AUTO_SLEEP_THRESHOLD_MS || keepPeripherals) {
         log_debug("PWR: Auto-selected Sleep for %lu ms wakeup", wakeupTimeMs);
         return PWR_EnterLightLowPower(wakeupSources, keepPeripherals);
     }
@@ -189,14 +181,11 @@ PWR_StatusTypeDef PWR_AutoLowPowerMode(uint32_t wakeupTimeMs, bool keepPeriphera
     return PWR_EnterDeepLowPower(wakeupSources, keepPeripherals);
 }
 
-PWR_StatusTypeDef PWR_ConfigureWakeupSources(PWR_WakeupSourceTypeDef sources)
-{
-    if (sources & PWR_SRC_WAKEUP_PIN)
-    {
+PWR_StatusTypeDef PWR_ConfigureWakeupSources(PWR_WakeupSourceTypeDef sources) {
+    if (sources & PWR_SRC_WAKEUP_PIN) {
         PWR_StatusTypeDef status = PWR_EnableWakeupPin(true);
 
-        if (status != PWR_OK)
-        {
+        if (status != PWR_OK) {
             return status;
         }
     }
@@ -204,20 +193,17 @@ PWR_StatusTypeDef PWR_ConfigureWakeupSources(PWR_WakeupSourceTypeDef sources)
     /* Stop mode only halts the core: the RTC event still has to reach it
        through EXTI, which is masked by default. The RTC driver owns the
        alarm/timer values; PWR owns the wakeup path. */
-    if (sources & PWR_SRC_RTC_ALARM)
-    {
+    if (sources & PWR_SRC_RTC_ALARM) {
         __HAL_RTC_ALARM_EXTI_ENABLE_IT();
         __HAL_RTC_ALARM_EXTI_ENABLE_RISING_EDGE();
     }
 
-    if (sources & PWR_SRC_RTC_WAKEUP)
-    {
+    if (sources & PWR_SRC_RTC_WAKEUP) {
         __HAL_RTC_WAKEUPTIMER_EXTI_ENABLE_IT();
         __HAL_RTC_WAKEUPTIMER_EXTI_ENABLE_RISING_EDGE();
     }
 
-    if (sources & PWR_SRC_RTC_TIMESTAMP)
-    {
+    if (sources & PWR_SRC_RTC_TIMESTAMP) {
         __HAL_RTC_TAMPER_TIMESTAMP_EXTI_ENABLE_IT();
         __HAL_RTC_TAMPER_TIMESTAMP_EXTI_ENABLE_RISING_EDGE();
     }
@@ -225,43 +211,36 @@ PWR_StatusTypeDef PWR_ConfigureWakeupSources(PWR_WakeupSourceTypeDef sources)
     return PWR_OK;
 }
 
-__weak PWR_StatusTypeDef PWR_OptimizeForLowPower(bool keepPeripherals)
-{
+__weak PWR_StatusTypeDef PWR_OptimizeForLowPower(bool keepPeripherals) {
     log_debug("PWR: Optimizing system for low power (keep peripherals: %d)", keepPeripherals);
 
     return PWR_OK;
 }
 
-__weak PWR_StatusTypeDef PWR_RestoreFromLowPower(void)
-{
+__weak PWR_StatusTypeDef PWR_RestoreFromLowPower(void) {
     log_debug("PWR: Restoring system after low power wakeup");
 
     return PWR_OK;
 }
 
-PWR_StatusTypeDef PWR_GetLowPowerStatus(PWR_LowPowerModeTypeDef* mode, PWR_WakeupSourceTypeDef* wakeupSource)
-{
-    if (mode == NULL)
-    {
+PWR_StatusTypeDef PWR_GetLowPowerStatus(PWR_LowPowerModeTypeDef *mode,
+                                        PWR_WakeupSourceTypeDef *wakeupSource) {
+    if (mode == NULL) {
         return PWR_INVALID_PARAM;
     }
 
-    if (PWR_WasStandbyWakeup())
-    {
+    if (PWR_WasStandbyWakeup()) {
         /* Standby resets the core, so the statics above are back at defaults */
         *mode = PWR_LOW_POWER_MODE_STANDBY;
 
-        if (wakeupSource != NULL)
-        {
+        if (wakeupSource != NULL) {
             *wakeupSource = PWR_SRC_WAKEUP_PIN;
         }
     }
-    else
-    {
+    else {
         *mode = s_lastMode;
 
-        if (wakeupSource != NULL)
-        {
+        if (wakeupSource != NULL) {
             *wakeupSource = s_lastSources;
         }
     }
@@ -269,23 +248,18 @@ PWR_StatusTypeDef PWR_GetLowPowerStatus(PWR_LowPowerModeTypeDef* mode, PWR_Wakeu
     return PWR_OK;
 }
 
-PWR_StatusTypeDef PWR_ConfigureAdvancedLowPower(bool flashPowerDown, bool disableBackupWrites)
-{
-    if (flashPowerDown)
-    {
+PWR_StatusTypeDef PWR_ConfigureAdvancedLowPower(bool flashPowerDown, bool disableBackupWrites) {
+    if (flashPowerDown) {
         HAL_PWREx_EnableFlashPowerDown();
     }
-    else
-    {
+    else {
         HAL_PWREx_DisableFlashPowerDown();
     }
 
-    if (disableBackupWrites)
-    {
+    if (disableBackupWrites) {
         PWR_DisableBackupAccess();
     }
-    else
-    {
+    else {
         PWR_EnableBackupAccess();
     }
 

@@ -6,10 +6,12 @@
 #include "rng_range.h"
 #include "rng_generate.h"
 
-RNG_StatusTypeDef RNG_GenerateRange(uint32_t max, uint32_t *result)
-{
-    uint32_t remainder;
-    uint32_t acceptLimit;
+/** Width of one hardware random word */
+#define RNG_WORD_BITS 32U
+
+RNG_StatusTypeDef RNG_GenerateRange(uint32_t max, uint32_t *result) {
+    uint32_t remainder = 0;
+    uint32_t acceptLimit = 0;
 
     if (result == NULL || max == 0U) {
         return RNG_ERROR;
@@ -43,11 +45,10 @@ RNG_StatusTypeDef RNG_GenerateRange(uint32_t max, uint32_t *result)
     return RNG_TIMEOUT;
 }
 
-RNG_StatusTypeDef RNG_GenerateInRange(uint32_t min, uint32_t max, uint32_t *result)
-{
-    uint32_t range;
+RNG_StatusTypeDef RNG_GenerateInRange(uint32_t min, uint32_t max, uint32_t *result) {
+    uint32_t range = 0;
     uint32_t randomValue = 0;
-    RNG_StatusTypeDef status;
+    RNG_StatusTypeDef status = RNG_OK;
 
     if (result == NULL || min > max) {
         return RNG_ERROR;
@@ -74,10 +75,9 @@ RNG_StatusTypeDef RNG_GenerateInRange(uint32_t min, uint32_t max, uint32_t *resu
     return RNG_OK;
 }
 
-RNG_StatusTypeDef RNG_GenerateBool(bool *result)
-{
+RNG_StatusTypeDef RNG_GenerateBool(bool *result) {
     uint32_t randomNumber = 0;
-    RNG_StatusTypeDef status;
+    RNG_StatusTypeDef status = RNG_OK;
 
     if (result == NULL) {
         return RNG_ERROR;
@@ -93,10 +93,9 @@ RNG_StatusTypeDef RNG_GenerateBool(bool *result)
     return RNG_OK;
 }
 
-RNG_StatusTypeDef RNG_GenerateFloat(float *result)
-{
+RNG_StatusTypeDef RNG_GenerateFloat(float *result) {
     uint32_t randomNumber = 0;
-    RNG_StatusTypeDef status;
+    RNG_StatusTypeDef status = RNG_OK;
 
     if (result == NULL) {
         return RNG_ERROR;
@@ -109,7 +108,8 @@ RNG_StatusTypeDef RNG_GenerateFloat(float *result)
 
     /* Only 24 bits fit exactly in a float; dividing the full word by 2^32
        rounds the top values up to exactly 1.0f, outside the documented range. */
-    *result = (float)(randomNumber >> (32U - RNG_FLOAT_MANTISSA_BITS)) / RNG_FLOAT_DIVISOR;
+    *result =
+        (float)(randomNumber >> (RNG_WORD_BITS - RNG_FLOAT_MANTISSA_BITS)) / RNG_FLOAT_DIVISOR;
 
     return RNG_OK;
 }

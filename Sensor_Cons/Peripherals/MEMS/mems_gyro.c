@@ -1,20 +1,20 @@
 /**
-  ******************************************************************************
-  * @file    mems_gyro.c
-  * @brief   Gyroscope configuration and sample acquisition
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mems_gyro.c
+ * @brief   Gyroscope configuration and sample acquisition
+ ******************************************************************************
+ */
 
 #include "mems_gyro.h"
 #include "mems_io.h"
 #include "mems_convert.h"
 #include "mems_l3gd20.h"
 
-#define MEMS_AXES_DATA_LENGTH           6U
-#define MEMS_CONFIG_SETTLE_MS           10U
+#define MEMS_AXES_DATA_LENGTH 6U
+#define MEMS_CONFIG_SETTLE_MS 10U
 
 static const uint8_t s_odrBits[MEMS_GYRO_ODR_COUNT] = {
-    [MEMS_GYRO_ODR_95Hz]  = L3GD20_ODR_95Hz,
+    [MEMS_GYRO_ODR_95Hz] = L3GD20_ODR_95Hz,
     [MEMS_GYRO_ODR_190Hz] = L3GD20_ODR_190Hz,
     [MEMS_GYRO_ODR_380Hz] = L3GD20_ODR_380Hz,
     [MEMS_GYRO_ODR_760Hz] = L3GD20_ODR_760Hz,
@@ -28,27 +28,32 @@ static const uint8_t s_bandwidthBits[MEMS_GYRO_BANDWIDTH_COUNT] = {
 };
 
 static const uint8_t s_fullScaleBits[MEMS_GYRO_FULLSCALE_COUNT] = {
-    [MEMS_GYRO_FULLSCALE_250]  = L3GD20_FULLSCALE_250,
-    [MEMS_GYRO_FULLSCALE_500]  = L3GD20_FULLSCALE_500,
+    [MEMS_GYRO_FULLSCALE_250] = L3GD20_FULLSCALE_250,
+    [MEMS_GYRO_FULLSCALE_500] = L3GD20_FULLSCALE_500,
     [MEMS_GYRO_FULLSCALE_2000] = L3GD20_FULLSCALE_2000,
 };
 
-static uint8_t MEMS_AxisMask(const MEMS_GyroConfigTypeDef *config)
-{
+static uint8_t MEMS_AxisMask(const MEMS_GyroConfigTypeDef *config) {
     uint8_t mask = 0U;
 
-    if (config->XAxisEnable) { mask |= L3GD20_AXIS_X_ENABLE; }
-    if (config->YAxisEnable) { mask |= L3GD20_AXIS_Y_ENABLE; }
-    if (config->ZAxisEnable) { mask |= L3GD20_AXIS_Z_ENABLE; }
+    if (config->XAxisEnable) {
+        mask |= L3GD20_AXIS_X_ENABLE;
+    }
+    if (config->YAxisEnable) {
+        mask |= L3GD20_AXIS_Y_ENABLE;
+    }
+    if (config->ZAxisEnable) {
+        mask |= L3GD20_AXIS_Z_ENABLE;
+    }
 
     return mask;
 }
 
-MEMS_StatusTypeDef MEMS_GyroApplyConfig(MEMS_HandleTypeDef *hmems, const MEMS_GyroConfigTypeDef *config)
-{
-    MEMS_StatusTypeDef status;
-    uint8_t ctrl_reg1;
-    uint8_t ctrl_reg4;
+MEMS_StatusTypeDef MEMS_GyroApplyConfig(MEMS_HandleTypeDef *hmems,
+                                        const MEMS_GyroConfigTypeDef *config) {
+    MEMS_StatusTypeDef status = MEMS_OK;
+    uint8_t ctrl_reg1 = 0;
+    uint8_t ctrl_reg4 = 0;
 
     if (hmems == NULL || config == NULL) {
         return MEMS_INVALID_PARAM;
@@ -59,8 +64,7 @@ MEMS_StatusTypeDef MEMS_GyroApplyConfig(MEMS_HandleTypeDef *hmems, const MEMS_Gy
         return MEMS_INVALID_PARAM;
     }
 
-    ctrl_reg1 = (uint8_t)(s_odrBits[config->OutputDataRate] |
-                          s_bandwidthBits[config->Bandwidth] |
+    ctrl_reg1 = (uint8_t)(s_odrBits[config->OutputDataRate] | s_bandwidthBits[config->Bandwidth] |
                           MEMS_AxisMask(config));
     if (!config->PowerDownMode) {
         ctrl_reg1 |= L3GD20_NORMAL_MODE;
@@ -85,8 +89,8 @@ MEMS_StatusTypeDef MEMS_GyroApplyConfig(MEMS_HandleTypeDef *hmems, const MEMS_Gy
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_GyroConfig(MEMS_HandleTypeDef *hmems, const MEMS_GyroConfigTypeDef *config)
-{
+MEMS_StatusTypeDef MEMS_GyroConfig(MEMS_HandleTypeDef *hmems,
+                                   const MEMS_GyroConfigTypeDef *config) {
     MEMS_StatusTypeDef status = MEMS_CheckReady(hmems);
 
     if (status != MEMS_OK) {
@@ -96,8 +100,7 @@ MEMS_StatusTypeDef MEMS_GyroConfig(MEMS_HandleTypeDef *hmems, const MEMS_GyroCon
     return MEMS_GyroApplyConfig(hmems, config);
 }
 
-MEMS_StatusTypeDef MEMS_GyroReadRaw(MEMS_HandleTypeDef *hmems, MEMS_AxesRawTypeDef *axes)
-{
+MEMS_StatusTypeDef MEMS_GyroReadRaw(MEMS_HandleTypeDef *hmems, MEMS_AxesRawTypeDef *axes) {
     MEMS_StatusTypeDef status = MEMS_CheckReady(hmems);
     uint8_t data[MEMS_AXES_DATA_LENGTH];
 
@@ -120,9 +123,8 @@ MEMS_StatusTypeDef MEMS_GyroReadRaw(MEMS_HandleTypeDef *hmems, MEMS_AxesRawTypeD
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_GyroRead(MEMS_HandleTypeDef *hmems, MEMS_AxesTypeDef *axes)
-{
-    MEMS_StatusTypeDef status;
+MEMS_StatusTypeDef MEMS_GyroRead(MEMS_HandleTypeDef *hmems, MEMS_AxesTypeDef *axes) {
+    MEMS_StatusTypeDef status = MEMS_OK;
     MEMS_AxesRawTypeDef raw_data;
 
     if (axes == NULL) {
@@ -147,8 +149,7 @@ MEMS_StatusTypeDef MEMS_GyroRead(MEMS_HandleTypeDef *hmems, MEMS_AxesTypeDef *ax
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_SetAxisEnable(MEMS_HandleTypeDef *hmems, uint8_t axis_mask)
-{
+MEMS_StatusTypeDef MEMS_SetAxisEnable(MEMS_HandleTypeDef *hmems, uint8_t axis_mask) {
     MEMS_StatusTypeDef status = MEMS_CheckReady(hmems);
 
     if (status != MEMS_OK) {
@@ -167,8 +168,8 @@ MEMS_StatusTypeDef MEMS_SetAxisEnable(MEMS_HandleTypeDef *hmems, uint8_t axis_ma
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_GetFullScale(MEMS_HandleTypeDef *hmems, MEMS_GyroFullScaleTypeDef *full_scale)
-{
+MEMS_StatusTypeDef MEMS_GetFullScale(MEMS_HandleTypeDef *hmems,
+                                     MEMS_GyroFullScaleTypeDef *full_scale) {
     MEMS_StatusTypeDef status = MEMS_CheckReady(hmems);
 
     if (status != MEMS_OK) {
@@ -183,9 +184,8 @@ MEMS_StatusTypeDef MEMS_GetFullScale(MEMS_HandleTypeDef *hmems, MEMS_GyroFullSca
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_SetPowerMode(MEMS_HandleTypeDef *hmems, bool power_down)
-{
-    MEMS_StatusTypeDef status;
+MEMS_StatusTypeDef MEMS_SetPowerMode(MEMS_HandleTypeDef *hmems, bool power_down) {
+    MEMS_StatusTypeDef status = MEMS_OK;
 
     if (hmems == NULL) {
         return MEMS_INVALID_PARAM;

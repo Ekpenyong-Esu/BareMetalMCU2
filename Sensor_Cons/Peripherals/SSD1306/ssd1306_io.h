@@ -1,11 +1,11 @@
 /**
-  ******************************************************************************
-  * @file    ssd1306_io.h
-  * @brief   SSD1306 I2C transport - internal to the driver
-  * @details Owns the control byte, the 7-bit to 8-bit address shift and the
-  *          staging buffer. Not part of ssd1306.h.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ssd1306_io.h
+ * @brief   SSD1306 I2C transport - internal to the driver
+ * @details Owns the control byte and the 7-bit to 8-bit address shift, and
+ *          stages transfers in the handle's txBuffer. Not part of ssd1306.h.
+ ******************************************************************************
+ */
 
 #ifndef SSD1306_IO_H
 #define SSD1306_IO_H
@@ -17,20 +17,21 @@ extern "C" {
 #include "ssd1306_types.h"
 
 /**
- * @brief   Bring up the I2C bus and confirm the panel acknowledges.
+ * @brief   Register the panel on @p bus and confirm it acknowledges.
+ * @note    Reads the 7-bit address from hssd->config.
  */
-SSD1306_StatusTypeDef SSD1306_IO_Init(const SSD1306_Config_t *config);
+SSD1306_StatusTypeDef SSD1306_IO_Init(SSD1306_Handle_t *hssd, I2C_Bus_t *bus);
 
-SSD1306_StatusTypeDef SSD1306_IO_WriteCommand(const SSD1306_Config_t *config, uint8_t command);
+SSD1306_StatusTypeDef SSD1306_IO_WriteCommand(SSD1306_Handle_t *hssd, uint8_t command);
 
 /**
  * @brief   Send a run of command bytes in one transfer.
  */
-SSD1306_StatusTypeDef SSD1306_IO_WriteCommands(const SSD1306_Config_t *config,
-                                               const uint8_t *commands, uint16_t count);
+SSD1306_StatusTypeDef SSD1306_IO_WriteCommands(SSD1306_Handle_t *hssd, const uint8_t *commands,
+                                               uint16_t count);
 
-SSD1306_StatusTypeDef SSD1306_IO_WriteData(const SSD1306_Config_t *config,
-                                           const uint8_t *data, uint16_t size);
+SSD1306_StatusTypeDef SSD1306_IO_WriteData(SSD1306_Handle_t *hssd, const uint8_t *data,
+                                           uint16_t size);
 
 #ifdef __cplusplus
 }

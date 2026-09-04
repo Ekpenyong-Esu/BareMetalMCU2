@@ -8,14 +8,9 @@
 #include <string.h>
 
 static const char KEYPAD_DEFAULT_KEYMAP[KEYPAD_ROWS][KEYPAD_COLS] = {
-    {'1', '2', '3', 'A'},
-    {'4', '5', '6', 'B'},
-    {'7', '8', '9', 'C'},
-    {'*', '0', '#', 'D'}
-};
+    {'1', '2', '3', 'A'}, {'4', '5', '6', 'B'}, {'7', '8', '9', 'C'}, {'*', '0', '#', 'D'}};
 
-static bool Keypad_ValidateConfig(const KeypadConfig_t *config)
-{
+static bool Keypad_ValidateConfig(const KeypadConfig_t *config) {
     for (uint8_t i = 0U; i < KEYPAD_ROWS; i++) {
         if (config->rows[i].port == NULL || config->rows[i].pin == 0U) {
             return false;
@@ -31,8 +26,7 @@ static bool Keypad_ValidateConfig(const KeypadConfig_t *config)
     return true;
 }
 
-bool Keypad_Init(KeypadHandle_t *handle, const KeypadConfig_t *config)
-{
+bool Keypad_Init(KeypadHandle_t *handle, const KeypadConfig_t *config) {
     if (handle == NULL || config == NULL) {
         return false;
     }
@@ -66,8 +60,7 @@ bool Keypad_Init(KeypadHandle_t *handle, const KeypadConfig_t *config)
     return true;
 }
 
-bool Keypad_DeInit(KeypadHandle_t *handle)
-{
+bool Keypad_DeInit(KeypadHandle_t *handle) {
     if (handle == NULL) {
         return false;
     }
@@ -82,8 +75,7 @@ bool Keypad_DeInit(KeypadHandle_t *handle)
     return true;
 }
 
-bool Keypad_SetKeyMap(KeypadHandle_t *handle, const char keyMap[KEYPAD_ROWS][KEYPAD_COLS])
-{
+bool Keypad_SetKeyMap(KeypadHandle_t *handle, const char keyMap[KEYPAD_ROWS][KEYPAD_COLS]) {
     if (handle == NULL || keyMap == NULL || !handle->initialized) {
         return false;
     }
@@ -93,7 +85,6 @@ bool Keypad_SetKeyMap(KeypadHandle_t *handle, const char keyMap[KEYPAD_ROWS][KEY
     return true;
 }
 
-bool Keypad_IsInitialized(const KeypadHandle_t *handle)
-{
+bool Keypad_IsInitialized(const KeypadHandle_t *handle) {
     return (handle != NULL) && handle->initialized;
 }

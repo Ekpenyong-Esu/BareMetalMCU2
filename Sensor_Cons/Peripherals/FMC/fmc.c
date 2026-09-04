@@ -7,10 +7,9 @@
 #include "log.h"
 #include <string.h>
 
-HAL_StatusTypeDef FMC_Driver_DeInit(FMC_Driver_Handle_t *handle)
-{
+HAL_StatusTypeDef FMC_Driver_DeInit(FMC_Driver_Handle_t *handle) {
     HAL_StatusTypeDef status = HAL_OK;
-    uint32_t memoryType;
+    uint32_t memoryType = 0;
 
     if (handle == NULL) {
         return HAL_ERROR;
@@ -57,8 +56,7 @@ HAL_StatusTypeDef FMC_Driver_DeInit(FMC_Driver_Handle_t *handle)
     return HAL_OK;
 }
 
-uint32_t FMC_Driver_GetError(const FMC_Driver_Handle_t *handle)
-{
+uint32_t FMC_Driver_GetError(const FMC_Driver_Handle_t *handle) {
     /* A missing handle is a caller mistake, not an initialization failure. */
     if (handle == NULL) {
         return FMC_DRIVER_ERROR_PARAM;
@@ -67,13 +65,11 @@ uint32_t FMC_Driver_GetError(const FMC_Driver_Handle_t *handle)
     return handle->errorCode;
 }
 
-bool FMC_Driver_IsInitialized(const FMC_Driver_Handle_t *handle)
-{
+bool FMC_Driver_IsInitialized(const FMC_Driver_Handle_t *handle) {
     return (handle != NULL) && handle->initialized;
 }
 
-uint32_t FMC_Driver_GetBaseAddress(const FMC_Driver_Handle_t *handle)
-{
+uint32_t FMC_Driver_GetBaseAddress(const FMC_Driver_Handle_t *handle) {
     if (handle == NULL || !handle->initialized) {
         return 0U;
     }
@@ -81,8 +77,7 @@ uint32_t FMC_Driver_GetBaseAddress(const FMC_Driver_Handle_t *handle)
     return handle->baseAddress;
 }
 
-uint32_t FMC_Driver_GetSize(const FMC_Driver_Handle_t *handle)
-{
+uint32_t FMC_Driver_GetSize(const FMC_Driver_Handle_t *handle) {
     if (handle == NULL || !handle->initialized) {
         return 0U;
     }

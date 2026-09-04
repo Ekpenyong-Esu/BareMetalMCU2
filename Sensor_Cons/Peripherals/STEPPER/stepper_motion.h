@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    stepper_motion.h
-  * @brief   Movement commands and motor state
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    stepper_motion.h
+ * @brief   Movement commands and motor state
+ ******************************************************************************
+ */
 
 #ifndef STEPPER_MOTION_H
 #define STEPPER_MOTION_H
@@ -18,16 +18,13 @@ extern "C" {
  * @brief   Step the motor a relative number of steps, blocking until done.
  * @param   speed Speed in RPM; must not exceed the configured maxSpeedRPM.
  */
-STEPPER_StatusTypeDef STEPPER_MoveSteps(STEPPER_Handle_t *hstep,
-                                        uint32_t steps,
-                                        STEPPER_Direction_t direction,
-                                        uint16_t speed);
+STEPPER_StatusTypeDef STEPPER_MoveSteps(STEPPER_Handle_t *hstep, uint32_t steps,
+                                        STEPPER_Direction_t direction, uint16_t speed);
 
 /**
  * @brief   Step the motor to an absolute position, blocking until done.
  */
-STEPPER_StatusTypeDef STEPPER_MoveToPosition(STEPPER_Handle_t *hstep,
-                                             int32_t position,
+STEPPER_StatusTypeDef STEPPER_MoveToPosition(STEPPER_Handle_t *hstep, int32_t position,
                                              uint16_t speed);
 
 /**

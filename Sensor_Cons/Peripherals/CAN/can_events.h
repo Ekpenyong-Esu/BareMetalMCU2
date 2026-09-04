@@ -1,18 +1,18 @@
 /**
-  ******************************************************************************
-  * @file    can_events.h
-  * @brief   CAN callback registration and interrupt management
-  * @details Per-handle callback storage and HAL ISR dispatch. Each handle
-  *          owns its own tx/rx/error callbacks; the HAL ISR callbacks
-  *          resolve the handle via the registry in can_core.c.
-  *
-  * CAN Events Responsibilities:
-  * - CAN_Register*Callback: Store per-handle callbacks (or NULL to clear)
-  * - CAN_Enable/DisableInterrupts: Activate/deactivate bxCAN notifications
-  * - CAN_Notify*: Dispatch callbacks from transfer and ISR paths
-  * - HAL callbacks: HAL_CAN_TxMailbox*CompleteCallback, HAL_CAN_RxFifo*MsgPendingCallback,
-  *   HAL_CAN_ErrorCallback — all resolve the handle by instance
-  */
+ ******************************************************************************
+ * @file    can_events.h
+ * @brief   CAN callback registration and interrupt management
+ * @details Per-handle callback storage and HAL ISR dispatch. Each handle
+ *          owns its own tx/rx/error callbacks; the HAL ISR callbacks
+ *          resolve the handle via the registry in can_core.c.
+ *
+ * CAN Events Responsibilities:
+ * - CAN_Register*Callback: Store per-handle callbacks (or NULL to clear)
+ * - CAN_Enable/DisableInterrupts: Activate/deactivate bxCAN notifications
+ * - CAN_Notify*: Dispatch callbacks from transfer and ISR paths
+ * - HAL callbacks: HAL_CAN_TxMailbox*CompleteCallback, HAL_CAN_RxFifo*MsgPendingCallback,
+ *   HAL_CAN_ErrorCallback — all resolve the handle by instance
+ */
 
 #ifndef CAN_EVENTS_H
 #define CAN_EVENTS_H

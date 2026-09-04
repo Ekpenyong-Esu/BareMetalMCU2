@@ -2,30 +2,26 @@
 
 This directory contains a comprehensive MEMS (Micro-Electro-Mechanical Systems) sensor driver implementation for the STM32F429 Discovery board, specifically designed for the L3GD20 3-axis digital gyroscope.
 
-**Note:** The older `Peripherals/GYRO` driver was removed — use this `MEMS` driver for both the on-board and external gyroscopes (use `MEMS_SetCS()` to specify an external CS pin).
+**Note:** The older `Peripherals/GYRO` driver was removed — use this `MEMS` driver for both the on-board and external gyroscopes; the chip-select pin is part of `MEMS_Config_t`.
 
 ## Overview
 
-The MEMS driver provides a complete interface for controlling and reading data from the L3GD20 gyroscope sensor connected via SPI5 on the STM32F429 Discovery board. The driver includes features for initialization, calibration, data reading, power management, and interrupt handling.
+The MEMS driver provides a complete interface for controlling and reading data from the L3GD20 gyroscope sensor over SPI. The driver includes features for initialization, calibration, data reading, power management, and interrupt handling. It does not know the board: the application opens the SPI bus and tells `MEMS_Init()` which chip-select and interrupt pins the part is wired to.
 
 ## Hardware Configuration
 
 ### L3GD20 Gyroscope Sensor
-- **Connection**: SPI5 interface
+- **Connection**: 4-wire SPI, mode 0, up to 10 MHz (the driver fixes these)
 - **Full Scale Ranges**: ±250, ±500, ±2000 dps (degrees per second)
 - **Output Data Rates**: 95Hz, 190Hz, 380Hz, 760Hz
 - **Resolution**: 16-bit
 - **Operating Voltage**: 2.16V to 3.6V
 
 ### Pin Configuration
-| Function | Pin | GPIO Port | Description |
-|----------|-----|-----------|-------------|
-| SPI5_SCK | PF7 | GPIOF | Serial Clock |
-| SPI5_MISO | PF8 | GPIOF | Master In Slave Out |
-| SPI5_MOSI | PF9 | GPIOF | Master Out Slave In |
-| CS | PC1 | GPIOC | Chip Select |
-| INT1 | PA1 | GPIOA | Interrupt 1 |
-| INT2 | PA2 | GPIOA | Interrupt 2 |
+SCK/MISO/MOSI belong to the `SPI_Bus_t` the application opens; CS, INT1 and
+INT2 are given to `MEMS_Init()` in `MEMS_Config_t`. Leave an INT port NULL if
+that line is not connected. On the STM32F429 Discovery the on-board part sits
+on SPI5 (PF7/PF8/PF9) with CS on PC1, INT1 on PA1 and INT2 on PA2.
 
 ## Files Structure
 
@@ -33,7 +29,7 @@ The MEMS driver provides a complete interface for controlling and reading data f
 MEMS/
 ├── mems_l3gd20.h       # L3GD20 register map and bit definitions
 ├── mems_types.h        # Status, enums, config structs, handle
-├── mems_hw.h/.c        # Board wiring: chip select, SPI5 pins, INT pins
+├── mems_hw.h/.c        # Chip select and INT pins of one part
 ├── mems_io.h/.c        # Register read/write/update over SPI
 ├── mems_convert.h/.c   # Raw sample to degrees per second
 ├── mems_gyro.h/.c      # Gyro configuration and sample acquisition
@@ -68,13 +64,14 @@ MEMS/
 
 ### Initialization Functions
 ```c
-MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const SPI_ConfigTypeDef *config);
+MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const MEMS_Config_t *config);
 MEMS_StatusTypeDef MEMS_DeInit(MEMS_HandleTypeDef *hmems);
 ```
 
-Pass `NULL` for `config` to accept `SPI_ConfigDefault()`. The driver registers
-its own `SPI_Device_t`, so SPI5 is reprogrammed to these settings before every
-transfer and the display sharing the bus cannot leave the gyro misconfigured.
+`config` names the open bus and the CS/INT pins. The driver registers its own
+`SPI_Device_t` with the settings the L3GD20 needs, so the bus is reprogrammed
+to them whenever the gyro is selected and another chip sharing the wires
+cannot leave it misconfigured.
 
 ### Configuration Functions
 ```c
@@ -106,26 +103,33 @@ float MEMS_ConvertToDPS(int16_t raw_data, MEMS_GyroFullScaleTypeDef full_scale);
 
 ### Basic Initialization and Reading
 
-**Using an external gyroscope (custom CS pin)**
-
-If your gyroscope is not the on-board device and you wired it to a custom CS pin, call `MEMS_SetCS()` before `MEMS_Init()` to configure the chip-select pin for the `MEMS_HandleTypeDef`:
-
 ```c
-// Example: external device CS on PA4
-MEMS_SetCS(&hmems, GPIOA, GPIO_PIN_4);
-if (MEMS_Init(&hmems, NULL) == MEMS_OK) {
-    // proceed as normal
-}
-```
-```c
+#include "spi_core.h"
 #include "mems_core.h"
 #include "mems_gyro.h"
+
+// The application owns the bus and decides which pins carry it.
+SPI_BusConfig_t busConfig = {
+    .instance = SPI5,
+    .sckPort = GPIOF,  .sckPin = GPIO_PIN_7,
+    .misoPort = GPIOF, .misoPin = GPIO_PIN_8,
+    .mosiPort = GPIOF, .mosiPin = GPIO_PIN_9,
+};
+SPI_Bus_t bus;
+SPI_BusInit(&bus, &busConfig);
+
+// On-board part; an external one only differs in these pins.
+MEMS_Config_t memsConfig = {
+    .Bus = &bus,
+    .CS_Port = GPIOC,   .CS_Pin = GPIO_PIN_1,
+    .INT1_Port = GPIOA, .INT1_Pin = GPIO_PIN_1,
+    .INT2_Port = GPIOA, .INT2_Pin = GPIO_PIN_2,   /* or NULL port if unused */
+};
 
 MEMS_HandleTypeDef hmems;
 MEMS_AxesTypeDef gyro_data;
 
-// Initialize MEMS sensor with the default bus settings
-if (MEMS_Init(&hmems, NULL) == MEMS_OK) {
+if (MEMS_Init(&hmems, &memsConfig) == MEMS_OK) {
     // Read gyroscope data
     if (MEMS_GyroRead(&hmems, &gyro_data) == MEMS_OK) {
         printf("Gyro X: %.2f dps\n", gyro_data.X);
@@ -170,37 +174,31 @@ Ensure that the STM32F429 Discovery board is properly connected and powered. The
 ### 2. Include Headers
 ```c
 #include "mems_core.h"        // Init / DeInit / Reset / default config
-#include "mems_hw.h"          // MEMS_SetCS for an off-board device
 #include "mems_gyro.h"        // Configuration and sample acquisition
 #include "mems_calibration.h" // Zero-rate offset calibration
 #include "mems_diag.h"        // Device info, status, temperature, self-test
 #include "mems_interrupt.h"   // Interrupt routing
 ```
 
-### 3. Choose the bus settings
-SPI5 itself is owned by the shared driver in `Peripherals/SPI`; you do not
-configure it here. Pass `NULL` to take the defaults, or hand `MEMS_Init()` a
-`SPI_ConfigTypeDef` when the part needs something else:
-
-```c
-SPI_ConfigTypeDef busConfig = SPI_ConfigDefault();
-busConfig.CLKPolarity = SPI_POLARITY_HIGH;   /* L3GD20 samples on the 2nd edge */
-busConfig.CLKPhase = SPI_PHASE_2EDGE;
-busConfig.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
-
-MEMS_Init(&hmems, &busConfig);
-```
+### 3. Open the bus
+The SPI peripheral and its SCK/MISO/MOSI pins are owned by the application
+through `Peripherals/SPI`; open it once with `SPI_BusInit()` and hand the
+`SPI_Bus_t` to every device driver sharing it. The L3GD20's own bus settings
+(mode 0, PCLK/16) are fixed inside this driver.
 
 ### 4. Application Integration
 ```c
 int main(void) {
     HAL_Init();
     SystemClock_Config();
-    
+
+    SPI_Bus_t bus;
+    SPI_BusInit(&bus, &busConfig);           /* see Basic Initialization */
+
     MEMS_HandleTypeDef hmems;
-    
+
     // Initialize MEMS sensor
-    if (MEMS_Init(&hmems, NULL) == MEMS_OK) {
+    if (MEMS_Init(&hmems, &memsConfig) == MEMS_OK) {
         // Run basic example
         MEMS_ExampleResultTypeDef result = MEMS_Example_Basic(&hmems);
         MEMS_Example_PrintResult(&result);

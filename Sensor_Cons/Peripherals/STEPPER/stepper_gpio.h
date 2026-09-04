@@ -1,10 +1,10 @@
 /**
-  ******************************************************************************
-  * @file    stepper_gpio.h
-  * @brief   Coil pin configuration and drive
-  * @note    Internal to the driver; not part of stepper.h.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    stepper_gpio.h
+ * @brief   Coil pin configuration and drive
+ * @note    Internal to the driver; not part of stepper.h.
+ ******************************************************************************
+ */
 
 #ifndef STEPPER_GPIO_H
 #define STEPPER_GPIO_H

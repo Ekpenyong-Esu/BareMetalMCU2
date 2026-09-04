@@ -22,4 +22,3 @@
 #include "tim_encoder.h"
 
 #endif /* TIM_H */
-

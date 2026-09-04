@@ -9,11 +9,10 @@
 #include "xpt2046_map.h"
 
 /* PENIRQ is pulled up again only once the panel drivers have switched off. */
-#define XPT2046_SETTLE_US       20U
+#define XPT2046_SETTLE_US 20U
 
-XPT2046_StatusTypeDef XPT2046_ReadRaw(XPT2046_Handle_t *hxpt, XPT2046_RawSample_t *sample)
-{
-    XPT2046_StatusTypeDef status;
+XPT2046_StatusTypeDef XPT2046_ReadRaw(XPT2046_Handle_t *hxpt, XPT2046_RawSample_t *sample) {
+    XPT2046_StatusTypeDef status = XPT2046_OK;
 
     if (hxpt == NULL || sample == NULL) {
         return XPT2046_INVALID_PARAM;
@@ -27,7 +26,7 @@ XPT2046_StatusTypeDef XPT2046_ReadRaw(XPT2046_Handle_t *hxpt, XPT2046_RawSample_
         return XPT2046_NO_TOUCH;
     }
 
-    status = XPT2046_IO_ReadSample(&hxpt->config, sample);
+    status = XPT2046_IO_ReadSample(hxpt, sample);
     if (status != XPT2046_OK) {
         return status;
     }
@@ -42,10 +41,9 @@ XPT2046_StatusTypeDef XPT2046_ReadRaw(XPT2046_Handle_t *hxpt, XPT2046_RawSample_
     return XPT2046_OK;
 }
 
-XPT2046_StatusTypeDef XPT2046_ReadTouch(XPT2046_Handle_t *hxpt, XPT2046_TouchPoint_t *touch)
-{
+XPT2046_StatusTypeDef XPT2046_ReadTouch(XPT2046_Handle_t *hxpt, XPT2046_TouchPoint_t *touch) {
     XPT2046_RawSample_t sample;
-    XPT2046_StatusTypeDef status;
+    XPT2046_StatusTypeDef status = XPT2046_OK;
 
     if (hxpt == NULL || touch == NULL) {
         return XPT2046_INVALID_PARAM;
@@ -70,10 +68,9 @@ XPT2046_StatusTypeDef XPT2046_ReadTouch(XPT2046_Handle_t *hxpt, XPT2046_TouchPoi
     return XPT2046_OK;
 }
 
-XPT2046_StatusTypeDef XPT2046_Update(XPT2046_Handle_t *hxpt)
-{
+XPT2046_StatusTypeDef XPT2046_Update(XPT2046_Handle_t *hxpt) {
     XPT2046_TouchPoint_t sampled;
-    XPT2046_StatusTypeDef status;
+    XPT2046_StatusTypeDef status = XPT2046_OK;
 
     if (hxpt == NULL) {
         return XPT2046_INVALID_PARAM;
@@ -104,8 +101,7 @@ XPT2046_StatusTypeDef XPT2046_Update(XPT2046_Handle_t *hxpt)
     return status;
 }
 
-XPT2046_StatusTypeDef XPT2046_GetTouch(const XPT2046_Handle_t *hxpt, XPT2046_TouchPoint_t *touch)
-{
+XPT2046_StatusTypeDef XPT2046_GetTouch(const XPT2046_Handle_t *hxpt, XPT2046_TouchPoint_t *touch) {
     if (hxpt == NULL || touch == NULL) {
         return XPT2046_INVALID_PARAM;
     }

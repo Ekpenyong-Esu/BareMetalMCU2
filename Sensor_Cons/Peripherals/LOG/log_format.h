@@ -26,8 +26,7 @@ extern "C" {
  * @param  args   Arguments for @p format
  * @retval Number of characters written, excluding the terminator
  */
-size_t LogFormat_Line(char *out, size_t size, log_level_t level,
-                      const char *file, int line,
+size_t LogFormat_Line(char *out, size_t size, log_level_t level, const char *file, int line,
                       const char *format, va_list args);
 
 #ifdef __cplusplus

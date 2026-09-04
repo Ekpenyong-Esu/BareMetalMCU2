@@ -1,14 +1,13 @@
 /**
-  ******************************************************************************
-  * @file    mic_pdm.c
-  * @brief   PDM bitstream to PCM decimation
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mic_pdm.c
+ * @brief   PDM bitstream to PCM decimation
+ ******************************************************************************
+ */
 
 #include "mic_pdm.h"
 
-MIC_StatusTypeDef MIC_PDMToPCM(const uint32_t *pdm_buffer, int16_t *pcm_buffer, uint32_t length)
-{
+MIC_StatusTypeDef MIC_PDMToPCM(const uint32_t *pdm_buffer, int16_t *pcm_buffer, uint32_t length) {
     if (pdm_buffer == NULL || pcm_buffer == NULL || length == 0) {
         return MIC_INVALID_PARAM;
     }
@@ -25,7 +24,8 @@ MIC_StatusTypeDef MIC_PDMToPCM(const uint32_t *pdm_buffer, int16_t *pcm_buffer, 
 
             if (pdm_word & (1UL << (bit_index % MIC_PDM_WORD_SIZE))) {
                 accumulator++;
-            } else {
+            }
+            else {
                 accumulator--;
             }
         }

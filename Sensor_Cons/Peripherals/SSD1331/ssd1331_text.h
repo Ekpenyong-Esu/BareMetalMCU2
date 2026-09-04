@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ssd1331_text.h
-  * @brief   SSD1331 text rendering
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ssd1331_text.h
+ * @brief   SSD1331 text rendering
+ ******************************************************************************
+ */
 
 #ifndef SSD1331_TEXT_H
 #define SSD1331_TEXT_H
@@ -17,7 +17,7 @@ extern "C" {
 /**
  * @brief   Place the text cursor.
  */
-SSD1331_StatusTypeDef SSD1331_SetCursor(SSD1331_Handle_t *hssd, uint16_t x, uint16_t y);
+SSD1331_StatusTypeDef SSD1331_SetCursor(SSD1331_Handle_t *hssd, uint16_t posX, uint16_t posY);
 
 /**
  * @brief   Render one glyph in @p color over @p background.
@@ -26,8 +26,8 @@ SSD1331_StatusTypeDef SSD1331_SetCursor(SSD1331_Handle_t *hssd, uint16_t x, uint
  *          The background is painted too, so redrawing over existing text does
  *          not leave the old strokes behind.
  */
-SSD1331_StatusTypeDef SSD1331_WriteChar(SSD1331_Handle_t *hssd, char ch,
-                                        SSD1331_Color_t color, SSD1331_Color_t background);
+SSD1331_StatusTypeDef SSD1331_WriteChar(SSD1331_Handle_t *hssd, char chr, SSD1331_Color_t color,
+                                        SSD1331_Color_t background);
 
 SSD1331_StatusTypeDef SSD1331_WriteString(SSD1331_Handle_t *hssd, const char *str,
                                           SSD1331_Color_t color, SSD1331_Color_t background);

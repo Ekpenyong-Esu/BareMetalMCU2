@@ -1,37 +1,31 @@
 /**
-  ******************************************************************************
-  * @file    audio_buffer.c
-  * @brief   Playback ring buffer implementation
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    audio_buffer.c
+ * @brief   Playback ring buffer implementation
+ ******************************************************************************
+ */
 
 #include "audio_buffer.h"
 
-/* Private variables ---------------------------------------------------------*/
-
-/** Statically reserved playback memory; the driver never allocates. */
-static uint8_t s_outputMemory[AUDIO_BUFFER_SIZE_DEFAULT];
-
 /* Public functions ----------------------------------------------------------*/
 
-AUDIO_StatusTypeDef Audio_BufferInit(AudioDevice_t* dev)
-{
+AUDIO_StatusTypeDef Audio_BufferInit(AUDIO_Handle_t *dev) {
     if (dev == NULL) {
         return AUDIO_INVALID_PARAM;
     }
-    if (dev->config.BufferSize == 0U || dev->config.BufferSize > sizeof(s_outputMemory)) {
+    if (dev->config.BufferSize == 0U || dev->config.BufferSize > sizeof(dev->outputMemory)) {
         return AUDIO_ERROR;
     }
 
-    dev->output.Buffer = s_outputMemory;
+    /* The memory lives in the handle so two devices never share a buffer. */
+    dev->output.Buffer = dev->outputMemory;
     dev->output.Size = dev->config.BufferSize;
     Audio_BufferReset(dev);
 
     return AUDIO_OK;
 }
 
-void Audio_BufferRelease(AudioDevice_t* dev)
-{
+void Audio_BufferRelease(AUDIO_Handle_t *dev) {
     if (dev == NULL) {
         return;
     }
@@ -41,8 +35,7 @@ void Audio_BufferRelease(AudioDevice_t* dev)
     Audio_BufferReset(dev);
 }
 
-void Audio_BufferReset(AudioDevice_t* dev)
-{
+void Audio_BufferReset(AUDIO_Handle_t *dev) {
     if (dev == NULL) {
         return;
     }
@@ -53,8 +46,7 @@ void Audio_BufferReset(AudioDevice_t* dev)
     dev->output.IsFull = false;
 }
 
-uint32_t Audio_BufferFreeSpace(const AudioDevice_t* dev)
-{
+uint32_t Audio_BufferFreeSpace(const AUDIO_Handle_t *dev) {
     if (dev == NULL || dev->output.Buffer == NULL) {
         return 0U;
     }
@@ -69,8 +61,7 @@ uint32_t Audio_BufferFreeSpace(const AudioDevice_t* dev)
     return dev->output.ReadIndex - dev->output.WriteIndex;
 }
 
-AUDIO_StatusTypeDef Audio_BufferWrite(AudioDevice_t* dev, const uint8_t* data, uint32_t size)
-{
+AUDIO_StatusTypeDef Audio_BufferWrite(AUDIO_Handle_t *dev, const uint8_t *data, uint32_t size) {
     if (dev == NULL || data == NULL || size == 0U || dev->output.Buffer == NULL) {
         return AUDIO_INVALID_PARAM;
     }
@@ -93,8 +84,7 @@ AUDIO_StatusTypeDef Audio_BufferWrite(AudioDevice_t* dev, const uint8_t* data, u
     return AUDIO_OK;
 }
 
-void Audio_BufferAdvanceRead(AudioDevice_t* dev)
-{
+void Audio_BufferAdvanceRead(AUDIO_Handle_t *dev) {
     if (dev == NULL || dev->output.Buffer == NULL) {
         return;
     }
@@ -107,8 +97,7 @@ void Audio_BufferAdvanceRead(AudioDevice_t* dev)
     dev->output.IsFull = false;
 }
 
-uint32_t Audio_BufferFrameSize(const AudioDevice_t* dev)
-{
+uint32_t Audio_BufferFrameSize(const AUDIO_Handle_t *dev) {
     if (dev == NULL) {
         return 0U;
     }

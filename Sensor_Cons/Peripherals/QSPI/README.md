@@ -20,14 +20,31 @@ This QSPI (Quad-SPI) driver provides a complete interface for external SPI Flash
 
 ## Hardware Configuration
 
-### GPIO Pin Assignment
+The driver does not pick a bus or pins. The application opens an `SPI_Bus_t`
+(see `Peripherals/SPI`) and hands it to `QSPI_Init()` together with the
+chip-select pin in `QSPI_ConfigTypeDef`. The flash is then one device on that
+bus and may share it with other chips. A typical wiring on SPI1:
+
 ```
-Pin  | Function    | Description
------|-------------|-------------
-PB3  | SPI1_SCK    | Serial Clock
-PB4  | SPI1_MISO   | Master In Slave Out
-PB5  | SPI1_MOSI   | Master Out Slave In
-PB6  | CS          | Chip Select (Software controlled)
+Pin  | Function    | Owner
+-----|-------------|------------------------------
+PB3  | SPI1_SCK    | SPI_BusConfig_t (application)
+PB4  | SPI1_MISO   | SPI_BusConfig_t (application)
+PB5  | SPI1_MOSI   | SPI_BusConfig_t (application)
+PB6  | CS          | QSPI_ConfigTypeDef.csPort/csPin (this driver)
+```
+
+```c
+SPI_Bus_t bus;
+SPI_BusConfig_t busCfg = { .instance = SPI1, .sckPort = GPIOB, .sckPin = GPIO_PIN_3,
+                           .misoPort = GPIOB, .misoPin = GPIO_PIN_4,
+                           .mosiPort = GPIOB, .mosiPin = GPIO_PIN_5 };
+SPI_BusInit(&bus, &busCfg);
+
+QSPI_HandleStructTypeDef hflash;
+QSPI_ConfigTypeDef cfg = QSPI_GetDefaultConfig();
+cfg.bus = &bus;  cfg.csPort = GPIOB;  cfg.csPin = GPIO_PIN_6;
+QSPI_Init(&hflash, &cfg);
 ```
 
 ### Supported Flash Memories
@@ -40,9 +57,10 @@ PB6  | CS          | Chip Select (Software controlled)
 
 ### Initialization
 ```c
-QSPI_StatusTypeDef QSPI_Init(QSPI_HandleStructTypeDef *hqspi_struct);
+QSPI_StatusTypeDef QSPI_Init(QSPI_HandleStructTypeDef *hqspi_struct, const QSPI_ConfigTypeDef *config);
 QSPI_StatusTypeDef QSPI_DeInit(QSPI_HandleStructTypeDef *hqspi_struct);
-QSPI_StatusTypeDef QSPI_Configure(QSPI_HandleStructTypeDef *hqspi_struct, QSPI_ConfigTypeDef *config);
+QSPI_StatusTypeDef QSPI_Configure(QSPI_HandleStructTypeDef *hqspi_struct, const QSPI_ConfigTypeDef *config); /* clock divider only */
+QSPI_ConfigTypeDef QSPI_GetDefaultConfig(void);
 ```
 
 ### Memory Information

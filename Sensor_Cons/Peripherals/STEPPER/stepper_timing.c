@@ -1,28 +1,27 @@
 /**
-  ******************************************************************************
-  * @file    stepper_timing.c
-  * @brief   Microsecond time base backed by the caller's timer
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    stepper_timing.c
+ * @brief   Microsecond time base backed by the caller's timer
+ ******************************************************************************
+ */
 
 #include "stepper_timing.h"
 #include "tim_base.h"
 #include "tim_clock.h"
 #include "log.h"
 
-#define STEPPER_TICKS_PER_SECOND    1000000U
+#define STEPPER_TICKS_PER_SECOND 1000000U
 
 /* 16 bits are available on every timer this driver may be handed. */
-#define STEPPER_COUNTER_PERIOD      0xFFFFU
-#define STEPPER_COUNTER_MASK        0xFFFFU
+#define STEPPER_COUNTER_PERIOD 0xFFFFU
+#define STEPPER_COUNTER_MASK 0xFFFFU
 
 /** Longest single wait; longer requests are split into repeats of this. */
-#define STEPPER_MAX_WAIT_TICKS      0x8000U
+#define STEPPER_MAX_WAIT_TICKS 0x8000U
 
-STEPPER_StatusTypeDef STEPPER_TIMING_Init(TIM_HandleTypeDef *htim)
-{
-    uint32_t timerHz;
-    uint32_t prescaler;
+STEPPER_StatusTypeDef STEPPER_TIMING_Init(TIM_HandleTypeDef *htim) {
+    uint32_t timerHz = 0;
+    uint32_t prescaler = 0;
 
     if (htim == NULL || htim->Instance == NULL) {
         return STEPPER_INVALID_PARAM;
@@ -47,15 +46,13 @@ STEPPER_StatusTypeDef STEPPER_TIMING_Init(TIM_HandleTypeDef *htim)
     return STEPPER_OK;
 }
 
-void STEPPER_TIMING_DeInit(TIM_HandleTypeDef *htim)
-{
+void STEPPER_TIMING_DeInit(TIM_HandleTypeDef *htim) {
     if (htim != NULL && htim->Instance != NULL) {
         (void)TIM_Stop(htim);
     }
 }
 
-void STEPPER_TIMING_DelayMicroseconds(TIM_HandleTypeDef *htim, uint32_t microseconds)
-{
+void STEPPER_TIMING_DelayMicroseconds(TIM_HandleTypeDef *htim, uint32_t microseconds) {
     uint32_t remaining = microseconds;
 
     while (remaining > 0U) {

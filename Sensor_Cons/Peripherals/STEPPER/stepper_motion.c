@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    stepper_motion.c
-  * @brief   Movement commands and motor state
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    stepper_motion.c
+ * @brief   Movement commands and motor state
+ ******************************************************************************
+ */
 
 #include "stepper_motion.h"
 #include "stepper_sequence.h"
@@ -16,14 +16,14 @@
  * @note   Advancing first matters: applying the current entry would re-assert the
  *         pattern the coils already hold and lose a step per move.
  */
-static void STEPPER_StepOnce(STEPPER_Handle_t *hstep)
-{
+static void STEPPER_StepOnce(STEPPER_Handle_t *hstep) {
     uint8_t length = STEPPER_SEQ_GetLength(hstep->config.stepMode);
 
     if (hstep->direction == STEPPER_DIR_CW) {
         hstep->currentStep = (uint8_t)((hstep->currentStep + 1U) % length);
         hstep->currentPosition++;
-    } else {
+    }
+    else {
         hstep->currentStep = (uint8_t)((hstep->currentStep + length - 1U) % length);
         hstep->currentPosition--;
     }
@@ -32,11 +32,8 @@ static void STEPPER_StepOnce(STEPPER_Handle_t *hstep)
                               STEPPER_SEQ_GetPattern(hstep->config.stepMode, hstep->currentStep));
 }
 
-STEPPER_StatusTypeDef STEPPER_MoveSteps(STEPPER_Handle_t *hstep,
-                                        uint32_t steps,
-                                        STEPPER_Direction_t direction,
-                                        uint16_t speed)
-{
+STEPPER_StatusTypeDef STEPPER_MoveSteps(STEPPER_Handle_t *hstep, uint32_t steps,
+                                        STEPPER_Direction_t direction, uint16_t speed) {
     STEPPER_CHECK_HANDLE(hstep);
 
     if (hstep->isRunning) {
@@ -71,12 +68,10 @@ STEPPER_StatusTypeDef STEPPER_MoveSteps(STEPPER_Handle_t *hstep,
     return STEPPER_OK;
 }
 
-STEPPER_StatusTypeDef STEPPER_MoveToPosition(STEPPER_Handle_t *hstep,
-                                             int32_t position,
-                                             uint16_t speed)
-{
-    int64_t delta;
-    STEPPER_Direction_t direction;
+STEPPER_StatusTypeDef STEPPER_MoveToPosition(STEPPER_Handle_t *hstep, int32_t position,
+                                             uint16_t speed) {
+    int64_t delta = 0;
+    STEPPER_Direction_t direction = STEPPER_DIR_CW;
 
     STEPPER_CHECK_HANDLE(hstep);
 
@@ -96,8 +91,7 @@ STEPPER_StatusTypeDef STEPPER_MoveToPosition(STEPPER_Handle_t *hstep,
     return STEPPER_MoveSteps(hstep, (uint32_t)delta, direction, speed);
 }
 
-STEPPER_StatusTypeDef STEPPER_Stop(STEPPER_Handle_t *hstep)
-{
+STEPPER_StatusTypeDef STEPPER_Stop(STEPPER_Handle_t *hstep) {
     STEPPER_CHECK_HANDLE(hstep);
 
     hstep->isRunning = false;
@@ -106,18 +100,15 @@ STEPPER_StatusTypeDef STEPPER_Stop(STEPPER_Handle_t *hstep)
     return STEPPER_OK;
 }
 
-bool STEPPER_IsRunning(const STEPPER_Handle_t *hstep)
-{
+bool STEPPER_IsRunning(const STEPPER_Handle_t *hstep) {
     return (hstep != NULL) && hstep->isRunning;
 }
 
-int32_t STEPPER_GetPosition(const STEPPER_Handle_t *hstep)
-{
+int32_t STEPPER_GetPosition(const STEPPER_Handle_t *hstep) {
     return (hstep != NULL) ? hstep->currentPosition : 0;
 }
 
-STEPPER_StatusTypeDef STEPPER_SetPosition(STEPPER_Handle_t *hstep, int32_t position)
-{
+STEPPER_StatusTypeDef STEPPER_SetPosition(STEPPER_Handle_t *hstep, int32_t position) {
     STEPPER_CHECK_HANDLE(hstep);
 
     if (hstep->isRunning) {
@@ -129,8 +120,7 @@ STEPPER_StatusTypeDef STEPPER_SetPosition(STEPPER_Handle_t *hstep, int32_t posit
     return STEPPER_OK;
 }
 
-STEPPER_StatusTypeDef STEPPER_GetStatus(const STEPPER_Handle_t *hstep)
-{
+STEPPER_StatusTypeDef STEPPER_GetStatus(const STEPPER_Handle_t *hstep) {
     STEPPER_CHECK_HANDLE(hstep);
 
     return hstep->isRunning ? STEPPER_BUSY : STEPPER_OK;

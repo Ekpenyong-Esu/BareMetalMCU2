@@ -8,7 +8,8 @@
  * - DAC_Stop(): Stops conversion, output holds last value
  * - DAC_GetValue(): Reads the current DOR (Data Output Register)
  *
- * All functions validate handle initialization and channel match (must be CH1).
+ * All functions validate handle initialization and that the channel matches
+ * the one the handle was opened with.
  * DAC_SetValue also clamps the value to the maximum for the configured alignment.
  */
 
@@ -23,18 +24,16 @@
  * trigger is SOFTWARE/NONE. For timer triggers, this only loads the value;
  * the timer TRGO will start the actual conversion.
  *
- * Validates handle initialization and channel match (must be CH1).
+ * Validates handle initialization and channel match.
  * Clamps value to the maximum for the configured alignment.
  *
  * @param hdac Handle (must be initialized)
- * @param channel Channel, must match the initialized channel (DAC_CHANNEL_1)
+ * @param channel Channel, must match the channel the handle was opened with
  * @param value Code from 0 to DAC_MAX_VALUE_12BIT (or 255 for 8-bit alignment)
  * @retval HAL_StatusTypeDef HAL_OK on success, HAL_ERROR on invalid args or HAL failure
  */
-HAL_StatusTypeDef DAC_SetValue(DAC_HandleStruct *hdac, uint32_t channel, uint32_t value)
-{
-    if (!DAC_IsChannelValid(hdac, channel) ||
-        (value > DAC_MaxValueFor(hdac->config.alignment))) {
+HAL_StatusTypeDef DAC_SetValue(DAC_HandleStruct *hdac, uint32_t channel, uint32_t value) {
+    if (!DAC_IsChannelValid(hdac, channel) || (value > DAC_MaxValueFor(hdac->config.alignment))) {
         return HAL_ERROR;
     }
 
@@ -56,8 +55,7 @@ HAL_StatusTypeDef DAC_SetValue(DAC_HandleStruct *hdac, uint32_t channel, uint32_
  * @param channel Channel, must match the initialized channel
  * @retval HAL_StatusTypeDef HAL_OK on success, HAL_ERROR on invalid args
  */
-HAL_StatusTypeDef DAC_Start(DAC_HandleStruct *hdac, uint32_t channel)
-{
+HAL_StatusTypeDef DAC_Start(DAC_HandleStruct *hdac, uint32_t channel) {
     if (!DAC_IsChannelValid(hdac, channel)) {
         return HAL_ERROR;
     }
@@ -75,8 +73,7 @@ HAL_StatusTypeDef DAC_Start(DAC_HandleStruct *hdac, uint32_t channel)
  * @param channel Channel, must match the initialized channel
  * @retval HAL_StatusTypeDef HAL_OK on success, HAL_ERROR on invalid args
  */
-HAL_StatusTypeDef DAC_Stop(DAC_HandleStruct *hdac, uint32_t channel)
-{
+HAL_StatusTypeDef DAC_Stop(DAC_HandleStruct *hdac, uint32_t channel) {
     if (!DAC_IsChannelValid(hdac, channel)) {
         return HAL_ERROR;
     }
@@ -94,8 +91,7 @@ HAL_StatusTypeDef DAC_Stop(DAC_HandleStruct *hdac, uint32_t channel)
  * @param channel Channel, must match the initialized channel
  * @retval uint32_t Current code (0..4095), or 0 when the arguments are rejected
  */
-uint32_t DAC_GetValue(const DAC_HandleStruct *hdac, uint32_t channel)
-{
+uint32_t DAC_GetValue(const DAC_HandleStruct *hdac, uint32_t channel) {
     if (!DAC_IsChannelValid(hdac, channel)) {
         return 0U;
     }

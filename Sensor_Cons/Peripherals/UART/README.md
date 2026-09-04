@@ -17,12 +17,20 @@ transfer mode is an independent, directly-callable API, the same shape as
    - No behaviour, so every module can include it without a dependency cycle
 
 2. **Shared utilities** (`uart.h`, `uart.c`)
-   - `UART_DeInit()`, `UART_GetActiveHandle()`/`UART_SetActiveHandle()`, `UART_WaitForFlag()`
+   - `UART_DeInit()`, `UART_WaitForFlag()`, the instance registry
+     (`UART_Register()`/`UART_Unregister()`/`UART_FromInstance()`) and the vector
+     entry points `UART_IRQHandler()`/`UART_DmaStreamIRQHandler()`
    - The UART equivalent of `tim_clock.h`: genuinely mode-agnostic helpers that
      each mode module depends on one-way. Holds no Init/Transmit/Receive of its
      own and never includes a mode header.
 
-3. **Events** (`uart_events.c`)
+3. **Hardware binding** (`uart_hw.c`)
+   - `HAL_UART_MspInit()` / `MspDeInit()`: peripheral clock, pins, DMA streams, NVIC
+   - Everything is derived from the `UART_Config_t` the application passed to
+     Init(); the handle is found through the registry by `huart->Instance`
+   - Exports no header: the MSP functions are declared by the HAL
+
+4. **Events** (`uart_events.c`)
    - The HAL callbacks (`TxCplt`, `RxCplt`, `RxEvent`, `Error`)
    - The one place that has to know which mode is active, since HAL exposes a
      single callback per event regardless of mode; it is a plain switch on
@@ -30,18 +38,21 @@ transfer mode is an independent, directly-callable API, the same shape as
    - Exports no header: the callbacks are declared by the HAL, and the completion
      flags are fields on `UART_Handle_t`
 
-4. **Configuration** (`uart_config.h`)
-   - Tunables only: default settings, buffer sizes, timeouts, DMA stream selection
+5. **Configuration** (`uart_config.h`)
+   - Tunables only: default baud/frame settings and the default timeout
 
-### Board Wiring (outside this driver)
+### Board Wiring (supplied by the application)
 
-The driver owns no board detail. Wiring lives in `Core/`, alongside every other
-peripheral:
+The driver owns no board detail. The application names the instance, the TX/RX
+pins and, for DMA mode, the streams in `UART_Config_t`; the driver enables the
+matching clocks, alternate function and interrupt lines itself. `Core/` only
+routes the vectors:
 
-- `Core/Src/stm32f4xx_hal_msp.c` - `HAL_UART_MspInit()` / `MspDeInit()`: pins, clocks, DMA streams, NVIC
-- `Core/Src/stm32f4xx_it.c` - `USART1_IRQHandler()`, `DMA2_Stream5/7_IRQHandler()`
+- `Core/Src/stm32f4xx_it.c` - `USARTx_IRQHandler()` calls `UART_IRQHandler(USARTx)`,
+  `DMAx_StreamN_IRQHandler()` calls `UART_DmaStreamIRQHandler(DMAx_StreamN)`
 
-Both resolve the link through `UART_GetActiveHandle()` rather than a global.
+Both resolve the link through the instance registry, so several UARTs can be
+open at once.
 
 ### Transfer Modes
 
@@ -84,7 +95,7 @@ uart_ring_buffer.h      (no UART dependency)
 
 `uart_ring_buffer.h` sits at the bottom and depends on nothing. `uart.h` is a
 pure utility module, the UART equivalent of `tim_clock.h`: each mode `.c` file
-depends on it one-way (for `UART_DeInit`/`UART_SetActiveHandle`/
+depends on it one-way (for `UART_DeInit`/`UART_Register`/`UART_Unregister`/
 `UART_WaitForFlag`), and `uart.c` never includes a mode header back. No file
 switches on `UART_Mode_t` except `uart_events.c` (choosing how to react to a
 HAL callback) — the driver itself has no dispatch table. `Applications/
@@ -97,9 +108,12 @@ and calls `UART_Blocking_Init`/`Transmit`/`Receive` directly.
 ### 1. Initialization
 
 ```c
-// Configure UART
+// Configure UART: the application decides the instance and the pins
 UART_Config_t config = {
     .instance = USART1,
+    .txPort = GPIOA, .txPin = GPIO_PIN_9,
+    .rxPort = GPIOA, .rxPin = GPIO_PIN_10,
+    .alternate = 0,               // 0 = derive from instance (AF7 here)
     .baudRate = 115200,
     .wordLength = UART_WORDLENGTH_8B,
     .stopBits = UART_STOPBITS_1,
@@ -178,7 +192,13 @@ The UART module is integrated into the main application through the following st
 3. Open a link and transfer using the mode you called Init with:
    ```c
    UART_Handle_t uart = { .huart = &huart1, .rxBuffer = rxBuf, .rxSize = sizeof(rxBuf) };
-   UART_Config_t config = { .instance = USART1, .baudRate = 115200, .mode = UART_MODE_DMA };
+   UART_Config_t config = {
+       .instance = USART1,
+       .txPort = GPIOA, .txPin = GPIO_PIN_9, .rxPort = GPIOA, .rxPin = GPIO_PIN_10,
+       .dmaTxStream = DMA2_Stream7, .dmaTxChannel = DMA_CHANNEL_4,
+       .dmaRxStream = DMA2_Stream5, .dmaRxChannel = DMA_CHANNEL_4,
+       .baudRate = 115200, .mode = UART_MODE_DMA,
+   };
 
    UART_DMA_Init(&uart, &config);
    UART_DMA_Transmit(&uart, data, len, UART_TIMEOUT);

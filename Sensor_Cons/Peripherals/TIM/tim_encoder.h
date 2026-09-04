@@ -49,9 +49,7 @@ extern "C" {
  *                   0xFFFFFFFF for 32-bit TIM2/TIM5)
  * @retval HAL_OK on success, HAL_ERROR if arguments invalid or HAL init fails
  */
-HAL_StatusTypeDef TIM_Encoder_Init(TIM_HandleTypeDef *htim,
-                                   TIM_TypeDef *instance,
-                                   uint32_t period);
+HAL_StatusTypeDef TIM_Encoder_Init(TIM_HandleTypeDef *htim, TIM_TypeDef *instance, uint32_t period);
 
 /**
  * @brief  Start encoder counting

@@ -10,8 +10,7 @@
  * busy flag first. Registering them straight with the HAL, as the previous
  * implementation did, left the driver with no record of when a transfer ended.
  */
-static void DMA_OnTransferComplete(DMA_HandleTypeDef *hdma)
-{
+static void DMA_OnTransferComplete(DMA_HandleTypeDef *hdma) {
     DMA_Handle_t *handle = (DMA_Handle_t *)hdma->Parent;
 
     if (handle != NULL) {
@@ -21,8 +20,7 @@ static void DMA_OnTransferComplete(DMA_HandleTypeDef *hdma)
     DMA_TransferCompleteCallback(hdma);
 }
 
-static void DMA_OnTransferError(DMA_HandleTypeDef *hdma)
-{
+static void DMA_OnTransferError(DMA_HandleTypeDef *hdma) {
     DMA_Handle_t *handle = (DMA_Handle_t *)hdma->Parent;
 
     if (handle != NULL) {
@@ -32,8 +30,7 @@ static void DMA_OnTransferError(DMA_HandleTypeDef *hdma)
     DMA_TransferErrorCallback(hdma);
 }
 
-static void DMA_OnAbort(DMA_HandleTypeDef *hdma)
-{
+static void DMA_OnAbort(DMA_HandleTypeDef *hdma) {
     DMA_Handle_t *handle = (DMA_Handle_t *)hdma->Parent;
 
     if (handle != NULL) {
@@ -41,39 +38,34 @@ static void DMA_OnAbort(DMA_HandleTypeDef *hdma)
     }
 }
 
-HAL_StatusTypeDef DMA_Events_Register(DMA_Handle_t *handle)
-{
+HAL_StatusTypeDef DMA_Events_Register(DMA_Handle_t *handle) {
     if (handle == NULL) {
         return HAL_ERROR;
     }
 
-    if (HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_CPLT_CB_ID,
-                                 DMA_OnTransferComplete) != HAL_OK) {
+    if (HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_CPLT_CB_ID, DMA_OnTransferComplete) !=
+        HAL_OK) {
         return HAL_ERROR;
     }
 
-    if (HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_ERROR_CB_ID,
-                                 DMA_OnTransferError) != HAL_OK) {
+    if (HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_ERROR_CB_ID, DMA_OnTransferError) !=
+        HAL_OK) {
         return HAL_ERROR;
     }
 
-    return HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_ABORT_CB_ID,
-                                    DMA_OnAbort);
+    return HAL_DMA_RegisterCallback(&handle->hdma, HAL_DMA_XFER_ABORT_CB_ID, DMA_OnAbort);
 }
 
-void DMA_IRQHandler(DMA_Handle_t *handle)
-{
+void DMA_IRQHandler(DMA_Handle_t *handle) {
     if ((handle != NULL) && handle->initialized) {
         HAL_DMA_IRQHandler(&handle->hdma);
     }
 }
 
-__weak void DMA_TransferCompleteCallback(DMA_HandleTypeDef *hdma)
-{
+__weak void DMA_TransferCompleteCallback(DMA_HandleTypeDef *hdma) {
     UNUSED(hdma);
 }
 
-__weak void DMA_TransferErrorCallback(DMA_HandleTypeDef *hdma)
-{
+__weak void DMA_TransferErrorCallback(DMA_HandleTypeDef *hdma) {
     UNUSED(hdma);
 }

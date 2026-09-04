@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ir_distance_adc.c
-  * @brief   ADC access for the IR distance sensor (internal)
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ir_distance_adc.c
+ * @brief   ADC access for the IR distance sensor (internal)
+ ******************************************************************************
+ */
 
 #include "ir_distance_adc.h"
 #include "adc_core.h"
@@ -11,10 +11,9 @@
 #include "log.h"
 
 /* Sharp modules drive a slow, high-impedance analog output. */
-#define IR_DISTANCE_ADC_SAMPLETIME  ADC_SAMPLETIME_56CYCLES
+#define IR_DISTANCE_ADC_SAMPLETIME ADC_SAMPLETIME_56CYCLES
 
-IR_DISTANCE_StatusTypeDef IR_DISTANCE_ADC_Init(ADC_HandleStruct *hadc, uint32_t channel)
-{
+IR_DISTANCE_StatusTypeDef IR_DISTANCE_ADC_Init(ADC_HandleStruct *hadc, uint32_t channel) {
     if (hadc == NULL) {
         return IR_DISTANCE_INVALID_PARAM;
     }
@@ -33,9 +32,8 @@ IR_DISTANCE_StatusTypeDef IR_DISTANCE_ADC_Init(ADC_HandleStruct *hadc, uint32_t 
 }
 
 IR_DISTANCE_StatusTypeDef IR_DISTANCE_ADC_Read(ADC_HandleStruct *hadc, uint32_t channel,
-                                               uint16_t *value)
-{
-    uint32_t raw;
+                                               uint16_t *value) {
+    uint32_t raw = 0;
 
     if (hadc == NULL || value == NULL) {
         return IR_DISTANCE_INVALID_PARAM;

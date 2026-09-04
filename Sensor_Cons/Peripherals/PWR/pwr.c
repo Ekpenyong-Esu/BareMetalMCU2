@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    pwr.c
-  * @brief   PWR initialisation and configuration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    pwr.c
+ * @brief   PWR initialisation and configuration
+ ******************************************************************************
+ */
 
 /* Includes ------------------------------------------------------------------*/
 #include "pwr_core.h"
@@ -14,27 +14,22 @@
 
 /* Public functions ----------------------------------------------------------*/
 
-PWR_StatusTypeDef PWR_Init(const PWR_ConfigTypeDef* config)
-{
-    if (config == NULL)
-    {
+PWR_StatusTypeDef PWR_Init(const PWR_ConfigTypeDef *config) {
+    if (config == NULL) {
         return PWR_INVALID_PARAM;
     }
 
     __HAL_RCC_PWR_CLK_ENABLE();
 
-    if (config->enableBackupAccess)
-    {
+    if (config->enableBackupAccess) {
         PWR_EnableBackupAccess();
     }
 
-    if (config->enableWakeupPin)
-    {
+    if (config->enableWakeupPin) {
         PWR_EnableWakeupPin(true);
     }
 
-    if (config->enablePVD)
-    {
+    if (config->enablePVD) {
         PWR_EnablePVD(config->pvdLevel);
     }
 
@@ -43,8 +38,7 @@ PWR_StatusTypeDef PWR_Init(const PWR_ConfigTypeDef* config)
     return PWR_OK;
 }
 
-PWR_StatusTypeDef PWR_InitDefault(void)
-{
+PWR_StatusTypeDef PWR_InitDefault(void) {
     PWR_ConfigTypeDef config;
 
     PWR_GetDefaultConfig(&config);
@@ -52,10 +46,8 @@ PWR_StatusTypeDef PWR_InitDefault(void)
     return PWR_Init(&config);
 }
 
-PWR_StatusTypeDef PWR_GetDefaultConfig(PWR_ConfigTypeDef* config)
-{
-    if (config == NULL)
-    {
+PWR_StatusTypeDef PWR_GetDefaultConfig(PWR_ConfigTypeDef *config) {
+    if (config == NULL) {
         return PWR_INVALID_PARAM;
     }
 

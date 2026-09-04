@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    crc_types.h
-  * @brief   Shared vocabulary for the CRC driver
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    crc_types.h
+ * @brief   Shared vocabulary for the CRC driver
+ ******************************************************************************
+ */
 
 #ifndef CRC_TYPES_H
 #define CRC_TYPES_H
@@ -17,26 +17,19 @@ extern "C" {
 #include <stdbool.h>
 #include <stddef.h>
 
-#define CRC_MAX_DATA_SIZE           1024U
-#define CRC_DEFAULT_POLYNOMIAL      0x04C11DB7U
-#define CRC_DEFAULT_INIT_VALUE      0xFFFFFFFFU
+#define CRC_MAX_DATA_SIZE 1024U
+#define CRC_DEFAULT_POLYNOMIAL 0x04C11DB7U
+#define CRC_DEFAULT_INIT_VALUE 0xFFFFFFFFU
 
-#define CRC_POLY_CRC32              0x04C11DB7U
-#define CRC_POLY_CRC32C             0x1EDC6F41U
-#define CRC_POLY_CRC16              0x8005U
-#define CRC_POLY_CRC16_CCITT        0x1021U
-#define CRC_POLY_CRC8               0x07U
+#define CRC_POLY_CRC32 0x04C11DB7U
+#define CRC_POLY_CRC32C 0x1EDC6F41U
+#define CRC_POLY_CRC16 0x8005U
+#define CRC_POLY_CRC16_CCITT 0x1021U
+#define CRC_POLY_CRC8 0x07U
 
-typedef enum {
-    CRC_FORMAT_8BIT = 0U,
-    CRC_FORMAT_16BIT = 1U,
-    CRC_FORMAT_32BIT = 2U
-} CRC_DataFormat;
+typedef enum { CRC_FORMAT_8BIT = 0U, CRC_FORMAT_16BIT = 1U, CRC_FORMAT_32BIT = 2U } CRC_DataFormat;
 
-typedef enum {
-    CRC_METHOD_HARDWARE = 0U,
-    CRC_METHOD_SOFTWARE = 1U
-} CRC_Method;
+typedef enum { CRC_METHOD_HARDWARE = 0U, CRC_METHOD_SOFTWARE = 1U } CRC_Method;
 
 typedef enum {
     CRC_ERROR_NONE = 0,

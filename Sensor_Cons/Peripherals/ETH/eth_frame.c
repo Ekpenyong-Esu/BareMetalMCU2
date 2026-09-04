@@ -9,14 +9,13 @@
 #include "log.h"
 #include <string.h>
 
-#define ETH_BYTE_MASK    0xFFU
+#define ETH_BYTE_MASK 0xFFU
 
-HAL_StatusTypeDef ETH_TransmitFrame(ETH_Handle_t *handle, const ETH_Frame_t *frame)
-{
+HAL_StatusTypeDef ETH_TransmitFrame(ETH_Handle_t *handle, const ETH_Frame_t *frame) {
     ETH_TxPacketConfigTypeDef txConfig;
     ETH_BufferTypeDef txBufferDesc;
-    uint8_t *buffer;
-    uint32_t frameLength;
+    uint8_t *buffer = NULL;
+    uint32_t frameLength = 0;
 
     if ((handle == NULL) || (frame == NULL)) {
         return HAL_ERROR;
@@ -63,10 +62,9 @@ HAL_StatusTypeDef ETH_TransmitFrame(ETH_Handle_t *handle, const ETH_Frame_t *fra
     return HAL_ETH_Transmit(&handle->heth, &txConfig, ETH_TX_TIMEOUT_MS);
 }
 
-HAL_StatusTypeDef ETH_ReceiveFrame(ETH_Handle_t *handle, ETH_Frame_t *frame)
-{
+HAL_StatusTypeDef ETH_ReceiveFrame(ETH_Handle_t *handle, ETH_Frame_t *frame) {
     uint8_t *packet = NULL;
-    uint32_t frameLength;
+    uint32_t frameLength = 0;
 
     if ((handle == NULL) || (frame == NULL)) {
         return HAL_ERROR;
@@ -88,16 +86,14 @@ HAL_StatusTypeDef ETH_ReceiveFrame(ETH_Handle_t *handle, ETH_Frame_t *frame)
     frameLength = handle->heth.RxDescList.RxDataLength;
 
     if (frameLength <= (ETH_HEADER_LEN + ETH_FCS_LEN)) {
-        log_warning("ETH: runt frame of %lu bytes discarded",
-                    (unsigned long)frameLength);
+        log_warning("ETH: runt frame of %lu bytes discarded", (unsigned long)frameLength);
         return HAL_ERROR;
     }
 
     frameLength -= ETH_FCS_LEN;
 
     if (frameLength > ETH_MAX_FRAME_LEN) {
-        log_warning("ETH: oversized frame of %lu bytes discarded",
-                    (unsigned long)frameLength);
+        log_warning("ETH: oversized frame of %lu bytes discarded", (unsigned long)frameLength);
         return HAL_ERROR;
     }
 

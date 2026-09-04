@@ -11,7 +11,10 @@
 /* Private define ------------------------------------------------------------*/
 
 /** Percent denominator used for the carrier duty cycle */
-#define IR_DUTY_CYCLE_SCALE     100U
+#define IR_DUTY_CYCLE_SCALE 100U
+
+/** Capture timer free-runs over its full 32-bit range; edges are timestamped */
+#define IR_CAPTURE_PERIOD_FREE_RUN 0xFFFFFFFFU
 
 /* Private function prototypes -----------------------------------------------*/
 static uint32_t IR_GetTimerClock(void);
@@ -20,14 +23,11 @@ static HAL_StatusTypeDef IR_ConfigureCaptureTimer(IR_Handle_t *handle);
 /* Public functions ----------------------------------------------------------*/
 
 HAL_StatusTypeDef IR_Init(IR_Handle_t *handle, TIM_HandleTypeDef *htimCarrier,
-                          TIM_HandleTypeDef *htimCapture,
-                          uint32_t txChannel, uint32_t rxChannel,
-                          const IR_Config_t *config)
-{
-    HAL_StatusTypeDef status;
+                          TIM_HandleTypeDef *htimCapture, uint32_t txChannel, uint32_t rxChannel,
+                          const IR_Config_t *config) {
+    HAL_StatusTypeDef status = HAL_OK;
 
-    if (handle == NULL || htimCarrier == NULL || htimCapture == NULL || config == NULL)
-    {
+    if (handle == NULL || htimCarrier == NULL || htimCapture == NULL || config == NULL) {
         return HAL_ERROR;
     }
 
@@ -57,8 +57,7 @@ HAL_StatusTypeDef IR_Init(IR_Handle_t *handle, TIM_HandleTypeDef *htimCarrier,
     handle->rxFrame.repeat = false;
 
     status = IR_ConfigureCaptureTimer(handle);
-    if (status != HAL_OK)
-    {
+    if (status != HAL_OK) {
         handle->errorCode = IR_ERROR_TIMER;
         return status;
     }
@@ -68,8 +67,7 @@ HAL_StatusTypeDef IR_Init(IR_Handle_t *handle, TIM_HandleTypeDef *htimCarrier,
     handle->initialized = true;
 
     status = IR_ConfigureCarrier(handle, config->carrierFreq, config->dutyCycle);
-    if (status != HAL_OK)
-    {
+    if (status != HAL_OK) {
         handle->errorCode = IR_ERROR_INIT;
         handle->initialized = false;
         return status;
@@ -78,10 +76,8 @@ HAL_StatusTypeDef IR_Init(IR_Handle_t *handle, TIM_HandleTypeDef *htimCarrier,
     return HAL_OK;
 }
 
-HAL_StatusTypeDef IR_DeInit(IR_Handle_t *handle)
-{
-    if (IR_ValidateHandle(handle) != HAL_OK)
-    {
+HAL_StatusTypeDef IR_DeInit(IR_Handle_t *handle) {
+    if (IR_ValidateHandle(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
@@ -96,10 +92,8 @@ HAL_StatusTypeDef IR_DeInit(IR_Handle_t *handle)
 }
 
 HAL_StatusTypeDef IR_SetEventCallback(IR_Handle_t *handle,
-                                      void (*callback)(IR_Event_t event, IR_Frame_t *frame))
-{
-    if (IR_ValidateHandle(handle) != HAL_OK)
-    {
+                                      void (*callback)(IR_Event_t event, IR_Frame_t *frame)) {
+    if (IR_ValidateHandle(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
@@ -108,26 +102,22 @@ HAL_StatusTypeDef IR_SetEventCallback(IR_Handle_t *handle,
     return HAL_OK;
 }
 
-HAL_StatusTypeDef IR_ConfigureCarrier(IR_Handle_t *handle, uint32_t frequency, uint8_t dutyCycle)
-{
+HAL_StatusTypeDef IR_ConfigureCarrier(IR_Handle_t *handle, uint32_t frequency, uint8_t dutyCycle) {
     TIM_OC_InitTypeDef sConfigOC = {0};
-    uint32_t timerClock;
-    uint32_t period;
+    uint32_t timerClock = 0;
+    uint32_t period = 0;
 
-    if (IR_ValidateHandle(handle) != HAL_OK)
-    {
+    if (IR_ValidateHandle(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
-    if (frequency == 0U || dutyCycle == 0U || dutyCycle >= IR_DUTY_CYCLE_SCALE)
-    {
+    if (frequency == 0U || dutyCycle == 0U || dutyCycle >= IR_DUTY_CYCLE_SCALE) {
         handle->errorCode = IR_ERROR_INVALID_PARAM;
         return HAL_ERROR;
     }
 
     timerClock = IR_GetTimerClock();
-    if (frequency > timerClock)
-    {
+    if (frequency > timerClock) {
         handle->errorCode = IR_ERROR_INVALID_PARAM;
         return HAL_ERROR;
     }
@@ -139,8 +129,7 @@ HAL_StatusTypeDef IR_ConfigureCarrier(IR_Handle_t *handle, uint32_t frequency, u
     handle->htimCarrier->Init.Prescaler = 0U;
     handle->htimCarrier->Init.Period = period;
 
-    if (HAL_TIM_PWM_Init(handle->htimCarrier) != HAL_OK)
-    {
+    if (HAL_TIM_PWM_Init(handle->htimCarrier) != HAL_OK) {
         handle->errorCode = IR_ERROR_TIMER;
         return HAL_ERROR;
     }
@@ -150,8 +139,7 @@ HAL_StatusTypeDef IR_ConfigureCarrier(IR_Handle_t *handle, uint32_t frequency, u
     sConfigOC.OCPolarity = handle->config.invertSignal ? TIM_OCPOLARITY_LOW : TIM_OCPOLARITY_HIGH;
     sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 
-    if (HAL_TIM_PWM_ConfigChannel(handle->htimCarrier, &sConfigOC, handle->txChannel) != HAL_OK)
-    {
+    if (HAL_TIM_PWM_ConfigChannel(handle->htimCarrier, &sConfigOC, handle->txChannel) != HAL_OK) {
         handle->errorCode = IR_ERROR_TIMER;
         return HAL_ERROR;
     }
@@ -162,10 +150,8 @@ HAL_StatusTypeDef IR_ConfigureCarrier(IR_Handle_t *handle, uint32_t frequency, u
     return HAL_OK;
 }
 
-HAL_StatusTypeDef IR_SetTolerance(IR_Handle_t *handle, uint16_t tolerance)
-{
-    if (IR_ValidateHandle(handle) != HAL_OK)
-    {
+HAL_StatusTypeDef IR_SetTolerance(IR_Handle_t *handle, uint16_t tolerance) {
+    if (IR_ValidateHandle(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
@@ -174,57 +160,46 @@ HAL_StatusTypeDef IR_SetTolerance(IR_Handle_t *handle, uint16_t tolerance)
     return HAL_OK;
 }
 
-IR_State_t IR_GetState(IR_Handle_t *handle)
-{
-    if (handle == NULL)
-    {
+IR_State_t IR_GetState(IR_Handle_t *handle) {
+    if (handle == NULL) {
         return IR_STATE_ERROR;
     }
 
     return handle->state;
 }
 
-uint32_t IR_GetError(IR_Handle_t *handle)
-{
-    if (handle == NULL)
-    {
+uint32_t IR_GetError(IR_Handle_t *handle) {
+    if (handle == NULL) {
         return IR_ERROR_INIT;
     }
 
     return handle->errorCode;
 }
 
-HAL_StatusTypeDef IR_ClearError(IR_Handle_t *handle)
-{
-    if (handle == NULL)
-    {
+HAL_StatusTypeDef IR_ClearError(IR_Handle_t *handle) {
+    if (handle == NULL) {
         return HAL_ERROR;
     }
 
     handle->errorCode = IR_ERROR_NONE;
 
-    if (handle->state == IR_STATE_ERROR)
-    {
+    if (handle->state == IR_STATE_ERROR) {
         handle->state = IR_STATE_IDLE;
     }
 
     return HAL_OK;
 }
 
-HAL_StatusTypeDef IR_ValidateHandle(const IR_Handle_t *handle)
-{
-    if (handle == NULL || !handle->initialized)
-    {
+HAL_StatusTypeDef IR_ValidateHandle(const IR_Handle_t *handle) {
+    if (handle == NULL || !handle->initialized) {
         return HAL_ERROR;
     }
 
     return HAL_OK;
 }
 
-void IR_NotifyEvent(IR_Handle_t *handle, IR_Event_t event, IR_Frame_t *frame)
-{
-    if (handle->eventCallback != NULL)
-    {
+void IR_NotifyEvent(IR_Handle_t *handle, IR_Event_t event, IR_Frame_t *frame) {
+    if (handle->eventCallback != NULL) {
         handle->eventCallback(event, frame);
     }
 }
@@ -236,8 +211,7 @@ void IR_NotifyEvent(IR_Handle_t *handle, IR_Event_t event, IR_Frame_t *frame)
  * @note  APB1 timers run at twice PCLK1 whenever the APB1 prescaler is not 1.
  * @return uint32_t: Timer input clock in Hz
  */
-static uint32_t IR_GetTimerClock(void)
-{
+static uint32_t IR_GetTimerClock(void) {
     return HAL_RCC_GetPCLK1Freq() * 2U;
 }
 
@@ -246,18 +220,16 @@ static uint32_t IR_GetTimerClock(void)
  * @param handle: Pointer to IR handle structure
  * @return HAL_StatusTypeDef: HAL status
  */
-static HAL_StatusTypeDef IR_ConfigureCaptureTimer(IR_Handle_t *handle)
-{
+static HAL_StatusTypeDef IR_ConfigureCaptureTimer(IR_Handle_t *handle) {
     const uint32_t timerClock = IR_GetTimerClock();
     const uint32_t prescaler = timerClock / IR_CAPTURE_TICK_FREQ;
 
-    if (prescaler == 0U)
-    {
+    if (prescaler == 0U) {
         return HAL_ERROR;
     }
 
     handle->htimCapture->Init.Prescaler = prescaler - 1U;
-    handle->htimCapture->Init.Period = 0xFFFFFFFFU;
+    handle->htimCapture->Init.Period = IR_CAPTURE_PERIOD_FREE_RUN;
     handle->htimCapture->Init.CounterMode = TIM_COUNTERMODE_UP;
 
     /* The decoders convert captured ticks with this rate, not with the raw

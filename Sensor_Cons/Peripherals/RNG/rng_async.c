@@ -10,8 +10,7 @@ static RNG_DataCallback_t s_callback = NULL;
 static volatile bool s_pending = false;
 static bool s_interruptEnabled = false;
 
-RNG_StatusTypeDef RNG_EnableInterrupt(void)
-{
+RNG_StatusTypeDef RNG_EnableInterrupt(void) {
     if (!RNG_IsInitialized()) {
         return RNG_NOT_READY;
     }
@@ -23,8 +22,7 @@ RNG_StatusTypeDef RNG_EnableInterrupt(void)
     return RNG_OK;
 }
 
-RNG_StatusTypeDef RNG_DisableInterrupt(void)
-{
+RNG_StatusTypeDef RNG_DisableInterrupt(void) {
     RNG_HandleTypeDef *hrng = RNG_GetHandle();
 
     if (hrng != NULL) {
@@ -39,8 +37,7 @@ RNG_StatusTypeDef RNG_DisableInterrupt(void)
     return RNG_OK;
 }
 
-RNG_StatusTypeDef RNG_GenerateAsync(RNG_DataCallback_t callback)
-{
+RNG_StatusTypeDef RNG_GenerateAsync(RNG_DataCallback_t callback) {
     RNG_HandleTypeDef *hrng = RNG_GetHandle();
 
     if (callback == NULL) {
@@ -72,13 +69,11 @@ RNG_StatusTypeDef RNG_GenerateAsync(RNG_DataCallback_t callback)
     return RNG_OK;
 }
 
-bool RNG_IsGenerationPending(void)
-{
+bool RNG_IsGenerationPending(void) {
     return s_pending;
 }
 
-void RNG_IRQHandler(void)
-{
+void RNG_IRQHandler(void) {
     RNG_HandleTypeDef *hrng = RNG_GetHandle();
 
     if (hrng != NULL) {
@@ -86,8 +81,7 @@ void RNG_IRQHandler(void)
     }
 }
 
-void HAL_RNG_ReadyDataCallback(RNG_HandleTypeDef *hrng, uint32_t random32bit)
-{
+void HAL_RNG_ReadyDataCallback(RNG_HandleTypeDef *hrng, uint32_t random32bit) {
     RNG_DataCallback_t callback = s_callback;
 
     (void)hrng;
@@ -100,8 +94,7 @@ void HAL_RNG_ReadyDataCallback(RNG_HandleTypeDef *hrng, uint32_t random32bit)
     }
 }
 
-void HAL_RNG_ErrorCallback(RNG_HandleTypeDef *hrng)
-{
+void HAL_RNG_ErrorCallback(RNG_HandleTypeDef *hrng) {
     (void)hrng;
 
     /* Drop the request rather than leaving the caller waiting forever. */

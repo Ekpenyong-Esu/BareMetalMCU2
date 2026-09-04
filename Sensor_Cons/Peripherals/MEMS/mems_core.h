@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mems_core.h
-  * @brief   Lifecycle for the L3GD20 MEMS gyroscope driver
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mems_core.h
+ * @brief   Lifecycle for the L3GD20 MEMS gyroscope driver
+ ******************************************************************************
+ */
 
 #ifndef MEMS_CORE_H
 #define MEMS_CORE_H
@@ -15,10 +15,11 @@ extern "C" {
 #include "mems_types.h"
 
 /**
- * @brief Bring up the sensor and register its settings on the shared SPI bus.
- * @param config Bus settings to use, or NULL for SPI_ConfigDefault().
+ * @brief Bring up the sensor on the bus and pins the application chose.
+ * @param config Bus, chip select and optional INT pins; bus must already be
+ *               open. The SPI settings the L3GD20 needs are fixed by the driver.
  */
-MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const SPI_ConfigTypeDef *config);
+MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const MEMS_Config_t *config);
 
 MEMS_StatusTypeDef MEMS_DeInit(MEMS_HandleTypeDef *hmems);
 

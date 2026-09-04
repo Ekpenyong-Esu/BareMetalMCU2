@@ -70,7 +70,8 @@ UART_Status_t UART_Interrupt_Init(UART_Handle_t *handle, const UART_Config_t *co
  * @retval UART_OK on success (or started if timeout==0), UART_ERROR on invalid args,
  *         UART_TIMEOUT_ERROR if timeout expired
  */
-UART_Status_t UART_Interrupt_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size, uint32_t timeout);
+UART_Status_t UART_Interrupt_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size,
+                                      uint32_t timeout);
 
 /**
  * @brief  Start reception and wait for a full packet to drain from the ring
@@ -86,7 +87,8 @@ UART_Status_t UART_Interrupt_Transmit(UART_Handle_t *handle, const uint8_t *data
  * @retval UART_OK on success, UART_TIMEOUT_ERROR if timeout expired,
  *         UART_ERROR on invalid args or ring buffer error
  */
-UART_Status_t UART_Interrupt_Receive(UART_Handle_t *handle, uint8_t *data, uint16_t size, uint32_t timeout);
+UART_Status_t UART_Interrupt_Receive(UART_Handle_t *handle, uint8_t *data, uint16_t size,
+                                     uint32_t timeout);
 
 /**
  * @brief  Re-arm one-shot reception after a completed transfer

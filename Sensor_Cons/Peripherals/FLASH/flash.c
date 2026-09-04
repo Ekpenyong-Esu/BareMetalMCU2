@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    flash.c
-  * @brief   Flash access control: lock state, completion and status reporting
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    flash.c
+ * @brief   Flash access control: lock state, completion and status reporting
+ ******************************************************************************
+ */
 
 /* Includes ------------------------------------------------------------------*/
 #include "flash_core.h"
@@ -11,36 +11,32 @@
 /* Private defines -----------------------------------------------------------*/
 
 /** @brief Every error flag the Flash controller can latch on this part */
-#define FLASH_ALL_ERROR_FLAGS   (FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | \
-                                 FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR)
+#define FLASH_ALL_ERROR_FLAGS                                                                      \
+    (FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |                   \
+     FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR)
 
 /* Public functions ----------------------------------------------------------*/
 
-FLASH_StatusTypeDef FLASH_Unlock(void)
-{
+FLASH_StatusTypeDef FLASH_Unlock(void) {
     HAL_StatusTypeDef halStatus = HAL_FLASH_Unlock();
 
     return FLASH_ConvertHALStatus(halStatus);
 }
 
-FLASH_StatusTypeDef FLASH_Lock(void)
-{
+FLASH_StatusTypeDef FLASH_Lock(void) {
     HAL_StatusTypeDef halStatus = HAL_FLASH_Lock();
 
     return FLASH_ConvertHALStatus(halStatus);
 }
 
-FLASH_StatusTypeDef FLASH_WaitForOperation(uint32_t timeout)
-{
+FLASH_StatusTypeDef FLASH_WaitForOperation(uint32_t timeout) {
     HAL_StatusTypeDef halStatus = FLASH_WaitForLastOperation(timeout);
 
     return FLASH_ConvertHALStatus(halStatus);
 }
 
-FLASH_StatusTypeDef FLASH_ConvertHALStatus(HAL_StatusTypeDef halStatus)
-{
-    switch (halStatus)
-    {
+FLASH_StatusTypeDef FLASH_ConvertHALStatus(HAL_StatusTypeDef halStatus) {
+    switch (halStatus) {
         case HAL_OK:
             return FLASH_STATUS_OK;
         case HAL_ERROR:
@@ -54,15 +50,12 @@ FLASH_StatusTypeDef FLASH_ConvertHALStatus(HAL_StatusTypeDef halStatus)
     }
 }
 
-void FLASH_ClearErrorFlags(void)
-{
+void FLASH_ClearErrorFlags(void) {
     __HAL_FLASH_CLEAR_FLAG(FLASH_ALL_ERROR_FLAGS);
 }
 
-const char* FLASH_GetStatusString(FLASH_StatusTypeDef status)
-{
-    switch (status)
-    {
+const char *FLASH_GetStatusString(FLASH_StatusTypeDef status) {
+    switch (status) {
         case FLASH_STATUS_OK:
             return "FLASH_STATUS_OK";
         case FLASH_STATUS_ERROR:

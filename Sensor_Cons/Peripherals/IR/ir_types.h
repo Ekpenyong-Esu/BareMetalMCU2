@@ -22,52 +22,60 @@ extern "C" {
 /* Exported constants --------------------------------------------------------*/
 
 /* Basic IR settings */
-#define IR_CARRIER_FREQUENCY          38000U    /* How fast the light blinks (38k times per sec) */
-#define IR_CARRIER_DUTY_CYCLE         33U       /* Light is on 33% of the time */
-#define IR_TIMEOUT_MS                 1000U     /* Give up after 1 second with no signal */
+#define IR_CARRIER_FREQUENCY 38000U /* How fast the light blinks (38k times per sec) */
+#define IR_CARRIER_DUTY_CYCLE 33U   /* Light is on 33% of the time */
+#define IR_TIMEOUT_MS 1000U         /* Give up after 1 second with no signal */
 
 /* Timer counts 1 tick per microsecond */
-#define IR_CAPTURE_TICK_FREQ          1000000U
+#define IR_CAPTURE_TICK_FREQ 1000000U
 
 /* Long quiet time that means one message ended */
-#define IR_FRAME_GAP_US               10000U
+#define IR_FRAME_GAP_US 10000U
 
 /* NEC remote - most common TV remote */
-#define IR_NEC_HEADER_MARK            9000U     /* Long flash at start (9ms) */
-#define IR_NEC_HEADER_SPACE           4500U     /* Pause after start flash (4.5ms) */
-#define IR_NEC_BIT_MARK               562U      /* Short flash for each bit */
-#define IR_NEC_BIT_0_SPACE            562U      /* Short pause means bit 0 */
-#define IR_NEC_BIT_1_SPACE            1687U     /* Long pause means bit 1 */
-#define IR_NEC_STOP_BIT               562U      /* Final short flash */
-#define IR_NEC_REPEAT_SPACE           2250U     /* Pause for repeat press */
-#define IR_NEC_TOLERANCE              200U      /* Allow 200us error in timing */
-#define IR_NEC_DATA_BITS              32U       /* 32 bits: address + command */
-#define IR_NEC_HEADER_ENTRIES         2U        /* Header uses 2 slots in buffer */
+#define IR_NEC_HEADER_MARK 9000U  /* Long flash at start (9ms) */
+#define IR_NEC_HEADER_SPACE 4500U /* Pause after start flash (4.5ms) */
+#define IR_NEC_BIT_MARK 562U      /* Short flash for each bit */
+#define IR_NEC_BIT_0_SPACE 562U   /* Short pause means bit 0 */
+#define IR_NEC_BIT_1_SPACE 1687U  /* Long pause means bit 1 */
+#define IR_NEC_STOP_BIT 562U      /* Final short flash */
+#define IR_NEC_REPEAT_SPACE 2250U /* Pause for repeat press */
+#define IR_NEC_TOLERANCE 200U     /* Allow 200us error in timing */
+#define IR_NEC_DATA_BITS 32U      /* 32 bits: address + command */
+#define IR_NEC_HEADER_ENTRIES 2U  /* Header uses 2 slots in buffer */
+/* NEC frame layout, MSB first: address, ~address, command, ~command */
+#define IR_NEC_ADDRESS_SHIFT 24U     /* Address byte position in the 32-bit frame */
+#define IR_NEC_ADDRESS_INV_SHIFT 16U /* Inverted address byte position */
+#define IR_NEC_COMMAND_SHIFT 8U      /* Command byte position */
+#define IR_NEC_BYTE_MASK 0xFFU       /* One frame byte */
 
 /* RC5 remote - Philips style */
-#define IR_RC5_BIT_TIME               1778U     /* Time for one bit (1.778ms) */
-#define IR_RC5_HALF_BIT               889U      /* Half bit time */
-#define IR_RC5_TOLERANCE              300U      /* Allow 300us error */
-#define IR_RC5_DATA_BITS              14U       /* 14 bits total */
-#define IR_RC5_START_BITS             0x03U     /* First two bits are always 1 */
-#define IR_RC5_MAX_ADDRESS            31U       /* Biggest address value (5 bits) */
-#define IR_RC5_MAX_COMMAND            63U       /* Biggest command value (6 bits) */
+#define IR_RC5_BIT_TIME 1778U   /* Time for one bit (1.778ms) */
+#define IR_RC5_HALF_BIT 889U    /* Half bit time */
+#define IR_RC5_TOLERANCE 300U   /* Allow 300us error */
+#define IR_RC5_DATA_BITS 14U    /* 14 bits total */
+#define IR_RC5_START_BITS 0x03U /* First two bits are always 1 */
+#define IR_RC5_MAX_ADDRESS 31U  /* Biggest address value (5 bits) */
+#define IR_RC5_MAX_COMMAND 63U  /* Biggest command value (6 bits) */
+/* RC5 frame layout, MSB first: 2 start bits, toggle, 5 address, 6 command */
+#define IR_RC5_START_SHIFT 12U  /* Start bits position in the 14-bit frame */
+#define IR_RC5_ADDRESS_SHIFT 6U /* Address field position */
 
 /* SIRC remote - Sony style */
-#define IR_SIRC_HEADER_MARK           2400U     /* Start flash (2.4ms) */
-#define IR_SIRC_BIT_MARK              600U      /* Short flash for each bit */
-#define IR_SIRC_BIT_0_SPACE           600U      /* Short pause means bit 0 */
-#define IR_SIRC_BIT_1_SPACE           1200U     /* Long pause means bit 1 */
-#define IR_SIRC_TOLERANCE             200U      /* Allow 200us error */
-#define IR_SIRC_DATA_BITS             12U       /* 12 bits: 7 command + 5 address */
-#define IR_SIRC_HEADER_ENTRIES        1U        /* Header uses 1 slot in buffer */
-#define IR_SIRC_MAX_ADDRESS           31U       /* Biggest address value (5 bits) */
-#define IR_SIRC_MAX_COMMAND           127U      /* Biggest command value (7 bits) */
+#define IR_SIRC_HEADER_MARK 2400U /* Start flash (2.4ms) */
+#define IR_SIRC_BIT_MARK 600U     /* Short flash for each bit */
+#define IR_SIRC_BIT_0_SPACE 600U  /* Short pause means bit 0 */
+#define IR_SIRC_BIT_1_SPACE 1200U /* Long pause means bit 1 */
+#define IR_SIRC_TOLERANCE 200U    /* Allow 200us error */
+#define IR_SIRC_DATA_BITS 12U     /* 12 bits: 7 command + 5 address */
+#define IR_SIRC_HEADER_ENTRIES 1U /* Header uses 1 slot in buffer */
+#define IR_SIRC_MAX_ADDRESS 31U   /* Biggest address value (5 bits) */
+#define IR_SIRC_MAX_COMMAND 127U  /* Biggest command value (7 bits) */
 
 /* Buffer sizes */
-#define IR_RX_BUFFER_SIZE             256U      /* Space to store incoming pulses */
-#define IR_TX_BUFFER_SIZE             128U      /* Space to store outgoing pulses */
-#define IR_MAX_PULSE_COUNT            100U      /* Most pulses in one message */
+#define IR_RX_BUFFER_SIZE 256U  /* Space to store incoming pulses */
+#define IR_TX_BUFFER_SIZE 128U  /* Space to store outgoing pulses */
+#define IR_MAX_PULSE_COUNT 100U /* Most pulses in one message */
 
 /** Which remote type is used */
 typedef enum {
@@ -80,11 +88,11 @@ typedef enum {
 
 /** What the IR driver is doing now */
 typedef enum {
-    IR_STATE_IDLE = 0,      /* Doing nothing, waiting */
-    IR_STATE_RECEIVING,     /* Getting a message */
-    IR_STATE_TRANSMITTING,  /* Sending a message */
-    IR_STATE_PROCESSING,    /* Checking the message */
-    IR_STATE_ERROR          /* Something went wrong */
+    IR_STATE_IDLE = 0,     /* Doing nothing, waiting */
+    IR_STATE_RECEIVING,    /* Getting a message */
+    IR_STATE_TRANSMITTING, /* Sending a message */
+    IR_STATE_PROCESSING,   /* Checking the message */
+    IR_STATE_ERROR         /* Something went wrong */
 } IR_State_t;
 
 /** Events that can happen */
@@ -99,15 +107,15 @@ typedef enum {
 } IR_Event_t;
 
 /* Error codes - what went wrong */
-#define IR_ERROR_NONE                 0x00U /* No error */
-#define IR_ERROR_INIT                 0x01U /* Setup failed */
-#define IR_ERROR_INVALID_PARAM        0x02U /* Bad setting given */
-#define IR_ERROR_TIMEOUT              0x03U /* Took too long */
-#define IR_ERROR_PROTOCOL             0x04U /* Unknown remote pattern */
-#define IR_ERROR_BUFFER_OVERFLOW      0x05U /* Buffer too full */
-#define IR_ERROR_TX_BUSY              0x06U /* Busy sending */
-#define IR_ERROR_RX_BUSY              0x07U /* Busy receiving */
-#define IR_ERROR_TIMER                0x08U /* Timer problem */
+#define IR_ERROR_NONE 0x00U            /* No error */
+#define IR_ERROR_INIT 0x01U            /* Setup failed */
+#define IR_ERROR_INVALID_PARAM 0x02U   /* Bad setting given */
+#define IR_ERROR_TIMEOUT 0x03U         /* Took too long */
+#define IR_ERROR_PROTOCOL 0x04U        /* Unknown remote pattern */
+#define IR_ERROR_BUFFER_OVERFLOW 0x05U /* Buffer too full */
+#define IR_ERROR_TX_BUSY 0x06U         /* Busy sending */
+#define IR_ERROR_RX_BUSY 0x07U         /* Busy receiving */
+#define IR_ERROR_TIMER 0x08U           /* Timer problem */
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -116,8 +124,8 @@ typedef enum {
  * @details Mark is how long the light is on, space is how long it is off.
  */
 typedef struct {
-    uint16_t mark;                  /* Light on time in microseconds */
-    uint16_t space;                 /* Light off time in microseconds */
+    uint16_t mark;  /* Light on time in microseconds */
+    uint16_t space; /* Light off time in microseconds */
 } IR_Pulse_t;
 
 /**
@@ -125,25 +133,25 @@ typedef struct {
  * @details Holds who sent it, which button, and the raw bits.
  */
 typedef struct {
-    IR_Protocol_t protocol;         /* Which remote type (NEC, RC5, etc) */
-    uint32_t address;               /* Who the message is for */
-    uint32_t command;               /* Which button was pressed */
-    uint32_t data;                  /* Raw bits as a number */
-    uint8_t bits;                   /* How many bits in the message */
-    bool repeat;                    /* True if button is held down */
-    bool valid;                     /* True if message looks good */
+    IR_Protocol_t protocol; /* Which remote type (NEC, RC5, etc) */
+    uint32_t address;       /* Who the message is for */
+    uint32_t command;       /* Which button was pressed */
+    uint32_t data;          /* Raw bits as a number */
+    uint8_t bits;           /* How many bits in the message */
+    bool repeat;            /* True if button is held down */
+    bool valid;             /* True if message looks good */
 } IR_Frame_t;
 
 /**
  * @brief Settings for the IR driver
  */
 typedef struct {
-    IR_Protocol_t protocol;         /* Which remote type to use by default */
-    uint32_t carrierFreq;           /* How fast the light blinks (Hz) */
-    uint8_t dutyCycle;              /* How long light stays on (percent) */
-    uint16_t tolerance;             /* How much timing error to allow (us) */
-    bool autoRepeat;                /* Detect held button or not */
-    bool invertSignal;              /* Flip the signal or not */
+    IR_Protocol_t protocol; /* Which remote type to use by default */
+    uint32_t carrierFreq;   /* How fast the light blinks (Hz) */
+    uint8_t dutyCycle;      /* How long light stays on (percent) */
+    uint16_t tolerance;     /* How much timing error to allow (us) */
+    bool autoRepeat;        /* Detect held button or not */
+    bool invertSignal;      /* Flip the signal or not */
 } IR_Config_t;
 
 /**
@@ -152,26 +160,26 @@ typedef struct {
  */
 typedef struct {
     /* Timers and channels */
-    TIM_HandleTypeDef *htimCarrier;     /* Timer that makes the blink */
-    TIM_HandleTypeDef *htimCapture;     /* Timer that measures incoming blinks */
-    uint32_t txChannel;                 /* PWM channel for sending */
-    uint32_t rxChannel;                 /* Capture channel for receiving */
-    uint32_t captureTickFreq;           /* Timer ticks per second */
+    TIM_HandleTypeDef *htimCarrier; /* Timer that makes the blink */
+    TIM_HandleTypeDef *htimCapture; /* Timer that measures incoming blinks */
+    uint32_t txChannel;             /* PWM channel for sending */
+    uint32_t rxChannel;             /* Capture channel for receiving */
+    uint32_t captureTickFreq;       /* Timer ticks per second */
 
     /* Settings */
-    IR_Config_t config;                 /* Current settings */
+    IR_Config_t config; /* Current settings */
 
     /* Status */
-    IR_State_t state;                   /* What the driver is doing now */
-    uint32_t errorCode;                 /* Last error, 0 means no error */
-    bool initialized;                   /* True if setup is done */
+    IR_State_t state;   /* What the driver is doing now */
+    uint32_t errorCode; /* Last error, 0 means no error */
+    bool initialized;   /* True if setup is done */
 
     /* Data we received */
-    uint32_t rxBuffer[IR_RX_BUFFER_SIZE];   /* Raw timings we captured */
-    uint16_t rxIndex;                       /* Where we are in the buffer */
-    uint32_t lastCaptureTime;               /* Time of last blink edge */
-    bool rxHasReference;                    /* True if lastCaptureTime is valid */
-    IR_Frame_t rxFrame;                     /* Last full message we got */
+    uint32_t rxBuffer[IR_RX_BUFFER_SIZE]; /* Raw timings we captured */
+    uint16_t rxIndex;                     /* Where we are in the buffer */
+    uint32_t lastCaptureTime;             /* Time of last blink edge */
+    bool rxHasReference;                  /* True if lastCaptureTime is valid */
+    IR_Frame_t rxFrame;                   /* Last full message we got */
 
     /* Data to send */
     IR_Pulse_t txBuffer[IR_TX_BUFFER_SIZE]; /* Pulses to send */

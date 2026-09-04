@@ -1,89 +1,86 @@
 /**
  * @file ltdc_panel.c
- * @brief Board bring-up of the on-board ILI9341 RGB panel
+ * @brief One-call panel bring-up over an application-supplied framebuffer
  */
 
 #include "ltdc_panel.h"
 #include "ltdc_core.h"
-#include "fmc.h"
+#include "ltdc_layer.h"
+#include "ltdc_pixel.h"
 #include "log.h"
 #include <string.h>
-
-#define LTDC_PANEL_FB_ADDRESS       ((uint32_t)SDRAM_DEVICE_ADDR)    /*!< Layer 0 framebuffer in external SDRAM */
 
 /* Private functions ---------------------------------------------------------*/
 
 /**
- * @brief Program the controller timings for the on-board panel
- * @param hltdc HAL handle to configure
+ * @brief Describe layer 0 as a full-screen layer over the caller's framebuffer
+ * @param panel Panel description
+ * @param layer Destination driver layer configuration
  */
-static void LTDC_PanelSetTimings(LTDC_HandleTypeDef *hltdc)
-{
-    hltdc->Instance = LTDC;
-
-    /* Polarities must match the ILI9341 RGB interface. */
-    hltdc->Init.HSPolarity = LTDC_HSPOLARITY_AL;
-    hltdc->Init.VSPolarity = LTDC_VSPOLARITY_AL;
-    hltdc->Init.DEPolarity = LTDC_DEPOLARITY_AL;
-    hltdc->Init.PCPolarity = LTDC_PCPOLARITY_IPC;
-
-    /* ST BSP timings; registers hold accumulated widths minus one. */
-    hltdc->Init.HorizontalSync = LTDC_HSYNC_WIDTH - 1;
-    hltdc->Init.VerticalSync = LTDC_VSYNC_HEIGHT - 1;
-    hltdc->Init.AccumulatedHBP = LTDC_HSYNC_WIDTH + LTDC_HBP_WIDTH - 1;
-    hltdc->Init.AccumulatedVBP = LTDC_VSYNC_HEIGHT + LTDC_VBP_HEIGHT - 1;
-    hltdc->Init.AccumulatedActiveW = LTDC_HSYNC_WIDTH + LTDC_HBP_WIDTH + LTDC_DISPLAY_WIDTH - 1;
-    hltdc->Init.AccumulatedActiveH = LTDC_VSYNC_HEIGHT + LTDC_VBP_HEIGHT + LTDC_DISPLAY_HEIGHT - 1;
-    hltdc->Init.TotalWidth = LTDC_HSYNC_WIDTH + LTDC_HBP_WIDTH + LTDC_DISPLAY_WIDTH + LTDC_HFP_WIDTH - 1;
-    hltdc->Init.TotalHeigh = LTDC_VSYNC_HEIGHT + LTDC_VBP_HEIGHT + LTDC_DISPLAY_HEIGHT + LTDC_VFP_HEIGHT - 1;
-
-    hltdc->Init.Backcolor.Blue = 0;
-    hltdc->Init.Backcolor.Green = 0;
-    hltdc->Init.Backcolor.Red = 0;
-}
-
-/**
- * @brief Describe layer 0 as a full-screen RGB565 layer over the SDRAM framebuffer
- * @param layerCfg Destination HAL structure
- */
-static void LTDC_PanelSetLayer0(LTDC_LayerCfgTypeDef *layerCfg)
-{
-    layerCfg->WindowX0 = 0;
-    layerCfg->WindowX1 = LTDC_DISPLAY_WIDTH;    /* ST BSP bring-up values, kept as-is */
-    layerCfg->WindowY0 = 0;
-    layerCfg->WindowY1 = LTDC_DISPLAY_HEIGHT;
-    layerCfg->PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
-    layerCfg->Alpha = 255;
-    layerCfg->Alpha0 = 0;
-    layerCfg->BlendingFactor1 = LTDC_BLENDING_FACTOR1_PAxCA;
-    layerCfg->BlendingFactor2 = LTDC_BLENDING_FACTOR2_PAxCA;
-    layerCfg->FBStartAdress = LTDC_PANEL_FB_ADDRESS;
-    layerCfg->ImageWidth = LTDC_DISPLAY_WIDTH;
-    layerCfg->ImageHeight = LTDC_DISPLAY_HEIGHT;
-    layerCfg->Backcolor.Blue = 0;
-    layerCfg->Backcolor.Green = 0;
-    layerCfg->Backcolor.Red = 0;
+static void LTDC_PanelBuildLayer0(const LTDC_PanelConfig_t *panel, LTDC_LayerConfig_t *layer) {
+    layer->framebufferAddress = panel->framebufferAddress;
+    layer->windowX0 = 0;
+    layer->windowY0 = 0;
+    layer->windowX1 = panel->display.width - 1; /* inclusive end coordinate */
+    layer->windowY1 = panel->display.height - 1;
+    layer->imageWidth = panel->display.width;
+    layer->imageHeight = panel->display.height;
+    layer->pixelFormat = panel->pixelFormat;
+    layer->alpha = LTDC_MAX_ALPHA;
+    layer->alpha0 = 0;
+    layer->blendMode = LTDC_BLEND_PIXEL_ALPHA;
+    layer->backgroundColor = LTDC_COLOR_BLACK;
+    layer->enabled = false;
 }
 
 /* Public functions ----------------------------------------------------------*/
 
-HAL_StatusTypeDef LTDC_HW_Init(void)
-{
-    LTDC_HandleTypeDef *hltdc = LTDC_GetHandle();
+LTDC_DisplayConfig_t LTDC_PanelDefaultsILI9341(void) {
+    LTDC_DisplayConfig_t config = {0};
 
-    LTDC_PanelSetTimings(hltdc);
+    config.width = LTDC_ILI9341_WIDTH;
+    config.height = LTDC_ILI9341_HEIGHT;
+    config.hsyncWidth = LTDC_ILI9341_HSYNC_WIDTH;
+    config.hbp = LTDC_ILI9341_HBP_WIDTH;
+    config.hfp = LTDC_ILI9341_HFP_WIDTH;
+    config.vsyncHeight = LTDC_ILI9341_VSYNC_HEIGHT;
+    config.vbp = LTDC_ILI9341_VBP_HEIGHT;
+    config.vfp = LTDC_ILI9341_VFP_HEIGHT;
+    config.backgroundColor = LTDC_COLOR_BLACK;
 
-    if (HAL_LTDC_Init(hltdc) != HAL_OK) {
+    /* Polarities must match the ILI9341 RGB interface. */
+    config.hsyncActiveLow = true;
+    config.vsyncActiveLow = true;
+    config.dataEnableActiveLow = true;
+    config.pixelClockInverted = false;
+
+    return config;
+}
+
+HAL_StatusTypeDef LTDC_PanelInit(LTDC_Driver_t *driver, const LTDC_PanelConfig_t *panel) {
+    if (LTDC_ValidateDriver(driver) != HAL_OK) {
+        return HAL_ERROR;
+    }
+    if (panel == NULL || panel->framebufferAddress == 0U) {
+        log_error("LTDC: Panel config needs a framebuffer");
+        driver->errorCode = LTDC_ERROR_INVALID_PARAM;
+        return HAL_ERROR;
+    }
+
+    if (LTDC_ConfigureDisplay(driver, &panel->display) != HAL_OK) {
         log_error("LTDC: LTDC init failed");
         return HAL_ERROR;
     }
 
-    memset((void *)(uintptr_t)LTDC_PANEL_FB_ADDRESS, 0, LTDC_FB_SIZE_RGB565);
+    /* Whatever the framebuffer held before must not flash on screen. */
+    const uint32_t frameBytes =
+        (uint32_t)panel->display.width * panel->display.height * LTDC_PixelSize(panel->pixelFormat);
+    memset((void *)(uintptr_t)panel->framebufferAddress, 0, frameBytes);
 
-    LTDC_LayerCfgTypeDef layerCfg = {0};
-    LTDC_PanelSetLayer0(&layerCfg);
+    LTDC_LayerConfig_t layer;
+    LTDC_PanelBuildLayer0(panel, &layer);
 
-    if (HAL_LTDC_ConfigLayer(hltdc, &layerCfg, 0) != HAL_OK) {
+    if (LTDC_ConfigureLayer(driver, 0, &layer) != HAL_OK) {
         log_error("LTDC: Layer config error");
         return HAL_ERROR;
     }

@@ -1,11 +1,11 @@
 /**
-  ******************************************************************************
-  * @file    flash.h
-  * @brief   Internal Flash memory driver aggregator header
-  * @details Includes every public Flash module. Existing code can keep
-  *          including "flash.h"; new code may include only what it needs.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    flash.h
+ * @brief   Internal Flash memory driver aggregator header
+ * @details Includes every public Flash module. Existing code can keep
+ *          including "flash.h"; new code may include only what it needs.
+ ******************************************************************************
+ */
 
 #ifndef __FLASH_H__
 #define __FLASH_H__

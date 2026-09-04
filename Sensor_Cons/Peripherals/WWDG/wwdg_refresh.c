@@ -6,8 +6,7 @@
 #include "wwdg_refresh.h"
 #include "wwdg_core.h"
 
-uint32_t WWDG_GetCounter(void)
-{
+uint32_t WWDG_GetCounter(void) {
     const WWDG_HandleTypeDef *handle = WWDG_GetHandle();
 
     if (handle == NULL) {
@@ -17,8 +16,7 @@ uint32_t WWDG_GetCounter(void)
     return (handle->Instance->CR & WWDG_CR_T);
 }
 
-uint32_t WWDG_GetWindow(void)
-{
+uint32_t WWDG_GetWindow(void) {
     const WWDG_HandleTypeDef *handle = WWDG_GetHandle();
 
     if (handle == NULL) {
@@ -28,9 +26,8 @@ uint32_t WWDG_GetWindow(void)
     return (handle->Instance->CFR & WWDG_CFR_W);
 }
 
-bool WWDG_IsInWindow(void)
-{
-    uint32_t counter;
+bool WWDG_IsInWindow(void) {
+    uint32_t counter = 0;
 
     if (!WWDG_IsInitialized()) {
         return false;
@@ -43,8 +40,7 @@ bool WWDG_IsInWindow(void)
     return (counter >= WWDG_COUNTER_MIN) && (counter <= WWDG_GetWindow());
 }
 
-WWDG_StatusTypeDef WWDG_Refresh(void)
-{
+WWDG_StatusTypeDef WWDG_Refresh(void) {
     WWDG_HandleTypeDef *handle = WWDG_GetHandle();
 
     if (handle == NULL) {
@@ -58,8 +54,7 @@ WWDG_StatusTypeDef WWDG_Refresh(void)
     return (HAL_WWDG_Refresh(handle) == HAL_OK) ? WWDG_OK : WWDG_ERROR;
 }
 
-WWDG_StatusTypeDef WWDG_RefreshWithCounter(uint32_t counter)
-{
+WWDG_StatusTypeDef WWDG_RefreshWithCounter(uint32_t counter) {
     WWDG_HandleTypeDef *handle = WWDG_GetHandle();
 
     if (counter < WWDG_COUNTER_MIN || counter > WWDG_COUNTER_MAX) {

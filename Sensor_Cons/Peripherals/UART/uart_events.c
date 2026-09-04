@@ -13,32 +13,32 @@
 #include "uart_dma.h"
 #include "log.h"
 
-/* Callbacks receive a HAL handle, not our handle. Resolve the owning link and
- * ignore events raised by any other UART in the system. */
-static UART_Handle_t *OwnerOf(const UART_HandleTypeDef *huart)
-{
-    UART_Handle_t *handle = UART_GetActiveHandle();
+/* Callbacks receive a HAL handle, not our handle. Resolve the owning link by
+ * instance and ignore events raised by a UART this driver does not own. */
+static UART_Handle_t *OwnerOf(const UART_HandleTypeDef *huart) {
+    UART_Handle_t *handle = UART_FromInstance(huart->Instance);
 
     return (handle != NULL && handle->isInitialized && handle->huart == huart) ? handle : NULL;
 }
 
 /* Reception is one-shot, so every completed transfer must re-arm it; blocking
  * mode never receives asynchronously, so it has nothing to re-arm. */
-static void RestartReceive(UART_Handle_t *handle)
-{
+static void RestartReceive(UART_Handle_t *handle) {
     switch (handle->config.mode) {
         case UART_MODE_INTERRUPT:
             if (!UART_Interrupt_Rearm(handle)) {
                 log_error("UART: could not re-arm reception");
             }
             break;
-        case UART_MODE_DMA:       UART_DMA_Rearm(handle); break;
-        default:                  break;
+        case UART_MODE_DMA:
+            UART_DMA_Rearm(handle);
+            break;
+        default:
+            break;
     }
 }
 
-static void CompleteReception(UART_Handle_t *handle, uint16_t size)
-{
+static void CompleteReception(UART_Handle_t *handle, uint16_t size) {
     if (size > 0) {
         uint32_t stored = RingBuffer_PutBytes(&handle->rxRing, handle->rxBuffer, size);
         if (stored < size) {
@@ -53,8 +53,7 @@ static void CompleteReception(UART_Handle_t *handle, uint16_t size)
 /**
  * @brief Idle line detected: a partial buffer has arrived
  */
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     UART_Handle_t *handle = OwnerOf(huart);
 
     if (handle == NULL || Size == 0 || handle->config.mode == UART_MODE_BLOCKING) {
@@ -67,8 +66,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 /**
  * @brief Transmission finished
  */
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
     UART_Handle_t *handle = OwnerOf(huart);
 
     if (handle == NULL) {
@@ -81,8 +79,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 /**
  * @brief Requested number of bytes received
  */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     UART_Handle_t *handle = OwnerOf(huart);
 
     if (handle == NULL || handle->config.mode == UART_MODE_BLOCKING) {
@@ -96,8 +93,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 /**
  * @brief Line error: clear the cause, then get reception running again
  */
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
     UART_Handle_t *handle = OwnerOf(huart);
 
     if (handle == NULL) {

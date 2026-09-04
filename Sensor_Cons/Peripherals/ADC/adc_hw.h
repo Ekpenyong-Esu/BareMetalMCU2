@@ -19,14 +19,14 @@ extern "C" {
  * @param   instance ADC1, ADC2 or ADC3
  * @retval  HAL_OK on success, HAL_ERROR for an unknown instance
  */
-HAL_StatusTypeDef ADC_EnableInstanceClock(const ADC_TypeDef* instance);
+HAL_StatusTypeDef ADC_EnableInstanceClock(const ADC_TypeDef *instance);
 
 /**
  * @brief   Configure and link the DMA stream that serves an ADC instance
  * @param   hadc Handle whose instance and DMA sub-handle are used
  * @retval  HAL_StatusTypeDef Status of the operation
  */
-HAL_StatusTypeDef ADC_ConfigureDma(ADC_HandleStruct* hadc);
+HAL_StatusTypeDef ADC_ConfigureDma(ADC_HandleStruct *hadc);
 
 /**
  * @brief   Clamp a resolution to a supported HAL constant
@@ -47,7 +47,7 @@ uint32_t ADC_ValidateSamplingTime(uint32_t sampling_time);
  * @param   instance ADC1, ADC2 or ADC3
  * @retval  uint32_t Index, or ADC_INSTANCE_COUNT when unknown
  */
-uint32_t ADC_InstanceIndex(const ADC_TypeDef* instance);
+uint32_t ADC_InstanceIndex(const ADC_TypeDef *instance);
 
 #ifdef __cplusplus
 }

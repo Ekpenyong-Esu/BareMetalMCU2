@@ -1,16 +1,15 @@
 /**
-  ******************************************************************************
-  * @file    mic_analysis.c
-  * @brief   Frequency-domain analysis of the captured PCM buffer
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mic_analysis.c
+ * @brief   Frequency-domain analysis of the captured PCM buffer
+ ******************************************************************************
+ */
 
 #include "mic_analysis.h"
 #include <math.h>
 
 /* Naive O(n^2) DFT magnitude; adequate for MIC_FFT_SIZE and avoids a CMSIS-DSP dependency */
-static void MIC_PerformDFT(const int16_t *input, float *magnitude, uint32_t length)
-{
+static void MIC_PerformDFT(const int16_t *input, float *magnitude, uint32_t length) {
     for (uint32_t i = 0; i < length / 2; i++) {
         float real = 0.0f;
         float imag = 0.0f;
@@ -25,8 +24,7 @@ static void MIC_PerformDFT(const int16_t *input, float *magnitude, uint32_t leng
     }
 }
 
-static float MIC_SpectralCentroid(const float *spectrum, uint32_t length, uint32_t sample_rate)
-{
+static float MIC_SpectralCentroid(const float *spectrum, uint32_t length, uint32_t sample_rate) {
     float weighted_sum = 0.0f;
     float magnitude_sum = 0.0f;
 
@@ -39,8 +37,7 @@ static float MIC_SpectralCentroid(const float *spectrum, uint32_t length, uint32
     return (magnitude_sum > 0.0f) ? (weighted_sum / magnitude_sum) : 0.0f;
 }
 
-static float MIC_ZeroCrossingRate(const int16_t *buffer, uint32_t length)
-{
+static float MIC_ZeroCrossingRate(const int16_t *buffer, uint32_t length) {
     uint32_t crossings = 0;
 
     for (uint32_t i = 1; i < length; i++) {
@@ -52,8 +49,8 @@ static float MIC_ZeroCrossingRate(const int16_t *buffer, uint32_t length)
     return (float)crossings / (float)length;
 }
 
-MIC_StatusTypeDef MIC_PerformAudioAnalysis(MIC_HandleTypeDef *hmic, MIC_AudioAnalysisTypeDef *analysis)
-{
+MIC_StatusTypeDef MIC_PerformAudioAnalysis(MIC_HandleTypeDef *hmic,
+                                           MIC_AudioAnalysisTypeDef *analysis) {
     if (hmic == NULL || analysis == NULL) {
         return MIC_INVALID_PARAM;
     }
@@ -64,8 +61,7 @@ MIC_StatusTypeDef MIC_PerformAudioAnalysis(MIC_HandleTypeDef *hmic, MIC_AudioAna
 
     MIC_PerformDFT(hmic->PCMBuffer, analysis->MagnitudeSpectrum, MIC_FFT_SIZE);
 
-    analysis->Centroid = MIC_SpectralCentroid(analysis->MagnitudeSpectrum,
-                                              MIC_SPECTRAL_BINS,
+    analysis->Centroid = MIC_SpectralCentroid(analysis->MagnitudeSpectrum, MIC_SPECTRAL_BINS,
                                               (uint32_t)hmic->Config.SampleRate);
 
     analysis->ZeroCrossingRate = MIC_ZeroCrossingRate(hmic->PCMBuffer, MIC_PCM_SAMPLES);

@@ -1,10 +1,10 @@
 /**
-  ******************************************************************************
-  * @file    ultrasonic_gpio.h
-  * @brief   Trigger and echo pin handling (internal)
-  * @details Not part of the public ultrasonic.h aggregator.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ultrasonic_gpio.h
+ * @brief   Trigger and echo pin handling (internal)
+ * @details Not part of the public ultrasonic.h aggregator.
+ ******************************************************************************
+ */
 
 #ifndef ULTRASONIC_GPIO_H
 #define ULTRASONIC_GPIO_H

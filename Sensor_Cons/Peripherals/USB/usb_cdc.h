@@ -10,35 +10,36 @@
 
 /**
  * @brief Queue a CDC transmit
- * @note Asynchronous: the data is staged internally and
+ * @note Asynchronous: the data is staged in the handle and
  *       USB_TransmitCompleteCallback fires when the buffer is free again.
  */
-USB_StatusTypeDef USB_Host_CDC_Transmit(const uint8_t *data, uint16_t length);
+USB_StatusTypeDef USB_Host_CDC_Transmit(USB_Handle_t *husb, const uint8_t *data, uint16_t length);
 
 /**
  * @brief Arm a CDC receive into a caller-owned buffer
  * @note The buffer must stay valid until USB_DataReceivedCallback fires.
  */
-USB_StatusTypeDef USB_Host_CDC_Receive(uint8_t *data, uint16_t length);
+USB_StatusTypeDef USB_Host_CDC_Receive(USB_Handle_t *husb, uint8_t *data, uint16_t length);
 
 /**
  * @brief Whether a transmit is still in flight
  */
-bool USB_Host_CDC_IsTransmitBusy(void);
+bool USB_Host_CDC_IsTransmitBusy(const USB_Handle_t *husb);
 
 /**
  * @brief Apply a line coding to the attached device
  */
-USB_StatusTypeDef USB_Host_CDC_SetLineCoding(const CDC_LineCodingTypeDef *linecoding);
+USB_StatusTypeDef USB_Host_CDC_SetLineCoding(USB_Handle_t *husb,
+                                             const CDC_LineCodingTypeDef *linecoding);
 
 /**
  * @brief Read back the device's line coding
  */
-USB_StatusTypeDef USB_Host_CDC_GetLineCoding(CDC_LineCodingTypeDef *linecoding);
+USB_StatusTypeDef USB_Host_CDC_GetLineCoding(USB_Handle_t *husb, CDC_LineCodingTypeDef *linecoding);
 
 /**
  * @brief Bytes delivered by the most recent receive
  */
-uint16_t USB_Host_CDC_GetLastReceivedDataSize(void);
+uint16_t USB_Host_CDC_GetLastReceivedDataSize(const USB_Handle_t *husb);
 
 #endif /* USB_CDC_H */

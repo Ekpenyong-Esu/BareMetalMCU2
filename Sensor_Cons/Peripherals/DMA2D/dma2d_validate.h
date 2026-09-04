@@ -43,8 +43,7 @@ HAL_StatusTypeDef DMA2D_ValidateLayer(uint32_t layer);
  * @param height Transfer height in pixels
  * @return HAL_OK when the transfer can be started, HAL_ERROR otherwise
  */
-HAL_StatusTypeDef DMA2D_ValidateTransfer(uint32_t mode, const uint32_t *pSrc,
-                                         const uint32_t *pDst,
+HAL_StatusTypeDef DMA2D_ValidateTransfer(uint32_t mode, const uint32_t *pSrc, const uint32_t *pDst,
                                          uint32_t width, uint32_t height);
 
 #endif /* DMA2D_VALIDATE_H */

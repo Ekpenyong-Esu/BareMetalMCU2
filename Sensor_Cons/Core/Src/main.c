@@ -15,8 +15,7 @@
  * @brief  Program entry point: bring up the system, then run one application.
  * @note   Swap the call below for another *App_Run() to flash a different one.
  */
-int main(void)
-{
+int main(void) {
     SYS_Init(); /* HAL init, system clock, SysTick */
 
     ServoSweepApp_Run();
@@ -34,8 +33,7 @@ int main(void)
  * @param  line: assert_param error line source number
  * @retval None
  */
-void assert_failed(uint8_t *file, uint32_t line)
-{
+void assert_failed(uint8_t *file, uint32_t line) {
     /* USER CODE BEGIN 6 */
     printf("Wrong parameters value: file %s on line %lu\r\n", file, (unsigned long)line);
     /* USER CODE END 6 */

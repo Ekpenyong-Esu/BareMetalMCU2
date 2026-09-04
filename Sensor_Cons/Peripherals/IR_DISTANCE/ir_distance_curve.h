@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ir_distance_curve.h
-  * @brief   Calibration curves and piecewise linear interpolation
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ir_distance_curve.h
+ * @brief   Calibration curves and piecewise linear interpolation
+ ******************************************************************************
+ */
 
 #ifndef IR_DISTANCE_CURVE_H
 #define IR_DISTANCE_CURVE_H
@@ -18,7 +18,8 @@ extern "C" {
  * @brief   Get the factory curve for a sensor type.
  * @retval  NULL for IR_DISTANCE_CUSTOM and for unknown types.
  */
-const IR_DISTANCE_CustomCurve_t *IR_DISTANCE_CURVE_GetPredefined(IR_DISTANCE_SensorType_t sensorType);
+const IR_DISTANCE_CustomCurve_t *
+IR_DISTANCE_CURVE_GetPredefined(IR_DISTANCE_SensorType_t sensorType);
 
 /**
  * @brief   Check that a curve is usable for interpolation.
@@ -31,16 +32,14 @@ IR_DISTANCE_StatusTypeDef IR_DISTANCE_CURVE_Validate(const IR_DISTANCE_CustomCur
  * @retval  IR_DISTANCE_OUT_OF_RANGE when the reading falls outside the curve.
  */
 IR_DISTANCE_StatusTypeDef IR_DISTANCE_CURVE_AdcToDistance(const IR_DISTANCE_CustomCurve_t *curve,
-                                                          uint16_t adcValue,
-                                                          uint16_t *distance);
+                                                          uint16_t adcValue, uint16_t *distance);
 
 /**
  * @brief   Interpolate the expected ADC reading for a distance.
  * @retval  IR_DISTANCE_OUT_OF_RANGE when the distance falls outside the curve.
  */
 IR_DISTANCE_StatusTypeDef IR_DISTANCE_CURVE_DistanceToAdc(const IR_DISTANCE_CustomCurve_t *curve,
-                                                          uint16_t distance,
-                                                          uint16_t *adcValue);
+                                                          uint16_t distance, uint16_t *adcValue);
 
 /**
  * @brief   Insert a point, keeping the curve sorted by distance.
@@ -48,8 +47,7 @@ IR_DISTANCE_StatusTypeDef IR_DISTANCE_CURVE_DistanceToAdc(const IR_DISTANCE_Cust
  *          duplicated, so repeated calibration at one spot cannot fill the curve.
  */
 IR_DISTANCE_StatusTypeDef IR_DISTANCE_CURVE_Insert(IR_DISTANCE_CustomCurve_t *curve,
-                                                   uint16_t distance,
-                                                   uint16_t adcValue);
+                                                   uint16_t distance, uint16_t adcValue);
 
 #ifdef __cplusplus
 }

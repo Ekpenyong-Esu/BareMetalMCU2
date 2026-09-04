@@ -1,16 +1,16 @@
 /**
-  ******************************************************************************
-  * @file    gpio.h
-  * @brief   Simple GPIO driver for STM32F4
-  * @details GPIO controls the pins on the chip. Each pin can be an input
-  *          (reads high or low) or an output (sets high or low). This file
-  *          is the main place to set up pins, read them, write them, and
-  *          turn on pin interrupts.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    gpio.h
+ * @brief   Simple GPIO driver for STM32F4
+ * @details GPIO controls the pins on the chip. Each pin can be an input
+ *          (reads high or low) or an output (sets high or low). This file
+ *          is the main place to set up pins, read them, write them, and
+ *          turn on pin interrupts.
+ ******************************************************************************
+ */
 
-#ifndef __GPIO_H__
-#define __GPIO_H__
+#ifndef GPIO_H
+#define GPIO_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,7 +25,9 @@ extern "C" {
 
 /**
  * @brief  Turn on the clock for a GPIO port so its pins can be used
- * @param  GPIOx: Port to enable (GPIOA to GPIOI)
+ * @param  GPIOx: Port to enable (GPIOA to GPIOK)
+ * @note   GPIOJ and GPIOK are not bonded out on the LQFP144 package used by
+ *         the STM32F429I-DISC1.
  * @retval HAL_OK if ok, HAL_ERROR if port is not valid
  */
 HAL_StatusTypeDef GPIO_Driver_ClockEnable(GPIO_TypeDef *GPIOx);
@@ -104,7 +106,8 @@ void GPIO_Driver_WritePort(GPIO_TypeDef *GPIOx, uint16_t PortValue);
  *         So the priority you set affects all pins in that group.
  * @retval HAL_OK if ok, HAL_ERROR if pin is not valid
  */
-HAL_StatusTypeDef GPIO_Driver_EnableIRQ(uint16_t GPIO_Pin, uint32_t PreemptPriority, uint32_t SubPriority);
+HAL_StatusTypeDef GPIO_Driver_EnableIRQ(uint16_t GPIO_Pin, uint32_t PreemptPriority,
+                                        uint32_t SubPriority);
 
 /**
  * @brief  Turn off the interrupt for a pin
@@ -118,4 +121,4 @@ HAL_StatusTypeDef GPIO_Driver_DisableIRQ(uint16_t GPIO_Pin);
 }
 #endif
 
-#endif /* __GPIO_H__ */
+#endif /* GPIO_H */

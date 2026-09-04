@@ -10,37 +10,43 @@
 /* Differential-mode control bytes: S=1, MODE=0 (12-bit), SER/DFR=0, PD=00 so the
    reference and drivers power down between conversions and PENIRQ stays alive.
    Channel select A2:A0 per the ADS7846/XPT2046 conversion table. */
-#define XPT2046_CMD_READ_X            0xD0U   /**< A2:A0 = 101, X position */
-#define XPT2046_CMD_READ_Y            0x90U   /**< A2:A0 = 001, Y position */
-#define XPT2046_CMD_READ_Z1           0xB0U   /**< A2:A0 = 011, Z1 */
-#define XPT2046_CMD_READ_Z2           0xC0U   /**< A2:A0 = 100, Z2 */
+#define XPT2046_CMD_READ_X 0xD0U  /**< A2:A0 = 101, X position */
+#define XPT2046_CMD_READ_Y 0x90U  /**< A2:A0 = 001, Y position */
+#define XPT2046_CMD_READ_Z1 0xB0U /**< A2:A0 = 011, Z1 */
+#define XPT2046_CMD_READ_Z2 0xC0U /**< A2:A0 = 100, Z2 */
 
-#define XPT2046_CS_SETUP_US           10U     /**< Chip select setup time */
-#define XPT2046_FRAME_BYTES           3U      /**< Command byte plus two result bytes */
-#define XPT2046_CHANNEL_COUNT         4U
-#define XPT2046_SEQUENCE_BYTES        (XPT2046_FRAME_BYTES * XPT2046_CHANNEL_COUNT)
+#define XPT2046_CS_SETUP_US 10U /**< Chip select setup time */
+#define XPT2046_FRAME_BYTES 3U  /**< Command byte plus two result bytes */
+#define XPT2046_CHANNEL_COUNT 4U
+#define XPT2046_SEQUENCE_BYTES (XPT2046_FRAME_BYTES * XPT2046_CHANNEL_COUNT)
 
-#define XPT2046_CYCLES_PER_LOOP       4U      /**< Approximate cost of one delay iteration */
-#define XPT2046_HZ_PER_MHZ            1000000U
+#define XPT2046_CYCLES_PER_LOOP 4U /**< Approximate cost of one delay iteration */
+#define XPT2046_HZ_PER_MHZ 1000000U
 
-/* This controller's slot on the shared bus. */
-static SPI_Device_t s_device;
+/* Result frame: byte 1 = busy bit then D11..D5, byte 2 = D4..D0 then 3 zeros */
+#define XPT2046_RESULT_HIGH_MASK 0x7FU /**< Drops the busy bit from byte 1 */
+#define XPT2046_RESULT_HIGH_SHIFT 5U
+#define XPT2046_RESULT_LOW_SHIFT 3U
 
-void XPT2046_IO_DelayUs(uint32_t microseconds)
-{
-    volatile uint32_t count = (microseconds * (SystemCoreClock / XPT2046_HZ_PER_MHZ)) /
-                              XPT2046_CYCLES_PER_LOOP;
+void XPT2046_IO_DelayUs(uint32_t microseconds) {
+    volatile uint32_t count =
+        (microseconds * (SystemCoreClock / XPT2046_HZ_PER_MHZ)) / XPT2046_CYCLES_PER_LOOP;
 
     while (count-- > 0U) {
         __NOP();
     }
 }
 
-XPT2046_StatusTypeDef XPT2046_IO_ConfigurePins(const XPT2046_Config_t *config)
-{
+XPT2046_StatusTypeDef XPT2046_IO_ConfigurePins(XPT2046_Handle_t *hxpt) {
     GPIO_InitTypeDef init = {0};
+    const XPT2046_Config_t *config = NULL;
 
-    if (config == NULL || config->cs_port == NULL || config->irq_port == NULL) {
+    if (hxpt == NULL) {
+        return XPT2046_INVALID_PARAM;
+    }
+
+    config = &hxpt->config;
+    if (config->bus == NULL || config->cs_port == NULL || config->irq_port == NULL) {
         return XPT2046_INVALID_PARAM;
     }
 
@@ -58,15 +64,14 @@ XPT2046_StatusTypeDef XPT2046_IO_ConfigurePins(const XPT2046_Config_t *config)
     GPIO_Driver_Pin_Init(config->irq_port, &init);
 
     const SPI_ConfigTypeDef spiConfig = SPI_ConfigDefault();
-    if (SPI_DeviceInit(&s_device, &spiConfig) != SPI_OK) {
+    if (SPI_DeviceInit(&hxpt->device, config->bus, &spiConfig) != SPI_OK) {
         return XPT2046_ERROR;
     }
 
     return XPT2046_OK;
 }
 
-bool XPT2046_IO_PenDown(const XPT2046_Config_t *config)
-{
+bool XPT2046_IO_PenDown(const XPT2046_Config_t *config) {
     if (config == NULL || config->irq_port == NULL) {
         return false;
     }
@@ -74,25 +79,27 @@ bool XPT2046_IO_PenDown(const XPT2046_Config_t *config)
     return (HAL_GPIO_ReadPin(config->irq_port, config->irq_pin) == GPIO_PIN_RESET);
 }
 
-static uint16_t XPT2046_IO_Decode(const uint8_t *frame)
-{
+static uint16_t XPT2046_IO_Decode(const uint8_t *frame) {
     /* The converter emits a busy bit, then D11..D0, then three trailing zeros. */
-    return (uint16_t)(((uint16_t)(frame[1] & 0x7FU) << 5) | (uint16_t)(frame[2] >> 3));
+    return (
+        uint16_t)(((uint16_t)(frame[1] & XPT2046_RESULT_HIGH_MASK) << XPT2046_RESULT_HIGH_SHIFT) |
+                  (uint16_t)(frame[2] >> XPT2046_RESULT_LOW_SHIFT));
 }
 
-XPT2046_StatusTypeDef XPT2046_IO_ReadSample(const XPT2046_Config_t *config,
-                                            XPT2046_RawSample_t *sample)
-{
-    uint8_t tx[XPT2046_SEQUENCE_BYTES] = {
-        XPT2046_CMD_READ_X,  0x00U, 0x00U,
-        XPT2046_CMD_READ_Y,  0x00U, 0x00U,
-        XPT2046_CMD_READ_Z1, 0x00U, 0x00U,
-        XPT2046_CMD_READ_Z2, 0x00U, 0x00U
-    };
-    uint8_t rx[XPT2046_SEQUENCE_BYTES] = {0};
-    SPI_StatusTypeDef spiStatus;
+XPT2046_StatusTypeDef XPT2046_IO_ReadSample(XPT2046_Handle_t *hxpt, XPT2046_RawSample_t *sample) {
+    const XPT2046_Config_t *config = NULL;
+    uint8_t txFrame[XPT2046_SEQUENCE_BYTES] = {
+        XPT2046_CMD_READ_X,  0x00U, 0x00U, XPT2046_CMD_READ_Y,  0x00U, 0x00U,
+        XPT2046_CMD_READ_Z1, 0x00U, 0x00U, XPT2046_CMD_READ_Z2, 0x00U, 0x00U};
+    uint8_t rxFrame[XPT2046_SEQUENCE_BYTES] = {0};
+    SPI_StatusTypeDef spiStatus = SPI_OK;
 
-    if (config == NULL || sample == NULL || config->cs_port == NULL) {
+    if (hxpt == NULL || sample == NULL) {
+        return XPT2046_INVALID_PARAM;
+    }
+
+    config = &hxpt->config;
+    if (config->cs_port == NULL) {
         return XPT2046_INVALID_PARAM;
     }
 
@@ -101,7 +108,8 @@ XPT2046_StatusTypeDef XPT2046_IO_ReadSample(const XPT2046_Config_t *config,
     HAL_GPIO_WritePin(config->cs_port, config->cs_pin, GPIO_PIN_RESET);
     XPT2046_IO_DelayUs(XPT2046_CS_SETUP_US);
 
-    spiStatus = SPI_TransmitReceive(&s_device, tx, rx, XPT2046_SEQUENCE_BYTES, SPI_TIMEOUT_SHORT);
+    spiStatus = SPI_TransmitReceive(&hxpt->device, txFrame, rxFrame, XPT2046_SEQUENCE_BYTES,
+                                    SPI_TIMEOUT_SHORT);
 
     HAL_GPIO_WritePin(config->cs_port, config->cs_pin, GPIO_PIN_SET);
 
@@ -109,10 +117,10 @@ XPT2046_StatusTypeDef XPT2046_IO_ReadSample(const XPT2046_Config_t *config,
         return (spiStatus == SPI_TIMEOUT) ? XPT2046_TIMEOUT : XPT2046_ERROR;
     }
 
-    sample->x = XPT2046_IO_Decode(&rx[0]);
-    sample->y = XPT2046_IO_Decode(&rx[XPT2046_FRAME_BYTES]);
-    sample->z1 = XPT2046_IO_Decode(&rx[XPT2046_FRAME_BYTES * 2U]);
-    sample->z2 = XPT2046_IO_Decode(&rx[XPT2046_FRAME_BYTES * 3U]);
+    sample->x = XPT2046_IO_Decode(&rxFrame[0]);
+    sample->y = XPT2046_IO_Decode(&rxFrame[XPT2046_FRAME_BYTES]);
+    sample->z1 = XPT2046_IO_Decode(&rxFrame[XPT2046_FRAME_BYTES * 2U]);
+    sample->z2 = XPT2046_IO_Decode(&rxFrame[XPT2046_FRAME_BYTES * 3U]);
 
     return XPT2046_OK;
 }

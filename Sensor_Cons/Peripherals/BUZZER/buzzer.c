@@ -1,13 +1,20 @@
 /**
-  ******************************************************************************
-  * @file    buzzer.c
-  * @brief   Buzzer driver — active (GPIO) and passive (PWM) buzzers
-  * @details Active buzzers beep when powered; passive buzzers need a PWM
-  *          signal to make different tones. Both start silent after init.
-  */
+ ******************************************************************************
+ * @file    buzzer.c
+ * @brief   Buzzer driver — active (GPIO) and passive (PWM) buzzers
+ * @details Active buzzers beep when powered; passive buzzers need a PWM
+ *          signal to make different tones. Both start silent after init.
+ */
 
 #include "buzzer.h"
 #include "gpio.h"
+
+/** Duty cycle is expressed in percent, 0..100. */
+#define BUZZER_DUTY_PERCENT_MAX 100U
+/** Number of counts a 16-bit timer covers (ARR/PSC range is 0..65535). */
+#define BUZZER_TIMER_16BIT_COUNTS 65536U
+/** Largest value the 16-bit PSC/ARR registers can hold. */
+#define BUZZER_TIMER_16BIT_MAX 65535U
 
 /**
  * @brief Initialize an active buzzer on a GPIO output pin.
@@ -22,8 +29,7 @@
  * @param pin     GPIO pin (e.g., GPIO_PIN_6).
  * @return HAL_OK on success, HAL_ERROR if buzzer/port is NULL or GPIO init fails.
  */
-HAL_StatusTypeDef Buzzer_InitActive(Buzzer_t *buzzer, GPIO_TypeDef *port, uint16_t pin)
-{
+HAL_StatusTypeDef Buzzer_InitActive(Buzzer_t *buzzer, GPIO_TypeDef *port, uint16_t pin) {
     if (buzzer == NULL || port == NULL) {
         return HAL_ERROR;
     }
@@ -67,9 +73,8 @@ HAL_StatusTypeDef Buzzer_InitActive(Buzzer_t *buzzer, GPIO_TypeDef *port, uint16
  * @param timerClockHz     Timer input clock in Hz (e.g., 84000000 for TIM9 on F4).
  * @return HAL_OK on success, HAL_ERROR if arguments invalid or PWM start fails.
  */
-HAL_StatusTypeDef Buzzer_InitPassive(Buzzer_t *buzzer, TIM_HandleTypeDef *htim,
-                                     uint32_t channel, uint32_t timerClockHz)
-{
+HAL_StatusTypeDef Buzzer_InitPassive(Buzzer_t *buzzer, TIM_HandleTypeDef *htim, uint32_t channel,
+                                     uint32_t timerClockHz) {
     if (buzzer == NULL || htim == NULL || timerClockHz == 0) {
         return HAL_ERROR;
     }
@@ -97,14 +102,14 @@ HAL_StatusTypeDef Buzzer_InitPassive(Buzzer_t *buzzer, TIM_HandleTypeDef *htim,
  *
  * @param buzzer  Buzzer instance (NULL is safely ignored).
  */
-void Buzzer_On(Buzzer_t *buzzer)
-{
+void Buzzer_On(Buzzer_t *buzzer) {
     if (buzzer == NULL) {
         return;
     }
     if (buzzer->mode == BUZZER_MODE_ACTIVE_GPIO) {
         GPIO_Driver_WritePin(buzzer->port, buzzer->pin, GPIO_PIN_SET);
-    } else if (buzzer->mode == BUZZER_MODE_PASSIVE_PWM) {
+    }
+    else if (buzzer->mode == BUZZER_MODE_PASSIVE_PWM) {
         /* Drive a square wave at whatever frequency Buzzer_Tone last set. */
         uint32_t period = __HAL_TIM_GET_AUTORELOAD(buzzer->htim);
         __HAL_TIM_SET_COMPARE(buzzer->htim, buzzer->channel, (period + 1U) / 2U);
@@ -119,14 +124,14 @@ void Buzzer_On(Buzzer_t *buzzer)
  *
  * @param buzzer  Buzzer instance (NULL is safely ignored).
  */
-void Buzzer_Off(Buzzer_t *buzzer)
-{
+void Buzzer_Off(Buzzer_t *buzzer) {
     if (buzzer == NULL) {
         return;
     }
     if (buzzer->mode == BUZZER_MODE_ACTIVE_GPIO) {
         GPIO_Driver_WritePin(buzzer->port, buzzer->pin, GPIO_PIN_RESET);
-    } else if (buzzer->mode == BUZZER_MODE_PASSIVE_PWM) {
+    }
+    else if (buzzer->mode == BUZZER_MODE_PASSIVE_PWM) {
         __HAL_TIM_SET_COMPARE(buzzer->htim, buzzer->channel, 0);
     }
 }
@@ -157,12 +162,11 @@ void Buzzer_Off(Buzzer_t *buzzer)
  *         - frequencyHz == 0 or dutyPercent > 100
  *         - frequency too high (ticks < 2) or too low (prescaler > 65535)
  */
-HAL_StatusTypeDef Buzzer_Tone(Buzzer_t *buzzer, uint32_t frequencyHz, uint8_t dutyPercent)
-{
+HAL_StatusTypeDef Buzzer_Tone(Buzzer_t *buzzer, uint32_t frequencyHz, uint8_t dutyPercent) {
     if (buzzer == NULL || buzzer->mode != BUZZER_MODE_PASSIVE_PWM) {
         return HAL_ERROR;
     }
-    if (frequencyHz == 0 || dutyPercent > 100) {
+    if (frequencyHz == 0 || dutyPercent > BUZZER_DUTY_PERCENT_MAX) {
         return HAL_ERROR;
     }
 
@@ -171,18 +175,18 @@ HAL_StatusTypeDef Buzzer_Tone(Buzzer_t *buzzer, uint32_t frequencyHz, uint8_t du
     /* Ticks of the timer input clock in one period, before prescaling. */
     uint32_t ticks = timerClk / frequencyHz;
     if (ticks < 2U) {
-        return HAL_ERROR;   /* frequency too high to resolve a duty cycle */
+        return HAL_ERROR; /* frequency too high to resolve a duty cycle */
     }
 
     /* ARR is 16 bit on every F4 timer, so audio frequencies need a prescaler:
        at 84 MHz a 1 kHz tone is 84000 ticks, which would wrap ARR silently. */
-    uint32_t prescaler = (ticks - 1U) / 65536U;
-    if (prescaler > 65535U) {
-        return HAL_ERROR;   /* frequency too low for this timer clock */
+    uint32_t prescaler = (ticks - 1U) / BUZZER_TIMER_16BIT_COUNTS;
+    if (prescaler > BUZZER_TIMER_16BIT_MAX) {
+        return HAL_ERROR; /* frequency too low for this timer clock */
     }
 
     uint32_t period = (ticks / (prescaler + 1U)) - 1U;
-    uint32_t pulse = (period + 1U) * dutyPercent / 100U;
+    uint32_t pulse = (period + 1U) * dutyPercent / BUZZER_DUTY_PERCENT_MAX;
 
     __HAL_TIM_SET_PRESCALER(buzzer->htim, prescaler);
     __HAL_TIM_SET_AUTORELOAD(buzzer->htim, period);
@@ -203,8 +207,7 @@ HAL_StatusTypeDef Buzzer_Tone(Buzzer_t *buzzer, uint32_t frequencyHz, uint8_t du
  * @param buzzer  Buzzer instance (NULL returns false).
  * @return true if on, false if off or buzzer is NULL.
  */
-bool Buzzer_IsOn(const Buzzer_t *buzzer)
-{
+bool Buzzer_IsOn(const Buzzer_t *buzzer) {
     if (buzzer == NULL) {
         return false;
     }

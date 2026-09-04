@@ -17,7 +17,7 @@
  * @brief Access the single DMA2D device record
  * @return DMA2D_Device* The device record; never NULL
  */
-DMA2D_Device* DMA2D_GetDevice(void);
+DMA2D_Device *DMA2D_GetDevice(void);
 
 /**
  * @brief Initialize the DMA2D peripheral with the specified configuration

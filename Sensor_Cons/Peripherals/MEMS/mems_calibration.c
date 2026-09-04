@@ -1,19 +1,18 @@
 /**
-  ******************************************************************************
-  * @file    mems_calibration.c
-  * @brief   Gyroscope zero-rate offset calibration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mems_calibration.c
+ * @brief   Gyroscope zero-rate offset calibration
+ ******************************************************************************
+ */
 
 #include "mems_calibration.h"
 #include "mems_gyro.h"
 #include <string.h>
 
-#define MEMS_CALIBRATION_SAMPLES_DEFAULT    100U
-#define MEMS_CALIBRATION_SAMPLE_DELAY_MS    10U
+#define MEMS_CALIBRATION_SAMPLES_DEFAULT 100U
+#define MEMS_CALIBRATION_SAMPLE_DELAY_MS 10U
 
-MEMS_StatusTypeDef MEMS_CalibrateGyroscope(MEMS_HandleTypeDef *hmems, uint16_t samples)
-{
+MEMS_StatusTypeDef MEMS_CalibrateGyroscope(MEMS_HandleTypeDef *hmems, uint16_t samples) {
     MEMS_StatusTypeDef status = MEMS_CheckReady(hmems);
     MEMS_AxesTypeDef sum = {0.0f, 0.0f, 0.0f};
     MEMS_AxesTypeDef reading;

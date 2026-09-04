@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ili9488_io.c
-  * @brief   SPI and control-line transport for the ILI9488
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ili9488_io.c
+ * @brief   SPI and control-line transport for the ILI9488
+ ******************************************************************************
+ */
 
 #include "ili9488_io.h"
 #include "ili9488_cmd.h"
@@ -12,32 +12,28 @@
 #include "log.h"
 
 /** The serial interface carries 3 bytes per pixel; RGB565 is parallel-only. */
-#define ILI9488_BYTES_PER_PIXEL     3U
+#define ILI9488_BYTES_PER_PIXEL 3U
 
 /** Pixels staged per SPI burst, bounding the stack cost of a fill */
-#define ILI9488_FILL_CHUNK_PIXELS   64U
+#define ILI9488_FILL_CHUNK_PIXELS 64U
 
-#define ILI9488_ADDR_PARAM_SIZE     4U
+#define ILI9488_ADDR_PARAM_SIZE 4U
+#define ILI9488_LOW_BYTE_MASK 0xFFU /**< Column/page addresses go out as two bytes, MSB first */
 
-#define ILI9488_RESET_LOW_MS        100U
-#define ILI9488_RESET_HIGH_MS       120U
+#define ILI9488_RESET_LOW_MS 100U
+#define ILI9488_RESET_HIGH_MS 120U
 
-#define ILI9488_RGB565_RED_MASK     0xF800U
-#define ILI9488_RGB565_GREEN_MASK   0x07E0U
-#define ILI9488_RGB565_BLUE_MASK    0x001FU
+#define ILI9488_RGB565_RED_MASK 0xF800U
+#define ILI9488_RGB565_GREEN_MASK 0x07E0U
+#define ILI9488_RGB565_BLUE_MASK 0x001FU
 
-/* This panel's slot on the shared bus. */
-static SPI_Device_t s_device;
-
-static void ILI9488_IO_Select(const ILI9488_Config_t *config, GPIO_PinState dcState)
-{
+static void ILI9488_IO_Select(const ILI9488_Config_t *config, GPIO_PinState dcState) {
     HAL_GPIO_WritePin(config->dc_port, config->dc_pin, dcState);
     HAL_GPIO_WritePin(config->cs_port, config->cs_pin, GPIO_PIN_RESET);
 }
 
 static ILI9488_StatusTypeDef ILI9488_IO_Release(const ILI9488_Config_t *config,
-                                                SPI_StatusTypeDef status)
-{
+                                                SPI_StatusTypeDef status) {
     HAL_GPIO_WritePin(config->cs_port, config->cs_pin, GPIO_PIN_SET);
 
     if (status == SPI_TIMEOUT) {
@@ -48,8 +44,7 @@ static ILI9488_StatusTypeDef ILI9488_IO_Release(const ILI9488_Config_t *config,
 }
 
 /** Widen RGB565 to the panel's 18-bit format, replicating the high bits. */
-static void ILI9488_IO_ExpandColor(uint16_t color, uint8_t *bytes)
-{
+static void ILI9488_IO_ExpandColor(uint16_t color, uint8_t *bytes) {
     uint8_t red = (uint8_t)((color & ILI9488_RGB565_RED_MASK) >> 8);
     uint8_t green = (uint8_t)((color & ILI9488_RGB565_GREEN_MASK) >> 3);
     uint8_t blue = (uint8_t)((color & ILI9488_RGB565_BLUE_MASK) << 3);
@@ -59,12 +54,17 @@ static void ILI9488_IO_ExpandColor(uint16_t color, uint8_t *bytes)
     bytes[2] = (uint8_t)(blue | (blue >> 5));
 }
 
-ILI9488_StatusTypeDef ILI9488_IO_Init(const ILI9488_Config_t *config)
-{
+ILI9488_StatusTypeDef ILI9488_IO_Init(ILI9488_Handle_t *hili) {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
+    const ILI9488_Config_t *config = NULL;
 
-    if (config == NULL || config->cs_port == NULL ||
-        config->dc_port == NULL || config->rst_port == NULL) {
+    if (hili == NULL) {
+        return ILI9488_INVALID_PARAM;
+    }
+
+    config = &hili->config;
+    if (config->bus == NULL || config->cs_port == NULL || config->dc_port == NULL ||
+        config->rst_port == NULL) {
         return ILI9488_INVALID_PARAM;
     }
 
@@ -84,7 +84,7 @@ ILI9488_StatusTypeDef ILI9488_IO_Init(const ILI9488_Config_t *config)
     GPIO_Driver_Pin_Init(config->rst_port, &GPIO_InitStruct);
 
     const SPI_ConfigTypeDef spiConfig = SPI_ConfigDefault();
-    if (SPI_DeviceInit(&s_device, &spiConfig) != SPI_OK) {
+    if (SPI_DeviceInit(&hili->device, config->bus, &spiConfig) != SPI_OK) {
         log_error("ILI9488: SPI device registration failed");
         return ILI9488_ERROR;
     }
@@ -97,34 +97,31 @@ ILI9488_StatusTypeDef ILI9488_IO_Init(const ILI9488_Config_t *config)
     return ILI9488_OK;
 }
 
-ILI9488_StatusTypeDef ILI9488_IO_WriteCommand(const ILI9488_Config_t *config, uint8_t command)
-{
-    SPI_StatusTypeDef status;
+ILI9488_StatusTypeDef ILI9488_IO_WriteCommand(ILI9488_Handle_t *hili, uint8_t command) {
+    SPI_StatusTypeDef status = SPI_OK;
 
-    ILI9488_IO_Select(config, GPIO_PIN_RESET);
-    status = SPI_Transmit(&s_device, &command, 1U, SPI_TIMEOUT_SHORT);
+    ILI9488_IO_Select(&hili->config, GPIO_PIN_RESET);
+    status = SPI_Transmit(&hili->device, &command, 1U, SPI_TIMEOUT_SHORT);
 
-    return ILI9488_IO_Release(config, status);
+    return ILI9488_IO_Release(&hili->config, status);
 }
 
-ILI9488_StatusTypeDef ILI9488_IO_WriteData(const ILI9488_Config_t *config,
-                                           const uint8_t *data, uint16_t size)
-{
-    SPI_StatusTypeDef status;
+ILI9488_StatusTypeDef ILI9488_IO_WriteData(ILI9488_Handle_t *hili, const uint8_t *data,
+                                           uint16_t size) {
+    SPI_StatusTypeDef status = SPI_OK;
 
     if (data == NULL || size == 0U) {
         return ILI9488_INVALID_PARAM;
     }
 
-    ILI9488_IO_Select(config, GPIO_PIN_SET);
-    status = SPI_Transmit(&s_device, (uint8_t *)(uintptr_t)data, size, SPI_TIMEOUT_LONG);
+    ILI9488_IO_Select(&hili->config, GPIO_PIN_SET);
+    status = SPI_Transmit(&hili->device, (uint8_t *)(uintptr_t)data, size, SPI_TIMEOUT_LONG);
 
-    return ILI9488_IO_Release(config, status);
+    return ILI9488_IO_Release(&hili->config, status);
 }
 
-ILI9488_StatusTypeDef ILI9488_IO_WritePixels(const ILI9488_Config_t *config,
-                                             uint16_t color, uint32_t count)
-{
+ILI9488_StatusTypeDef ILI9488_IO_WritePixels(ILI9488_Handle_t *hili, uint16_t color,
+                                             uint32_t count) {
     uint8_t buffer[ILI9488_FILL_CHUNK_PIXELS * ILI9488_BYTES_PER_PIXEL];
     uint8_t pixel[ILI9488_BYTES_PER_PIXEL];
     SPI_StatusTypeDef status = SPI_OK;
@@ -144,23 +141,22 @@ ILI9488_StatusTypeDef ILI9488_IO_WritePixels(const ILI9488_Config_t *config,
 
     /* Hold CS low across the whole run: the panel treats a rising CS as the
        end of the memory write. */
-    ILI9488_IO_Select(config, GPIO_PIN_SET);
+    ILI9488_IO_Select(&hili->config, GPIO_PIN_SET);
 
     while (remaining > 0U && status == SPI_OK) {
-        uint32_t chunk = (remaining > ILI9488_FILL_CHUNK_PIXELS)
-                             ? ILI9488_FILL_CHUNK_PIXELS : remaining;
+        uint32_t chunk =
+            (remaining > ILI9488_FILL_CHUNK_PIXELS) ? ILI9488_FILL_CHUNK_PIXELS : remaining;
 
-        status = SPI_Transmit(&s_device, buffer, (uint16_t)(chunk * ILI9488_BYTES_PER_PIXEL),
+        status = SPI_Transmit(&hili->device, buffer, (uint16_t)(chunk * ILI9488_BYTES_PER_PIXEL),
                               SPI_TIMEOUT_LONG);
         remaining -= chunk;
     }
 
-    return ILI9488_IO_Release(config, status);
+    return ILI9488_IO_Release(&hili->config, status);
 }
 
-ILI9488_StatusTypeDef ILI9488_IO_WritePixelBuffer(const ILI9488_Config_t *config,
-                                                  const uint16_t *colors, uint32_t count)
-{
+ILI9488_StatusTypeDef ILI9488_IO_WritePixelBuffer(ILI9488_Handle_t *hili, const uint16_t *colors,
+                                                  uint32_t count) {
     uint8_t buffer[ILI9488_FILL_CHUNK_PIXELS * ILI9488_BYTES_PER_PIXEL];
     SPI_StatusTypeDef status = SPI_OK;
     uint32_t sent = 0U;
@@ -169,7 +165,7 @@ ILI9488_StatusTypeDef ILI9488_IO_WritePixelBuffer(const ILI9488_Config_t *config
         return ILI9488_INVALID_PARAM;
     }
 
-    ILI9488_IO_Select(config, GPIO_PIN_SET);
+    ILI9488_IO_Select(&hili->config, GPIO_PIN_SET);
 
     while (sent < count && status == SPI_OK) {
         uint32_t chunk = count - sent;
@@ -182,45 +178,43 @@ ILI9488_StatusTypeDef ILI9488_IO_WritePixelBuffer(const ILI9488_Config_t *config
             ILI9488_IO_ExpandColor(colors[sent + i], &buffer[i * ILI9488_BYTES_PER_PIXEL]);
         }
 
-        status = SPI_Transmit(&s_device, buffer, (uint16_t)(chunk * ILI9488_BYTES_PER_PIXEL),
+        status = SPI_Transmit(&hili->device, buffer, (uint16_t)(chunk * ILI9488_BYTES_PER_PIXEL),
                               SPI_TIMEOUT_LONG);
         sent += chunk;
     }
 
-    return ILI9488_IO_Release(config, status);
+    return ILI9488_IO_Release(&hili->config, status);
 }
 
-ILI9488_StatusTypeDef ILI9488_IO_SetAddressWindow(const ILI9488_Config_t *config,
-                                                  uint16_t x0, uint16_t y0,
-                                                  uint16_t x1, uint16_t y1)
-{
-    ILI9488_StatusTypeDef status;
+ILI9488_StatusTypeDef ILI9488_IO_SetAddressWindow(ILI9488_Handle_t *hili, uint16_t xStart,
+                                                  uint16_t yStart, uint16_t xEnd, uint16_t yEnd) {
+    ILI9488_StatusTypeDef status = ILI9488_OK;
     uint8_t params[ILI9488_ADDR_PARAM_SIZE];
 
-    status = ILI9488_IO_WriteCommand(config, ILI9488_CMD_COLUMN_ADDR_SET);
+    status = ILI9488_IO_WriteCommand(hili, ILI9488_CMD_COLUMN_ADDR_SET);
     if (status != ILI9488_OK) {
         return status;
     }
 
-    params[0] = (uint8_t)(x0 >> 8);
-    params[1] = (uint8_t)(x0 & 0xFFU);
-    params[2] = (uint8_t)(x1 >> 8);
-    params[3] = (uint8_t)(x1 & 0xFFU);
+    params[0] = (uint8_t)(xStart >> 8);
+    params[1] = (uint8_t)(xStart & ILI9488_LOW_BYTE_MASK);
+    params[2] = (uint8_t)(xEnd >> 8);
+    params[3] = (uint8_t)(xEnd & ILI9488_LOW_BYTE_MASK);
 
-    status = ILI9488_IO_WriteData(config, params, ILI9488_ADDR_PARAM_SIZE);
+    status = ILI9488_IO_WriteData(hili, params, ILI9488_ADDR_PARAM_SIZE);
     if (status != ILI9488_OK) {
         return status;
     }
 
-    status = ILI9488_IO_WriteCommand(config, ILI9488_CMD_PAGE_ADDR_SET);
+    status = ILI9488_IO_WriteCommand(hili, ILI9488_CMD_PAGE_ADDR_SET);
     if (status != ILI9488_OK) {
         return status;
     }
 
-    params[0] = (uint8_t)(y0 >> 8);
-    params[1] = (uint8_t)(y0 & 0xFFU);
-    params[2] = (uint8_t)(y1 >> 8);
-    params[3] = (uint8_t)(y1 & 0xFFU);
+    params[0] = (uint8_t)(yStart >> 8);
+    params[1] = (uint8_t)(yStart & ILI9488_LOW_BYTE_MASK);
+    params[2] = (uint8_t)(yEnd >> 8);
+    params[3] = (uint8_t)(yEnd & ILI9488_LOW_BYTE_MASK);
 
-    return ILI9488_IO_WriteData(config, params, ILI9488_ADDR_PARAM_SIZE);
+    return ILI9488_IO_WriteData(hili, params, ILI9488_ADDR_PARAM_SIZE);
 }

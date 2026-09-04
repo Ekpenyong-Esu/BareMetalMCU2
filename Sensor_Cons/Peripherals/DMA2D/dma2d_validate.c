@@ -9,26 +9,22 @@
 /* Private data --------------------------------------------------------------*/
 
 /** Accepted operating modes. */
-static const uint32_t s_validModes[] = {
-    DMA2D_MODE_R2M, DMA2D_MODE_M2M, DMA2D_MODE_M2M_PFC, DMA2D_MODE_M2M_BLEND
-};
+static const uint32_t s_validModes[] = {DMA2D_MODE_R2M, DMA2D_MODE_M2M, DMA2D_MODE_M2M_PFC,
+                                        DMA2D_MODE_M2M_BLEND};
 
 /** Accepted output colour formats. */
-static const uint32_t s_validOutputFormats[] = {
-    DMA2D_FORMAT_ARGB8888, DMA2D_FORMAT_RGB888, DMA2D_FORMAT_RGB565,
-    DMA2D_FORMAT_ARGB1555, DMA2D_FORMAT_ARGB4444
-};
+static const uint32_t s_validOutputFormats[] = {DMA2D_FORMAT_ARGB8888, DMA2D_FORMAT_RGB888,
+                                                DMA2D_FORMAT_RGB565, DMA2D_FORMAT_ARGB1555,
+                                                DMA2D_FORMAT_ARGB4444};
 
 /** Accepted input colour formats. */
-static const uint32_t s_validInputFormats[] = {
-    DMA2D_INPUT_ARGB8888, DMA2D_INPUT_RGB888, DMA2D_INPUT_RGB565,
-    DMA2D_INPUT_ARGB1555, DMA2D_INPUT_ARGB4444
-};
+static const uint32_t s_validInputFormats[] = {DMA2D_INPUT_ARGB8888, DMA2D_INPUT_RGB888,
+                                               DMA2D_INPUT_RGB565, DMA2D_INPUT_ARGB1555,
+                                               DMA2D_INPUT_ARGB4444};
 
 /** Accepted alpha modes. */
-static const uint32_t s_validAlphaModes[] = {
-    DMA2D_ALPHA_NO_MODIF, DMA2D_ALPHA_REPLACE, DMA2D_ALPHA_COMBINE
-};
+static const uint32_t s_validAlphaModes[] = {DMA2D_ALPHA_NO_MODIF, DMA2D_ALPHA_REPLACE,
+                                             DMA2D_ALPHA_COMBINE};
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -39,8 +35,7 @@ static const uint32_t s_validAlphaModes[] = {
  * @param count  Number of entries in @p table
  * @return true when @p value appears in @p table
  */
-static bool DMA2D_IsOneOf(uint32_t value, const uint32_t *table, size_t count)
-{
+static bool DMA2D_IsOneOf(uint32_t value, const uint32_t *table, size_t count) {
     for (size_t i = 0; i < count; i++) {
         if (table[i] == value) {
             return true;
@@ -50,13 +45,12 @@ static bool DMA2D_IsOneOf(uint32_t value, const uint32_t *table, size_t count)
 }
 
 /** Convenience wrapper so call sites do not repeat the element count. */
-#define DMA2D_IS_ONE_OF(value, table) \
+#define DMA2D_IS_ONE_OF(value, table)                                                              \
     DMA2D_IsOneOf((value), (table), sizeof(table) / sizeof((table)[0]))
 
 /* Public functions ----------------------------------------------------------*/
 
-HAL_StatusTypeDef DMA2D_ValidateConfig(const DMA2D_Config *config)
-{
+HAL_StatusTypeDef DMA2D_ValidateConfig(const DMA2D_Config *config) {
     if (config == NULL) {
         log_error("DMA2D configuration is NULL");
         return HAL_ERROR;
@@ -79,8 +73,8 @@ HAL_StatusTypeDef DMA2D_ValidateConfig(const DMA2D_Config *config)
 
     /* The colour components are only used to build the register-to-memory colour. */
     if (config->mode == DMA2D_MODE_R2M) {
-        if (config->red_value > 255U || config->green_value > 255U ||
-            config->blue_value > 255U || config->alpha_value > 255U) {
+        if (config->red_value > DMA2D_CHANNEL_MAX || config->green_value > DMA2D_CHANNEL_MAX ||
+            config->blue_value > DMA2D_CHANNEL_MAX || config->alpha_value > DMA2D_CHANNEL_MAX) {
             log_error("Invalid DMA2D color components: R=%lu, G=%lu, B=%lu, A=%lu",
                       (unsigned long)config->red_value, (unsigned long)config->green_value,
                       (unsigned long)config->blue_value, (unsigned long)config->alpha_value);
@@ -91,8 +85,7 @@ HAL_StatusTypeDef DMA2D_ValidateConfig(const DMA2D_Config *config)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef DMA2D_ValidateLayerConfig(const DMA2D_LayerConfig *layer_config)
-{
+HAL_StatusTypeDef DMA2D_ValidateLayerConfig(const DMA2D_LayerConfig *layer_config) {
     if (layer_config == NULL) {
         log_error("DMA2D layer configuration is NULL");
         return HAL_ERROR;
@@ -105,12 +98,11 @@ HAL_StatusTypeDef DMA2D_ValidateLayerConfig(const DMA2D_LayerConfig *layer_confi
     }
 
     if (!DMA2D_IS_ONE_OF(layer_config->input_alpha_mode, s_validAlphaModes)) {
-        log_error("Invalid DMA2D alpha mode: %lu",
-                  (unsigned long)layer_config->input_alpha_mode);
+        log_error("Invalid DMA2D alpha mode: %lu", (unsigned long)layer_config->input_alpha_mode);
         return HAL_ERROR;
     }
 
-    if (layer_config->input_alpha > 255U) {
+    if (layer_config->input_alpha > DMA2D_CHANNEL_MAX) {
         log_error("Invalid DMA2D alpha value: %lu", (unsigned long)layer_config->input_alpha);
         return HAL_ERROR;
     }
@@ -123,8 +115,7 @@ HAL_StatusTypeDef DMA2D_ValidateLayerConfig(const DMA2D_LayerConfig *layer_confi
     return HAL_OK;
 }
 
-HAL_StatusTypeDef DMA2D_ValidateLayer(uint32_t layer)
-{
+HAL_StatusTypeDef DMA2D_ValidateLayer(uint32_t layer) {
     if (layer != DMA2D_FOREGROUND_LAYER && layer != DMA2D_BACKGROUND_LAYER) {
         log_error("Invalid DMA2D layer: %lu", (unsigned long)layer);
         return HAL_ERROR;
@@ -132,10 +123,8 @@ HAL_StatusTypeDef DMA2D_ValidateLayer(uint32_t layer)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef DMA2D_ValidateTransfer(uint32_t mode, const uint32_t *pSrc,
-                                         const uint32_t *pDst,
-                                         uint32_t width, uint32_t height)
-{
+HAL_StatusTypeDef DMA2D_ValidateTransfer(uint32_t mode, const uint32_t *pSrc, const uint32_t *pDst,
+                                         uint32_t width, uint32_t height) {
     if (pDst == NULL) {
         log_error("DMA2D destination buffer is NULL");
         return HAL_ERROR;

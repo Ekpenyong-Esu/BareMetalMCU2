@@ -4,41 +4,26 @@
  */
 
 #include "usb_core.h"
+#include "usb_events.h"
 #include "log.h"
+#include <string.h>
 
-static USB_OperationModeTypeDef s_mode = USB_MODE_HOST;
-static bool s_initialized = false;
-
-USB_StatusTypeDef USB_ConvertHostStatus(USBH_StatusTypeDef status)
-{
+USB_StatusTypeDef USB_ConvertHostStatus(USBH_StatusTypeDef status) {
     switch (status) {
-        case USBH_OK:            return USB_STATUS_OK;
-        case USBH_BUSY:          return USB_STATUS_BUSY;
-        case USBH_NOT_SUPPORTED: return USB_STATUS_NOT_SUPPORTED;
-        default:                 return USB_STATUS_ERROR;
+        case USBH_OK:
+            return USB_STATUS_OK;
+        case USBH_BUSY:
+            return USB_STATUS_BUSY;
+        case USBH_NOT_SUPPORTED:
+            return USB_STATUS_NOT_SUPPORTED;
+        default:
+            return USB_STATUS_ERROR;
     }
 }
 
-USB_StatusTypeDef USB_Host_Init(void)
-{
-    /* MX_USB_HOST_Init registers the CDC class and starts the library. */
-    MX_USB_HOST_Init();
-
-    return USB_STATUS_OK;
-}
-
-USB_StatusTypeDef USB_Host_DeInit(void)
-{
-    USBH_StatusTypeDef hostStatus = USBH_DeInit(&hUsbHostHS);
-
-    return USB_ConvertHostStatus(hostStatus);
-}
-
-USB_StatusTypeDef USB_Init(const USB_ConfigTypeDef *config)
-{
-    USB_StatusTypeDef status;
-
-    if (config == NULL) {
+USB_StatusTypeDef USB_Init(USB_Handle_t *husb, USBH_HandleTypeDef *host,
+                           ApplicationTypeDef *appliState, const USB_ConfigTypeDef *config) {
+    if (husb == NULL || host == NULL || appliState == NULL || config == NULL) {
         return USB_STATUS_ERROR;
     }
 
@@ -46,84 +31,87 @@ USB_StatusTypeDef USB_Init(const USB_ConfigTypeDef *config)
         return USB_STATUS_NOT_SUPPORTED;
     }
 
-    if (s_initialized) {
+    if (husb->initialized) {
         return USB_STATUS_OK;
     }
 
-    status = USB_Host_Init();
-    if (status != USB_STATUS_OK) {
-        return status;
+    memset(husb, 0, sizeof(*husb));
+    husb->host = host;
+    husb->appliState = appliState;
+    husb->mode = config->mode;
+    /* Start from whatever the library already reported so a device attached
+       before USB_Init does not produce a spurious connect edge. */
+    husb->lastState = *appliState;
+
+    if (USB_Events_Attach(husb) != USB_STATUS_OK) {
+        return USB_STATUS_ERROR;
     }
 
-    s_mode = config->mode;
-    s_initialized = true;
+    husb->initialized = true;
 
-    log_debug("USB: host stack initialized");
+    log_debug("USB: host handle bound");
 
     return USB_STATUS_OK;
 }
 
-USB_StatusTypeDef USB_DeInit(void)
-{
-    USB_StatusTypeDef status;
+USB_StatusTypeDef USB_DeInit(USB_Handle_t *husb) {
+    USB_StatusTypeDef status = USB_STATUS_ERROR;
 
-    if (!s_initialized) {
+    if (husb == NULL) {
+        return USB_STATUS_ERROR;
+    }
+
+    if (!husb->initialized) {
         return USB_STATUS_OK;
     }
 
-    status = USB_Host_DeInit();
+    status = USB_ConvertHostStatus(USBH_DeInit(husb->host));
     if (status != USB_STATUS_OK) {
         return status;
     }
 
-    s_initialized = false;
+    USB_Events_Detach(husb);
+    husb->initialized = false;
 
     return USB_STATUS_OK;
 }
 
-bool USB_IsInitialized(void)
-{
-    return s_initialized;
+bool USB_IsInitialized(const USB_Handle_t *husb) {
+    return (husb != NULL) && husb->initialized;
 }
 
-USB_StatusTypeDef USB_Start(void)
-{
-    USBH_StatusTypeDef hostStatus = USBH_OK;
-
-    if (!s_initialized) {
+USB_StatusTypeDef USB_Start(USB_Handle_t *husb) {
+    if (!USB_IsInitialized(husb)) {
         return USB_STATUS_NOT_READY;
     }
 
-    hostStatus = USBH_Start(&hUsbHostHS);
-    return USB_ConvertHostStatus(hostStatus);
+    return USB_ConvertHostStatus(USBH_Start(husb->host));
 }
 
-USB_StatusTypeDef USB_Stop(void)
-{
-    USBH_StatusTypeDef hostStatus = USBH_OK;
-
-    if (!s_initialized) {
+USB_StatusTypeDef USB_Stop(USB_Handle_t *husb) {
+    if (!USB_IsInitialized(husb)) {
         return USB_STATUS_NOT_READY;
     }
 
-    hostStatus = USBH_Stop(&hUsbHostHS);
-    return USB_ConvertHostStatus(hostStatus);
+    return USB_ConvertHostStatus(USBH_Stop(husb->host));
 }
 
-USB_StatusTypeDef USB_SetOperationMode(USB_OperationModeTypeDef mode)
-{
+USB_StatusTypeDef USB_SetOperationMode(USB_Handle_t *husb, USB_OperationModeTypeDef mode) {
+    if (husb == NULL) {
+        return USB_STATUS_ERROR;
+    }
+
     /* Accepting an unsupported mode here would make every later call report
        NOT_SUPPORTED with no way back. */
     if (mode != USB_MODE_HOST) {
         return USB_STATUS_NOT_SUPPORTED;
     }
 
-    s_mode = mode;
+    husb->mode = mode;
 
     return USB_STATUS_OK;
 }
 
-USB_OperationModeTypeDef USB_GetOperationMode(void)
-{
-    return s_mode;
+USB_OperationModeTypeDef USB_GetOperationMode(const USB_Handle_t *husb) {
+    return (husb != NULL) ? husb->mode : USB_MODE_HOST;
 }

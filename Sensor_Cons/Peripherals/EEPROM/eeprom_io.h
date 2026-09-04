@@ -19,10 +19,11 @@ extern "C" {
 /* Exported functions prototypes ---------------------------------------------*/
 
 /**
- * @brief   Bring up the shared I2C bus if the application has not already
- * @retval  None
+ * @brief   Register the chip's device record on the bus the handle carries
+ * @param   handle Pointer to EEPROM handle, with bus and config already set
+ * @retval  EEPROM_StatusTypeDef EEPROM_ERROR if the bus is not open
  */
-void EEPROM_IO_Init(void);
+EEPROM_StatusTypeDef EEPROM_IO_Init(EEPROM_HandleTypeDef *handle);
 
 /**
  * @brief   Write a byte range to the device
@@ -33,10 +34,8 @@ void EEPROM_IO_Init(void);
  * @param   length Number of bytes
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_IO_Write(const EEPROM_HandleTypeDef* handle,
-                                     uint16_t address,
-                                     const uint8_t* data,
-                                     uint16_t length);
+EEPROM_StatusTypeDef EEPROM_IO_Write(EEPROM_HandleTypeDef *handle, uint16_t address,
+                                     const uint8_t *data, uint16_t length);
 
 /**
  * @brief   Read a byte range from the device
@@ -47,9 +46,7 @@ EEPROM_StatusTypeDef EEPROM_IO_Write(const EEPROM_HandleTypeDef* handle,
  * @param   length Number of bytes
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_IO_Read(const EEPROM_HandleTypeDef* handle,
-                                    uint16_t address,
-                                    uint8_t* data,
+EEPROM_StatusTypeDef EEPROM_IO_Read(EEPROM_HandleTypeDef *handle, uint16_t address, uint8_t *data,
                                     uint16_t length);
 
 /**
@@ -57,7 +54,7 @@ EEPROM_StatusTypeDef EEPROM_IO_Read(const EEPROM_HandleTypeDef* handle,
  * @param   handle Pointer to EEPROM handle
  * @retval  EEPROM_StatusTypeDef EEPROM_OK when the device acknowledges
  */
-EEPROM_StatusTypeDef EEPROM_IO_IsDeviceReady(const EEPROM_HandleTypeDef* handle);
+EEPROM_StatusTypeDef EEPROM_IO_IsDeviceReady(EEPROM_HandleTypeDef *handle);
 
 #ifdef __cplusplus
 }

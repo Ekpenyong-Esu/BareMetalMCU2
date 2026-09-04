@@ -7,10 +7,8 @@
 
 /* ========================== Encoder Interface ========================== */
 
-HAL_StatusTypeDef TIM_Encoder_Init(TIM_HandleTypeDef *htim,
-                                   TIM_TypeDef *instance,
-                                   uint32_t period)
-{
+HAL_StatusTypeDef TIM_Encoder_Init(TIM_HandleTypeDef *htim, TIM_TypeDef *instance,
+                                   uint32_t period) {
     if (htim == NULL || instance == NULL) {
         return HAL_ERROR;
     }
@@ -37,48 +35,42 @@ HAL_StatusTypeDef TIM_Encoder_Init(TIM_HandleTypeDef *htim,
     return HAL_TIM_Encoder_Init(htim, &sEncoderConfig);
 }
 
-HAL_StatusTypeDef TIM_Encoder_Start(TIM_HandleTypeDef *htim)
-{
+HAL_StatusTypeDef TIM_Encoder_Start(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_Encoder_Start(htim, TIM_CHANNEL_ALL);
 }
 
-HAL_StatusTypeDef TIM_Encoder_Start_IT(TIM_HandleTypeDef *htim)
-{
+HAL_StatusTypeDef TIM_Encoder_Start_IT(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_Encoder_Start_IT(htim, TIM_CHANNEL_ALL);
 }
 
-HAL_StatusTypeDef TIM_Encoder_Stop(TIM_HandleTypeDef *htim)
-{
+HAL_StatusTypeDef TIM_Encoder_Stop(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_Encoder_Stop(htim, TIM_CHANNEL_ALL);
 }
 
-HAL_StatusTypeDef TIM_Encoder_Stop_IT(TIM_HandleTypeDef *htim)
-{
+HAL_StatusTypeDef TIM_Encoder_Stop_IT(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_Encoder_Stop_IT(htim, TIM_CHANNEL_ALL);
 }
 
-int32_t TIM_Encoder_GetCount(TIM_HandleTypeDef *htim)
-{
+int32_t TIM_Encoder_GetCount(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return 0;
     }
     return (int32_t)__HAL_TIM_GET_COUNTER(htim);
 }
 
-void TIM_Encoder_Reset(TIM_HandleTypeDef *htim)
-{
+void TIM_Encoder_Reset(TIM_HandleTypeDef *htim) {
     if (htim != NULL) {
         __HAL_TIM_SET_COUNTER(htim, 0U);
     }

@@ -13,7 +13,7 @@ extern "C" {
 #include "eth_types.h"
 
 /** @brief Length of the frame check sequence appended by the MAC */
-#define ETH_FCS_LEN     4U
+#define ETH_FCS_LEN 4U
 
 /**
  * @brief   Transmit a single Ethernet frame

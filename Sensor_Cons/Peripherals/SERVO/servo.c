@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    servo.c
-  * @brief   Servo lifecycle and configuration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    servo.c
+ * @brief   Servo lifecycle and configuration
+ ******************************************************************************
+ */
 
 #include "servo_core.h"
 #include "servo_control.h"
@@ -12,26 +12,19 @@
 #include "log.h"
 #include <string.h>
 
-SERVO_Config_t SERVO_GetDefaultConfig(void)
-{
-    SERVO_Config_t config = {
-        .minAngle = SERVO_MIN_ANGLE,
-        .maxAngle = SERVO_MAX_ANGLE,
-        .minPulseWidth = SERVO_MIN_PULSE_WIDTH_US,
-        .maxPulseWidth = SERVO_MAX_PULSE_WIDTH_US,
-        .defaultAngle = SERVO_DEFAULT_ANGLE
-    };
+SERVO_Config_t SERVO_GetDefaultConfig(void) {
+    SERVO_Config_t config = {.minAngle = SERVO_MIN_ANGLE,
+                             .maxAngle = SERVO_MAX_ANGLE,
+                             .minPulseWidth = SERVO_MIN_PULSE_WIDTH_US,
+                             .maxPulseWidth = SERVO_MAX_PULSE_WIDTH_US,
+                             .defaultAngle = SERVO_DEFAULT_ANGLE};
 
     return config;
 }
 
-SERVO_StatusTypeDef SERVO_Init(SERVO_Handle_t *hservo,
-                               TIM_HandleTypeDef *htim,
-                               uint32_t channel,
-                               GPIO_TypeDef *gpioPort,
-                               uint16_t gpioPin)
-{
-    SERVO_StatusTypeDef status;
+SERVO_StatusTypeDef SERVO_Init(SERVO_Handle_t *hservo, TIM_HandleTypeDef *htim, uint32_t channel,
+                               GPIO_TypeDef *gpioPort, uint16_t gpioPin) {
+    SERVO_StatusTypeDef status = SERVO_OK;
     SERVO_Config_t defaultConfig;
 
     if (hservo == NULL || htim == NULL || htim->Instance == NULL || gpioPort == NULL) {
@@ -66,8 +59,7 @@ SERVO_StatusTypeDef SERVO_Init(SERVO_Handle_t *hservo,
     return SERVO_OK;
 }
 
-SERVO_StatusTypeDef SERVO_DeInit(SERVO_Handle_t *hservo)
-{
+SERVO_StatusTypeDef SERVO_DeInit(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 
     SERVO_PWM_DeInit(hservo);
@@ -76,8 +68,7 @@ SERVO_StatusTypeDef SERVO_DeInit(SERVO_Handle_t *hservo)
     return SERVO_OK;
 }
 
-SERVO_StatusTypeDef SERVO_Config(SERVO_Handle_t *hservo, const SERVO_Config_t *config)
-{
+SERVO_StatusTypeDef SERVO_Config(SERVO_Handle_t *hservo, const SERVO_Config_t *config) {
     SERVO_CHECK_HANDLE(hservo);
 
     if (SERVO_ValidateConfig(config) != SERVO_OK) {

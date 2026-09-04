@@ -43,8 +43,7 @@ TS_StatusTypeDef TS_GetCalibration(TS_HandleTypeDef *hts, TS_CalibrationTypeDef 
  * @param dispY Destination display Y
  * @return TS_StatusTypeDef Status of the operation
  */
-TS_StatusTypeDef TS_MapToDisplay(const TS_HandleTypeDef *hts,
-                                 uint16_t rawX, uint16_t rawY,
+TS_StatusTypeDef TS_MapToDisplay(const TS_HandleTypeDef *hts, uint16_t rawX, uint16_t rawY,
                                  uint16_t *dispX, uint16_t *dispY);
 
 #ifdef __cplusplus

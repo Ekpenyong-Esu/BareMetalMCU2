@@ -14,7 +14,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 static DMA2D_TransferCompleteCallback s_completeCallback = NULL;
-static DMA2D_TransferErrorCallback    s_errorCallback = NULL;
+static DMA2D_TransferErrorCallback s_errorCallback = NULL;
 static DMA2D_TransferProgressCallback s_progressCallback = NULL;
 
 /* Private functions ---------------------------------------------------------*/
@@ -24,33 +24,28 @@ static DMA2D_TransferProgressCallback s_progressCallback = NULL;
  * @param handle Handle supplied by the HAL callback
  * @return true when the handle is the driver's own
  */
-static bool DMA2D_IsOwnHandle(const DMA2D_HandleTypeDef *handle)
-{
+static bool DMA2D_IsOwnHandle(const DMA2D_HandleTypeDef *handle) {
     return (handle == &DMA2D_GetDevice()->hal);
 }
 
 /* Public functions ----------------------------------------------------------*/
 
-void DMA2D_RegisterTransferCompleteCallback(DMA2D_TransferCompleteCallback callback)
-{
+void DMA2D_RegisterTransferCompleteCallback(DMA2D_TransferCompleteCallback callback) {
     s_completeCallback = callback;
     log_debug("DMA2D transfer complete callback registered");
 }
 
-void DMA2D_RegisterTransferErrorCallback(DMA2D_TransferErrorCallback callback)
-{
+void DMA2D_RegisterTransferErrorCallback(DMA2D_TransferErrorCallback callback) {
     s_errorCallback = callback;
     log_debug("DMA2D transfer error callback registered");
 }
 
-void DMA2D_RegisterTransferProgressCallback(DMA2D_TransferProgressCallback callback)
-{
+void DMA2D_RegisterTransferProgressCallback(DMA2D_TransferProgressCallback callback) {
     s_progressCallback = callback;
     log_debug("DMA2D transfer progress callback registered");
 }
 
-void DMA2D_ClearCallbacks(void)
-{
+void DMA2D_ClearCallbacks(void) {
     s_completeCallback = NULL;
     s_errorCallback = NULL;
     s_progressCallback = NULL;
@@ -58,8 +53,7 @@ void DMA2D_ClearCallbacks(void)
 
 /* HAL callback overrides ----------------------------------------------------*/
 
-void HAL_DMA2D_TransferCompleteCallback(DMA2D_HandleTypeDef *hdma2d)
-{
+void HAL_DMA2D_TransferCompleteCallback(DMA2D_HandleTypeDef *hdma2d) {
     if (!DMA2D_IsOwnHandle(hdma2d)) {
         return;
     }
@@ -72,8 +66,7 @@ void HAL_DMA2D_TransferCompleteCallback(DMA2D_HandleTypeDef *hdma2d)
     }
 }
 
-void HAL_DMA2D_TransferErrorCallback(DMA2D_HandleTypeDef *hdma2d)
-{
+void HAL_DMA2D_TransferErrorCallback(DMA2D_HandleTypeDef *hdma2d) {
     if (!DMA2D_IsOwnHandle(hdma2d)) {
         return;
     }
@@ -86,8 +79,7 @@ void HAL_DMA2D_TransferErrorCallback(DMA2D_HandleTypeDef *hdma2d)
     }
 }
 
-void HAL_DMA2D_TransferProgressCallback(DMA2D_HandleTypeDef *hdma2d, uint32_t progress)
-{
+void HAL_DMA2D_TransferProgressCallback(DMA2D_HandleTypeDef *hdma2d, uint32_t progress) {
     if (!DMA2D_IsOwnHandle(hdma2d)) {
         return;
     }

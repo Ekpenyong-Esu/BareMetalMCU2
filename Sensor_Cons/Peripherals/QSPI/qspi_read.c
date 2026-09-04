@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    qspi_read.c
-  * @brief   Read paths for the serial NOR flash
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    qspi_read.c
+ * @brief   Read paths for the serial NOR flash
+ ******************************************************************************
+ */
 
 #include "qspi_read.h"
 #include "qspi_flash.h"
@@ -13,8 +13,7 @@
 
 static QSPI_StatusTypeDef QSPI_ReadWithCommand(QSPI_HandleStructTypeDef *hqspi, uint8_t command,
                                                uint32_t address, uint8_t *data, uint32_t size,
-                                               uint8_t dummyBytes)
-{
+                                               uint8_t dummyBytes) {
     QSPI_StatusTypeDef ready = QSPI_CheckReady(hqspi);
     if (ready != QSPI_OK || data == NULL) {
         return QSPI_INVALID_PARAM;
@@ -24,7 +23,7 @@ static QSPI_StatusTypeDef QSPI_ReadWithCommand(QSPI_HandleStructTypeDef *hqspi, 
         return QSPI_INVALID_PARAM;
     }
 
-    QSPI_ChipSelect(true);
+    QSPI_ChipSelect(hqspi, true);
 
     QSPI_StatusTypeDef status = QSPI_SendCommandWithAddress(hqspi, command, address);
 
@@ -40,19 +39,17 @@ static QSPI_StatusTypeDef QSPI_ReadWithCommand(QSPI_HandleStructTypeDef *hqspi, 
         status = QSPI_ReceiveData(hqspi, data, size);
     }
 
-    QSPI_ChipSelect(false);
+    QSPI_ChipSelect(hqspi, false);
 
     return status;
 }
 
-QSPI_StatusTypeDef QSPI_Read(QSPI_HandleStructTypeDef *hqspi, uint32_t address,
-                             uint8_t *data, uint32_t size)
-{
+QSPI_StatusTypeDef QSPI_Read(QSPI_HandleStructTypeDef *hqspi, uint32_t address, uint8_t *data,
+                             uint32_t size) {
     return QSPI_ReadWithCommand(hqspi, QSPI_CMD_READ_DATA, address, data, size, 0U);
 }
 
-QSPI_StatusTypeDef QSPI_FastRead(QSPI_HandleStructTypeDef *hqspi, uint32_t address,
-                                 uint8_t *data, uint32_t size)
-{
+QSPI_StatusTypeDef QSPI_FastRead(QSPI_HandleStructTypeDef *hqspi, uint32_t address, uint8_t *data,
+                                 uint32_t size) {
     return QSPI_ReadWithCommand(hqspi, QSPI_CMD_FAST_READ, address, data, size, 1U);
 }

@@ -13,18 +13,23 @@ extern "C" {
 #include "ts_types.h"
 
 /**
- * @brief Register the STMPE811 on the shared I2C bus
- * @note  Must run before any register access; the address is fixed by the part.
+ * @brief Register the STMPE811 on the application's bus
+ * @param hts Touchscreen handle that will own the device record
+ * @param bus Open bus the controller is wired to
+ * @param address 8-bit I2C address of the controller
+ * @return TS_StatusTypeDef TS_INVALID_PARAM when the bus is not usable
+ * @note  Must run before any register access
  */
-void TS_IO_BusInit(void);
+TS_StatusTypeDef TS_IO_DeviceInit(TS_HandleTypeDef *hts, I2C_Bus_t *bus, uint8_t address);
 
 /**
  * @brief Probe the bus for the STMPE811
+ * @param hts Touchscreen handle
  * @param trials Number of address attempts
  * @param timeout Timeout per attempt in ms
  * @return TS_StatusTypeDef TS_DEVICE_NOT_FOUND when nothing answers
  */
-TS_StatusTypeDef TS_IO_IsDeviceReady(uint32_t trials, uint32_t timeout);
+TS_StatusTypeDef TS_IO_IsDeviceReady(TS_HandleTypeDef *hts, uint32_t trials, uint32_t timeout);
 
 /**
  * @brief Read one 8-bit register
@@ -43,7 +48,8 @@ TS_StatusTypeDef TS_ReadRegister(TS_HandleTypeDef *hts, uint8_t reg, uint8_t *da
  * @param size Number of bytes to read
  * @return TS_StatusTypeDef Status of the operation
  */
-TS_StatusTypeDef TS_ReadRegisterMulti(TS_HandleTypeDef *hts, uint8_t reg, uint8_t *data, uint16_t size);
+TS_StatusTypeDef TS_ReadRegisterMulti(TS_HandleTypeDef *hts, uint8_t reg, uint8_t *data,
+                                      uint16_t size);
 
 /**
  * @brief Write one 8-bit register

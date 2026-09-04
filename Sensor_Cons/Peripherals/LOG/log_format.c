@@ -12,11 +12,16 @@
 // Text that introduces every line of a given severity
 static const char *LogFormat_LevelTag(log_level_t level) {
     switch (level) {
-        case LOG_LEVEL_DEBUG:   return "[DEBUG] ";
-        case LOG_LEVEL_INFO:    return "[INFO] ";
-        case LOG_LEVEL_WARNING: return "[WARNING] ";
-        case LOG_LEVEL_ERROR:   return "[ERROR] ";
-        default:                return "[UNKNOWN] ";
+        case LOG_LEVEL_DEBUG:
+            return "[DEBUG] ";
+        case LOG_LEVEL_INFO:
+            return "[INFO] ";
+        case LOG_LEVEL_WARNING:
+            return "[WARNING] ";
+        case LOG_LEVEL_ERROR:
+            return "[ERROR] ";
+        default:
+            return "[UNKNOWN] ";
     }
 }
 
@@ -41,8 +46,7 @@ static size_t LogFormat_Advance(size_t pos, size_t size, int written) {
     return (pos > size - 1u) ? (size - 1u) : pos;
 }
 
-size_t LogFormat_Line(char *out, size_t size, log_level_t level,
-                      const char *file, int line,
+size_t LogFormat_Line(char *out, size_t size, log_level_t level, const char *file, int line,
                       const char *format, va_list args) {
     if (out == NULL || size == 0u) {
         return 0u;

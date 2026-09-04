@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    stepper.c
-  * @brief   Stepper motor lifecycle and configuration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    stepper.c
+ * @brief   Stepper motor lifecycle and configuration
+ ******************************************************************************
+ */
 
 #include "stepper_core.h"
 #include "stepper_motion.h"
@@ -13,11 +13,10 @@
 #include "log.h"
 #include <string.h>
 
-#define STEPPER_DEFAULT_SPEED_RPM   60U
-#define STEPPER_DEFAULT_MAX_RPM     500U
+#define STEPPER_DEFAULT_SPEED_RPM 60U
+#define STEPPER_DEFAULT_MAX_RPM 500U
 
-static STEPPER_StatusTypeDef STEPPER_ValidateConfig(const STEPPER_Config_t *config)
-{
+static STEPPER_StatusTypeDef STEPPER_ValidateConfig(const STEPPER_Config_t *config) {
     if (config->stepsPerRevolution == 0U) {
         return STEPPER_INVALID_PARAM;
     }
@@ -39,11 +38,9 @@ static STEPPER_StatusTypeDef STEPPER_ValidateConfig(const STEPPER_Config_t *conf
     return STEPPER_OK;
 }
 
-STEPPER_StatusTypeDef STEPPER_Init(STEPPER_Handle_t *hstep,
-                                   TIM_HandleTypeDef *htim,
-                                   const STEPPER_Pins_t *pins)
-{
-    STEPPER_StatusTypeDef status;
+STEPPER_StatusTypeDef STEPPER_Init(STEPPER_Handle_t *hstep, TIM_HandleTypeDef *htim,
+                                   const STEPPER_Pins_t *pins) {
+    STEPPER_StatusTypeDef status = STEPPER_OK;
     STEPPER_Config_t defaultConfig;
 
     if (hstep == NULL || htim == NULL || pins == NULL) {
@@ -80,8 +77,7 @@ STEPPER_StatusTypeDef STEPPER_Init(STEPPER_Handle_t *hstep,
     return status;
 }
 
-STEPPER_StatusTypeDef STEPPER_DeInit(STEPPER_Handle_t *hstep)
-{
+STEPPER_StatusTypeDef STEPPER_DeInit(STEPPER_Handle_t *hstep) {
     STEPPER_CHECK_HANDLE(hstep);
 
     (void)STEPPER_Stop(hstep);
@@ -94,8 +90,7 @@ STEPPER_StatusTypeDef STEPPER_DeInit(STEPPER_Handle_t *hstep)
     return STEPPER_OK;
 }
 
-STEPPER_StatusTypeDef STEPPER_Config(STEPPER_Handle_t *hstep, const STEPPER_Config_t *config)
-{
+STEPPER_StatusTypeDef STEPPER_Config(STEPPER_Handle_t *hstep, const STEPPER_Config_t *config) {
     STEPPER_CHECK_HANDLE(hstep);
 
     if (config == NULL) {
@@ -116,25 +111,23 @@ STEPPER_StatusTypeDef STEPPER_Config(STEPPER_Handle_t *hstep, const STEPPER_Conf
     return STEPPER_OK;
 }
 
-STEPPER_Config_t STEPPER_GetDefaultConfig(void)
-{
-    STEPPER_Config_t config = {
-        .stepsPerRevolution = STEPPER_DEFAULT_STEPS_PER_REV,
-        .maxSpeedRPM = STEPPER_DEFAULT_MAX_RPM,
-        .stepMode = STEPPER_MODE_FULL_STEP
-    };
+STEPPER_Config_t STEPPER_GetDefaultConfig(void) {
+    STEPPER_Config_t config = {.stepsPerRevolution = STEPPER_DEFAULT_STEPS_PER_REV,
+                               .maxSpeedRPM = STEPPER_DEFAULT_MAX_RPM,
+                               .stepMode = STEPPER_MODE_FULL_STEP};
 
     return config;
 }
 
-STEPPER_Pins_t STEPPER_GetDefaultPins(void)
-{
-    STEPPER_Pins_t pins = {
-        .port1 = GPIOE, .pin1 = GPIO_PIN_4,
-        .port2 = GPIOE, .pin2 = GPIO_PIN_5,
-        .port3 = GPIOE, .pin3 = GPIO_PIN_6,
-        .port4 = GPIOB, .pin4 = GPIO_PIN_6
-    };
+STEPPER_Pins_t STEPPER_GetDefaultPins(void) {
+    STEPPER_Pins_t pins = {.port1 = GPIOE,
+                           .pin1 = GPIO_PIN_4,
+                           .port2 = GPIOE,
+                           .pin2 = GPIO_PIN_5,
+                           .port3 = GPIOE,
+                           .pin3 = GPIO_PIN_6,
+                           .port4 = GPIOB,
+                           .pin4 = GPIO_PIN_6};
 
     return pins;
 }

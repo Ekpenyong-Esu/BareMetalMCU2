@@ -30,21 +30,21 @@ uint32_t DMA2D_MakeColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha
  * @param blue Destination for the blue component (may be NULL)
  * @param alpha Destination for the alpha component (may be NULL)
  */
-void DMA2D_GetColorComponents(uint32_t color, uint8_t *red, uint8_t *green,
-                              uint8_t *blue, uint8_t *alpha);
+void DMA2D_GetColorComponents(uint32_t color, uint8_t *red, uint8_t *green, uint8_t *blue,
+                              uint8_t *alpha);
 
 /**
  * @brief Describe a HAL status code
  * @param error_code HAL error code
  * @return const char* Error description string
  */
-const char* DMA2D_GetErrorString(HAL_StatusTypeDef error_code);
+const char *DMA2D_GetErrorString(HAL_StatusTypeDef error_code);
 
 /**
  * @brief Describe a DMA2D peripheral state
  * @param state DMA2D state
  * @return const char* State description string
  */
-const char* DMA2D_GetStateString(uint32_t state);
+const char *DMA2D_GetStateString(uint32_t state);
 
 #endif /* DMA2D_COLOR_H */

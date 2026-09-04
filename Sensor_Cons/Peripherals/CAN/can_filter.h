@@ -1,23 +1,23 @@
 /**
-  ******************************************************************************
-  * @file    can_filter.h
-  * @brief   CAN filter bank configuration
-  * @details Packs driver filter configs into bxCAN register layout and
-  *          programs them via HAL_CAN_ConfigFilter(). Handles both 32-bit
-  *          and 16-bit scale, standard and extended identifiers.
-  *
-  * CAN Filter Responsibilities:
-  * - CAN_ConfigFilter: Validate, pack and program one filter bank
-  * - Packing helpers: CAN_PackFilter32 / CAN_PackFilter16 (in can_filter.c)
-  * - Filter bank count and slave split are config-driven (not compile-time)
-  *
-  * Filter Bank Layout (bxCAN):
-  * - 32-bit scale: one filter per bank — STID[10:0] at bits 31..21,
-  *   EXID[17:0] at bits 20..3, IDE at bit 2, RTR at bit 1
-  * - 16-bit scale: two filters per bank — STID at bits 15..5, IDE at bit 3,
-  *   EXID[17:15] at bits 2..0; this driver mirrors one id/mask pair to both halves
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    can_filter.h
+ * @brief   CAN filter bank configuration
+ * @details Packs driver filter configs into bxCAN register layout and
+ *          programs them via HAL_CAN_ConfigFilter(). Handles both 32-bit
+ *          and 16-bit scale, standard and extended identifiers.
+ *
+ * CAN Filter Responsibilities:
+ * - CAN_ConfigFilter: Validate, pack and program one filter bank
+ * - Packing helpers: CAN_PackFilter32 / CAN_PackFilter16 (in can_filter.c)
+ * - Filter bank count and slave split are config-driven (not compile-time)
+ *
+ * Filter Bank Layout (bxCAN):
+ * - 32-bit scale: one filter per bank — STID[10:0] at bits 31..21,
+ *   EXID[17:0] at bits 20..3, IDE at bit 2, RTR at bit 1
+ * - 16-bit scale: two filters per bank — STID at bits 15..5, IDE at bit 3,
+ *   EXID[17:15] at bits 2..0; this driver mirrors one id/mask pair to both halves
+ ******************************************************************************
+ */
 
 #ifndef CAN_FILTER_H
 #define CAN_FILTER_H

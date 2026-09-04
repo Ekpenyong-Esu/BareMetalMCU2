@@ -21,35 +21,35 @@ extern "C" {
  * @param   config Configuration to copy into the handle
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_Init(SegDisplayHandle_t* handle, const SegDisplayConfig_t* config);
+SegStatus_t Seg_Init(SegDisplayHandle_t *handle, const SegDisplayConfig_t *config);
 
 /**
  * @brief   Release a display and blank its output
  * @param   handle Display handle
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_DeInit(SegDisplayHandle_t* handle);
+SegStatus_t Seg_DeInit(SegDisplayHandle_t *handle);
 
 /**
  * @brief   Enable display output
  * @param   handle Display handle
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_Enable(SegDisplayHandle_t* handle);
+SegStatus_t Seg_Enable(SegDisplayHandle_t *handle);
 
 /**
  * @brief   Disable display output
  * @param   handle Display handle
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_Disable(SegDisplayHandle_t* handle);
+SegStatus_t Seg_Disable(SegDisplayHandle_t *handle);
 
 /**
  * @brief   Blank every digit
  * @param   handle Display handle
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_Clear(SegDisplayHandle_t* handle);
+SegStatus_t Seg_Clear(SegDisplayHandle_t *handle);
 
 /**
  * @brief   Advance the multiplex cursor by one digit
@@ -59,7 +59,7 @@ SegStatus_t Seg_Clear(SegDisplayHandle_t* handle);
  *          >= 100Hz * digitCount for a flicker-free display. Backends that
  *          hold the whole frame themselves ignore it.
  */
-SegStatus_t Seg_Update(SegDisplayHandle_t* handle);
+SegStatus_t Seg_Update(SegDisplayHandle_t *handle);
 
 /**
  * @brief   Push the pattern buffer to the hardware
@@ -67,14 +67,14 @@ SegStatus_t Seg_Update(SegDisplayHandle_t* handle);
  * @retval  SegStatus_t Operation status
  * @note    Called automatically by every function that changes the buffer.
  */
-SegStatus_t Seg_Refresh(SegDisplayHandle_t* handle);
+SegStatus_t Seg_Refresh(SegDisplayHandle_t *handle);
 
 /**
  * @brief   Number of digits the display was configured with
  * @param   handle Display handle
  * @retval  uint8_t Digit count, zero if the handle is unusable
  */
-uint8_t Seg_GetDigitCount(const SegDisplayHandle_t* handle);
+uint8_t Seg_GetDigitCount(const SegDisplayHandle_t *handle);
 
 #ifdef __cplusplus
 }

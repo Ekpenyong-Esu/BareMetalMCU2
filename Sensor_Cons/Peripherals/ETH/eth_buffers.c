@@ -21,8 +21,7 @@ static uint8_t s_txBuffer[ETH_BUFFER_SIZE] __attribute__((aligned(4)));
 
 static uint32_t s_rxAllocIdx = 0U;
 
-void ETH_Buffers_Attach(ETH_HandleTypeDef *heth)
-{
+void ETH_Buffers_Attach(ETH_HandleTypeDef *heth) {
     if (heth == NULL) {
         return;
     }
@@ -32,13 +31,11 @@ void ETH_Buffers_Attach(ETH_HandleTypeDef *heth)
     heth->Init.RxBuffLen = ETH_BUFFER_SIZE;
 }
 
-void ETH_Buffers_Reset(void)
-{
+void ETH_Buffers_Reset(void) {
     s_rxAllocIdx = 0U;
 }
 
-uint8_t *ETH_Buffers_GetTxBuffer(void)
-{
+uint8_t *ETH_Buffers_GetTxBuffer(void) {
     return s_txBuffer;
 }
 
@@ -48,8 +45,7 @@ uint8_t *ETH_Buffers_GetTxBuffer(void)
  *          and would make the DMA write to whatever address the descriptor
  *          happened to hold.
  */
-void HAL_ETH_RxAllocateCallback(uint8_t **buff)
-{
+void HAL_ETH_RxAllocateCallback(uint8_t **buff) {
     *buff = s_rxPool[s_rxAllocIdx];
     s_rxAllocIdx = (s_rxAllocIdx + 1U) % ETH_RX_DESC_CNT;
 }
@@ -59,8 +55,7 @@ void HAL_ETH_RxAllocateCallback(uint8_t **buff)
  * @note    ETH_BUFFER_SIZE exceeds the longest legal frame, so a packet always
  *          occupies exactly one buffer and the list has a single element.
  */
-void HAL_ETH_RxLinkCallback(void **pStart, void **pEnd, uint8_t *buff, uint16_t Length)
-{
+void HAL_ETH_RxLinkCallback(void **pStart, void **pEnd, uint8_t *buff, uint16_t Length) {
     (void)Length;
 
     if (*pStart == NULL) {
@@ -75,7 +70,7 @@ void HAL_ETH_RxLinkCallback(void **pStart, void **pEnd, uint8_t *buff, uint16_t 
  *          nothing to free. The override exists so the HAL does not fall back
  *          to its empty weak default silently.
  */
-void HAL_ETH_TxFreeCallback(uint32_t *buff)
-{
+/* The prototype is fixed by stm32f4xx_hal_eth.h, so the pointer cannot be const. */
+void HAL_ETH_TxFreeCallback(uint32_t *buff) { // NOLINT(readability-non-const-parameter)
     (void)buff;
 }

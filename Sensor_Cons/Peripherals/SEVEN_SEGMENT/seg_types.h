@@ -20,7 +20,7 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 
-#define SEG_MAX_DIGITS                  8       /**< Maximum supported digits */
+#define SEG_MAX_DIGITS 8 /**< Maximum supported digits */
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -28,8 +28,8 @@ extern "C" {
  * @brief Backend that physically drives the display
  */
 typedef enum {
-    SEG_DRIVER_GPIO = 0,    /**< Direct GPIO control (no driver IC) */
-    SEG_DRIVER_HT1621       /**< HT1621 LCD driver IC */
+    SEG_DRIVER_GPIO = 0, /**< Direct GPIO control (no driver IC) */
+    SEG_DRIVER_HT1621    /**< HT1621 LCD driver IC */
 } SegDriverType_t;
 
 /**
@@ -44,11 +44,11 @@ typedef enum {
  * @brief Operation status
  */
 typedef enum {
-    SEG_OK = 0,             /**< Operation successful */
-    SEG_ERROR,              /**< General error */
-    SEG_INVALID_PARAM,      /**< Invalid parameter */
-    SEG_NOT_INITIALIZED,    /**< Driver not initialized */
-    SEG_BUSY                /**< Driver busy */
+    SEG_OK = 0,          /**< Operation successful */
+    SEG_ERROR,           /**< General error */
+    SEG_INVALID_PARAM,   /**< Invalid parameter */
+    SEG_NOT_INITIALIZED, /**< Driver not initialized */
+    SEG_BUSY             /**< Driver busy */
 } SegStatus_t;
 
 /**
@@ -65,45 +65,45 @@ typedef enum {
  *      --D--  .DP
  */
 typedef enum {
-    SEG_A = 0,              /**< Top segment */
-    SEG_B,                  /**< Top-right segment */
-    SEG_C,                  /**< Bottom-right segment */
-    SEG_D,                  /**< Bottom segment */
-    SEG_E,                  /**< Bottom-left segment */
-    SEG_F,                  /**< Top-left segment */
-    SEG_G,                  /**< Middle segment */
-    SEG_DP,                 /**< Decimal point */
-    SEG_COUNT               /**< Total segment count */
+    SEG_A = 0, /**< Top segment */
+    SEG_B,     /**< Top-right segment */
+    SEG_C,     /**< Bottom-right segment */
+    SEG_D,     /**< Bottom segment */
+    SEG_E,     /**< Bottom-left segment */
+    SEG_F,     /**< Top-left segment */
+    SEG_G,     /**< Middle segment */
+    SEG_DP,    /**< Decimal point */
+    SEG_COUNT  /**< Total segment count */
 } SegmentId_t;
 
 /**
  * @brief A single GPIO pin
  */
 typedef struct {
-    GPIO_TypeDef* port;     /**< GPIO port */
-    uint16_t pin;           /**< GPIO pin */
+    GPIO_TypeDef *port; /**< GPIO port */
+    uint16_t pin;       /**< GPIO pin */
 } SegGpioPin_t;
 
 /**
  * @brief Configuration for the direct-GPIO backend
  */
 typedef struct {
-    SegGpioPin_t segments[SEG_COUNT];   /**< Segment pins (A-G + DP) */
-    SegGpioPin_t* digits;               /**< Digit select pins (array) */
-    uint8_t digitCount;                 /**< Number of digits */
-    SegPolarity_t polarity;             /**< Common cathode or anode */
-    bool digitActiveHigh;               /**< Digit select active level */
+    SegGpioPin_t segments[SEG_COUNT]; /**< Segment pins (A-G + DP) */
+    SegGpioPin_t *digits;             /**< Digit select pins (array) */
+    uint8_t digitCount;               /**< Number of digits */
+    SegPolarity_t polarity;           /**< Common cathode or anode */
+    bool digitActiveHigh;             /**< Digit select active level */
 } SegGpioConfig_t;
 
 /**
  * @brief HT1621 bit-bang pins
  */
 typedef struct {
-    GPIO_TypeDef* csPort;   /**< Chip select port */
+    GPIO_TypeDef *csPort;   /**< Chip select port */
     uint16_t csPin;         /**< Chip select pin */
-    GPIO_TypeDef* wrPort;   /**< Write clock port */
+    GPIO_TypeDef *wrPort;   /**< Write clock port */
     uint16_t wrPin;         /**< Write clock pin */
-    GPIO_TypeDef* dataPort; /**< Data port */
+    GPIO_TypeDef *dataPort; /**< Data port */
     uint16_t dataPin;       /**< Data pin */
 } SegHT1621Pins_t;
 
@@ -111,24 +111,24 @@ typedef struct {
  * @brief Configuration for the HT1621 backend
  */
 typedef struct {
-    SegHT1621Pins_t pins;           /**< HT1621 GPIO pins */
-    uint8_t digitCount;             /**< Number of digits */
-    uint8_t bias;                   /**< LCD bias (2 or 3) */
-    uint8_t commons;                /**< Number of commons (2, 3, or 4) */
+    SegHT1621Pins_t pins; /**< HT1621 GPIO pins */
+    uint8_t digitCount;   /**< Number of digits */
+    uint8_t bias;         /**< LCD bias (2 or 3) */
+    uint8_t commons;      /**< Number of commons (2, 3, or 4) */
 } SegHT1621Config_t;
 
 /**
  * @brief Display configuration
  */
 typedef struct {
-    SegDriverType_t driverType;     /**< Backend selection */
+    SegDriverType_t driverType; /**< Backend selection */
     union {
-        SegGpioConfig_t gpio;       /**< GPIO backend configuration */
-        SegHT1621Config_t ht1621;   /**< HT1621 backend configuration */
+        SegGpioConfig_t gpio;     /**< GPIO backend configuration */
+        SegHT1621Config_t ht1621; /**< HT1621 backend configuration */
     } config;
     /* The multiplex rate is not set here: Seg_Update() lights one digit and
        returns, so the rate is however often the caller's timer calls it. */
-    bool leadingZeros;              /**< Pad numeric output with zeros */
+    bool leadingZeros; /**< Pad numeric output with zeros */
 } SegDisplayConfig_t;
 
 typedef struct SegDisplayHandle SegDisplayHandle_t;
@@ -140,28 +140,28 @@ typedef struct SegDisplayHandle SegDisplayHandle_t;
  */
 typedef struct {
     /** @brief Bring the backend up and leave the display blank */
-    SegStatus_t (*init)(SegDisplayHandle_t* handle);
+    SegStatus_t (*init)(SegDisplayHandle_t *handle);
     /** @brief Turn the display on */
-    void (*enable)(SegDisplayHandle_t* handle);
+    void (*enable)(SegDisplayHandle_t *handle);
     /** @brief Turn the display off */
-    void (*disable)(SegDisplayHandle_t* handle);
+    void (*disable)(SegDisplayHandle_t *handle);
     /** @brief Push the whole pattern buffer to the hardware */
-    void (*commit)(SegDisplayHandle_t* handle);
+    void (*commit)(SegDisplayHandle_t *handle);
     /** @brief Light one digit and advance; NULL when the backend is not multiplexed */
-    void (*multiplexStep)(SegDisplayHandle_t* handle);
+    void (*multiplexStep)(SegDisplayHandle_t *handle);
 } SegDriverOps_t;
 
 /**
  * @brief Display handle
  */
 struct SegDisplayHandle {
-    SegDisplayConfig_t config;              /**< Copy of the configuration */
-    const SegDriverOps_t* ops;              /**< Resolved backend */
-    uint8_t displayBuffer[SEG_MAX_DIGITS];  /**< One segment pattern per digit */
-    uint8_t digitCount;                     /**< Resolved once, backend agnostic */
-    uint8_t currentDigit;                   /**< Multiplex cursor */
-    bool initialized;                       /**< Initialization flag */
-    bool enabled;                           /**< Display enabled flag */
+    SegDisplayConfig_t config;             /**< Copy of the configuration */
+    const SegDriverOps_t *ops;             /**< Resolved backend */
+    uint8_t displayBuffer[SEG_MAX_DIGITS]; /**< One segment pattern per digit */
+    uint8_t digitCount;                    /**< Resolved once, backend agnostic */
+    uint8_t currentDigit;                  /**< Multiplex cursor */
+    bool initialized;                      /**< Initialization flag */
+    bool enabled;                          /**< Display enabled flag */
 };
 
 /* Exported inline helpers ---------------------------------------------------*/
@@ -171,8 +171,7 @@ struct SegDisplayHandle {
  * @param   handle Handle to validate
  * @retval  SEG_OK when the handle is usable
  */
-static inline SegStatus_t Seg_CheckReady(const SegDisplayHandle_t* handle)
-{
+static inline SegStatus_t Seg_CheckReady(const SegDisplayHandle_t *handle) {
     if (handle == NULL) {
         return SEG_INVALID_PARAM;
     }

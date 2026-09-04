@@ -7,70 +7,76 @@
 #include "usb_core.h"
 #include "usb_events.h"
 
-static ApplicationTypeDef s_lastState = APPLICATION_IDLE;
+USB_StatusTypeDef USB_Host_Process(USB_Handle_t *husb) {
+    ApplicationTypeDef state = APPLICATION_IDLE;
 
-USB_StatusTypeDef USB_Host_Process(void)
-{
-    ApplicationTypeDef state;
-
-    if (!USB_IsInitialized()) {
+    if (!USB_IsInitialized(husb)) {
         return USB_STATUS_NOT_READY;
     }
 
-    USBH_Process(&hUsbHostHS);
+    USBH_Process(husb->host);
 
     /* USBH_UserProcess only records the state, so the edge is detected here. */
-    state = Appli_state;
-    if (state != s_lastState) {
-        s_lastState = state;
+    state = *husb->appliState;
+    if (state != husb->lastState) {
+        husb->lastState = state;
 
         if (state == APPLICATION_READY) {
-            USB_ConnectCallback();
-        } else if (state == APPLICATION_DISCONNECT) {
-            USB_DisconnectCallback();
+            USB_ConnectCallback(husb);
+        }
+        else if (state == APPLICATION_DISCONNECT) {
+            USB_DisconnectCallback(husb);
         }
     }
 
     return USB_STATUS_OK;
 }
 
-USB_HostStateTypeDef USB_Host_GetState(void)
-{
-    switch (Appli_state) {
-        case APPLICATION_IDLE:       return USB_HOST_IDLE;
-        case APPLICATION_START:      return USB_HOST_DEVICE_ATTACHED;
-        case APPLICATION_READY:      return USB_HOST_CLASS_ACTIVE;
-        case APPLICATION_DISCONNECT: return USB_HOST_WAIT_FOR_ATTACHMENT;
-        default:                     return USB_HOST_ERROR_STATE;
+USB_HostStateTypeDef USB_Host_GetState(const USB_Handle_t *husb) {
+    if (!USB_IsInitialized(husb)) {
+        return USB_HOST_ERROR_STATE;
+    }
+
+    switch (*husb->appliState) {
+        case APPLICATION_IDLE:
+            return USB_HOST_IDLE;
+        case APPLICATION_START:
+            return USB_HOST_DEVICE_ATTACHED;
+        case APPLICATION_READY:
+            return USB_HOST_CLASS_ACTIVE;
+        case APPLICATION_DISCONNECT:
+            return USB_HOST_WAIT_FOR_ATTACHMENT;
+        default:
+            return USB_HOST_ERROR_STATE;
     }
 }
 
-bool USB_Host_IsConnected(void)
-{
+bool USB_Host_IsConnected(const USB_Handle_t *husb) {
+    if (!USB_IsInitialized(husb)) {
+        return false;
+    }
+
     /* APPLICATION_IDLE means nothing has ever attached, so testing only for
        "not disconnected" would report a connection from reset. */
-    return (Appli_state == APPLICATION_START) || (Appli_state == APPLICATION_READY);
+    return (*husb->appliState == APPLICATION_START) || (*husb->appliState == APPLICATION_READY);
 }
 
-bool USB_Host_IsReady(void)
-{
-    return (Appli_state == APPLICATION_READY);
+bool USB_Host_IsReady(const USB_Handle_t *husb) {
+    return USB_IsInitialized(husb) && (*husb->appliState == APPLICATION_READY);
 }
 
-uint16_t USB_GetConnectedDeviceVID(void)
-{
-    if (!USB_Host_IsReady()) {
+uint16_t USB_GetConnectedDeviceVID(const USB_Handle_t *husb) {
+    if (!USB_Host_IsReady(husb)) {
         return 0U;
     }
 
-    return hUsbHostHS.device.DevDesc.idVendor;
+    return husb->host->device.DevDesc.idVendor;
 }
 
-uint16_t USB_GetConnectedDevicePID(void)
-{
-    if (!USB_Host_IsReady()) {
+uint16_t USB_GetConnectedDevicePID(const USB_Handle_t *husb) {
+    if (!USB_Host_IsReady(husb)) {
         return 0U;
     }
 
-    return hUsbHostHS.device.DevDesc.idProduct;
+    return husb->host->device.DevDesc.idProduct;
 }

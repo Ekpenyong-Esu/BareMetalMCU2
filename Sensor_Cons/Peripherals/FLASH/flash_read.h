@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    flash_read.h
-  * @brief   Flash read-back and blank-check operations
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    flash_read.h
+ * @brief   Flash read-back and blank-check operations
+ ******************************************************************************
+ */
 
 #ifndef __FLASH_READ_H__
 #define __FLASH_READ_H__
@@ -45,7 +45,7 @@ uint32_t FLASH_ReadWord(uint32_t address);
  * @param   length Number of bytes to read
  * @retval  FLASH_StatusTypeDef Operation status
  */
-FLASH_StatusTypeDef FLASH_ReadBuffer(uint32_t address, uint8_t* data, uint32_t length);
+FLASH_StatusTypeDef FLASH_ReadBuffer(uint32_t address, uint8_t *data, uint32_t length);
 
 /**
  * @brief   Check if Flash region is erased

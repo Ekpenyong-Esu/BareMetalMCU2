@@ -8,9 +8,8 @@
 
 /* Exported functions --------------------------------------------------------*/
 
-bool LedBlink_Init(LedBlink_t* blink, LedHandle_t* led)
-{
-    if (blink == NULL || led == NULL ) {
+bool LedBlink_Init(LedBlink_t *blink, LedHandle_t *led) {
+    if (blink == NULL || led == NULL) {
         return false;
     }
 
@@ -21,8 +20,7 @@ bool LedBlink_Init(LedBlink_t* blink, LedHandle_t* led)
     return true;
 }
 
-bool LedBlink_Start(LedBlink_t* blink, uint32_t periodMs, uint32_t nowMs)
-{
+bool LedBlink_Start(LedBlink_t *blink, uint32_t periodMs, uint32_t nowMs) {
     if (blink == NULL || blink->led == NULL || periodMs == 0u) {
         return false;
     }
@@ -33,8 +31,7 @@ bool LedBlink_Start(LedBlink_t* blink, uint32_t periodMs, uint32_t nowMs)
     return true;
 }
 
-bool LedBlink_Stop(LedBlink_t* blink)
-{
+bool LedBlink_Stop(LedBlink_t *blink) {
     if (blink == NULL || blink->led == NULL) {
         return false;
     }
@@ -43,8 +40,7 @@ bool LedBlink_Stop(LedBlink_t* blink)
     return Led_Off(blink->led);
 }
 
-bool LedBlink_Update(LedBlink_t* blink, uint32_t nowMs)
-{
+bool LedBlink_Update(LedBlink_t *blink, uint32_t nowMs) {
     if (blink == NULL || blink->led == NULL) {
         return false;
     }
@@ -63,7 +59,6 @@ bool LedBlink_Update(LedBlink_t* blink, uint32_t nowMs)
     return true;
 }
 
-bool LedBlink_IsRunning(const LedBlink_t* blink)
-{
+bool LedBlink_IsRunning(const LedBlink_t *blink) {
     return (blink != NULL) && blink->running;
 }

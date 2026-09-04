@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    servo_convert.h
-  * @brief   Angle <-> pulse width conversion and range validation
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    servo_convert.h
+ * @brief   Angle <-> pulse width conversion and range validation
+ ******************************************************************************
+ */
 
 #ifndef SERVO_CONVERT_H
 #define SERVO_CONVERT_H

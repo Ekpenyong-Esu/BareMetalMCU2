@@ -9,9 +9,8 @@
 static ETH_Handle_t *s_handle = NULL;
 static bool s_interruptMode = false;
 
-HAL_StatusTypeDef ETH_EnableInterrupts(ETH_Handle_t *handle)
-{
-    bool wasRunning;
+HAL_StatusTypeDef ETH_EnableInterrupts(ETH_Handle_t *handle) {
+    bool wasRunning = false;
 
     if ((handle == NULL) || !ETH_IsInitialized(handle)) {
         return HAL_ERROR;
@@ -37,9 +36,8 @@ HAL_StatusTypeDef ETH_EnableInterrupts(ETH_Handle_t *handle)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef ETH_DisableInterrupts(ETH_Handle_t *handle)
-{
-    bool wasRunning;
+HAL_StatusTypeDef ETH_DisableInterrupts(ETH_Handle_t *handle) {
+    bool wasRunning = false;
 
     if ((handle == NULL) || !ETH_IsInitialized(handle)) {
         return HAL_ERROR;
@@ -62,13 +60,11 @@ HAL_StatusTypeDef ETH_DisableInterrupts(ETH_Handle_t *handle)
     return HAL_OK;
 }
 
-bool ETH_IsInterruptModeEnabled(void)
-{
+bool ETH_IsInterruptModeEnabled(void) {
     return s_interruptMode;
 }
 
-void ETH_Driver_IRQHandler(void)
-{
+void ETH_Driver_IRQHandler(void) {
     if (s_handle != NULL) {
         HAL_ETH_IRQHandler(&s_handle->heth);
     }
@@ -78,32 +74,26 @@ void ETH_Driver_IRQHandler(void)
  * The HAL raises its own callbacks. Forward them so the driver level hooks
  * below are actually reached instead of remaining unreferenced.
  */
-void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *heth)
-{
+void HAL_ETH_TxCpltCallback(ETH_HandleTypeDef *heth) {
     ETH_TxCpltCallback(heth);
 }
 
-void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *heth)
-{
+void HAL_ETH_RxCpltCallback(ETH_HandleTypeDef *heth) {
     ETH_RxCpltCallback(heth);
 }
 
-void HAL_ETH_ErrorCallback(ETH_HandleTypeDef *heth)
-{
+void HAL_ETH_ErrorCallback(ETH_HandleTypeDef *heth) {
     ETH_ErrorCallback(heth);
 }
 
-__weak void ETH_TxCpltCallback(ETH_HandleTypeDef *heth)
-{
+__weak void ETH_TxCpltCallback(ETH_HandleTypeDef *heth) {
     (void)heth;
 }
 
-__weak void ETH_RxCpltCallback(ETH_HandleTypeDef *heth)
-{
+__weak void ETH_RxCpltCallback(ETH_HandleTypeDef *heth) {
     (void)heth;
 }
 
-__weak void ETH_ErrorCallback(ETH_HandleTypeDef *heth)
-{
+__weak void ETH_ErrorCallback(ETH_HandleTypeDef *heth) {
     (void)heth;
 }

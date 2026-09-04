@@ -26,8 +26,7 @@ extern "C" {
  * @return HAL_StatusTypeDef: HAL status
  */
 HAL_StatusTypeDef IR_Init(IR_Handle_t *handle, TIM_HandleTypeDef *htimCarrier,
-                          TIM_HandleTypeDef *htimCapture,
-                          uint32_t txChannel, uint32_t rxChannel,
+                          TIM_HandleTypeDef *htimCapture, uint32_t txChannel, uint32_t rxChannel,
                           const IR_Config_t *config);
 
 /**

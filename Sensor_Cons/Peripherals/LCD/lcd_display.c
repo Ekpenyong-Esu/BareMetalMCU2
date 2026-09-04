@@ -12,8 +12,7 @@
 
 /* Public functions ----------------------------------------------------------*/
 
-LCD_StatusTypeDef LCD_Clear(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_Clear(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -26,8 +25,7 @@ LCD_StatusTypeDef LCD_Clear(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_Home(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_Home(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -40,8 +38,7 @@ LCD_StatusTypeDef LCD_Home(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_DisplayOn(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_DisplayOn(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -51,8 +48,7 @@ LCD_StatusTypeDef LCD_DisplayOn(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_DisplayOff(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_DisplayOff(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -62,55 +58,46 @@ LCD_StatusTypeDef LCD_DisplayOff(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_BacklightOn(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_BacklightOn(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
-    if (handle->config.useBacklight)
-    {
+    if (handle->config.useBacklight) {
         LCD_IO_SetPin(&handle->config.pins.backlight, GPIO_PIN_SET);
     }
 
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_BacklightOff(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_BacklightOff(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
-    if (handle->config.useBacklight)
-    {
+    if (handle->config.useBacklight) {
         LCD_IO_SetPin(&handle->config.pins.backlight, GPIO_PIN_RESET);
     }
 
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_ClearLine(LCD_HandleTypeDef* handle, uint8_t row)
-{
-    LCD_StatusTypeDef status;
+LCD_StatusTypeDef LCD_ClearLine(LCD_HandleTypeDef *handle, uint8_t row) {
+    LCD_StatusTypeDef status = LCD_OK;
 
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
-    if (row >= handle->rows)
-    {
+    if (row >= handle->rows) {
         return LCD_INVALID_PARAM;
     }
 
     status = LCD_SetCursor(handle, 0, row);
-    if (status != LCD_OK)
-    {
+    if (status != LCD_OK) {
         return status;
     }
 
-    for (uint8_t i = 0; i < handle->cols; i++)
-    {
+    for (uint8_t i = 0; i < handle->cols; i++) {
         status = LCD_PrintChar(handle, ' ');
-        if (status != LCD_OK)
-        {
+        if (status != LCD_OK) {
             return status;
         }
     }
@@ -118,8 +105,7 @@ LCD_StatusTypeDef LCD_ClearLine(LCD_HandleTypeDef* handle, uint8_t row)
     return LCD_SetCursor(handle, 0, row);
 }
 
-LCD_StatusTypeDef LCD_ScrollLeft(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_ScrollLeft(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -128,8 +114,7 @@ LCD_StatusTypeDef LCD_ScrollLeft(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_ScrollRight(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_ScrollRight(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -138,8 +123,7 @@ LCD_StatusTypeDef LCD_ScrollRight(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_AutoScrollOn(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_AutoScrollOn(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -148,8 +132,7 @@ LCD_StatusTypeDef LCD_AutoScrollOn(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_AutoScrollOff(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_AutoScrollOff(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 

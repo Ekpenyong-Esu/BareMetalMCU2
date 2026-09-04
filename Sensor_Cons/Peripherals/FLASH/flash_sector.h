@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    flash_sector.h
-  * @brief   Flash sector geometry and address range validation
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    flash_sector.h
+ * @brief   Flash sector geometry and address range validation
+ ******************************************************************************
+ */
 
 #ifndef __FLASH_SECTOR_H__
 #define __FLASH_SECTOR_H__
@@ -32,7 +32,7 @@ uint32_t FLASH_GetSector(uint32_t address);
  * @param   info Pointer to sector info structure
  * @retval  FLASH_StatusTypeDef Operation status
  */
-FLASH_StatusTypeDef FLASH_GetSectorInfo(uint32_t sector, FLASH_SectorInfoTypeDef* info);
+FLASH_StatusTypeDef FLASH_GetSectorInfo(uint32_t sector, FLASH_SectorInfoTypeDef *info);
 
 /**
  * @brief   Check if address is valid Flash address

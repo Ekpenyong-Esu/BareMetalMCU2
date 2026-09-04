@@ -1,6 +1,6 @@
 /**
  * @file ltdc_events.h
- * @brief Routing of LTDC HAL callbacks to a driver record
+ * @brief Routing of LTDC HAL callbacks and the interrupt to a driver record
  */
 
 #ifndef LTDC_EVENTS_H
@@ -13,7 +13,7 @@ extern "C" {
 #include "ltdc_types.h"
 
 /**
- * @brief Route LTDC HAL callbacks to this driver record
+ * @brief Route LTDC HAL callbacks and LTDC_ISR_Dispatch() to this driver record
  * @param driver Driver record, or NULL to route nowhere
  */
 void LTDC_Events_Attach(LTDC_Driver_t *driver);

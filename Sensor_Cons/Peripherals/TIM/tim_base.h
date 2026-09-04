@@ -45,9 +45,7 @@ extern "C" {
  * @param  period    Auto-reload value (overflow at period + 1 counts)
  * @retval HAL_OK on success, HAL_ERROR if arguments invalid or HAL init fails
  */
-HAL_StatusTypeDef TIM_Init(TIM_HandleTypeDef *htim,
-                           TIM_TypeDef *instance,
-                           uint32_t prescaler,
+HAL_StatusTypeDef TIM_Init(TIM_HandleTypeDef *htim, TIM_TypeDef *instance, uint32_t prescaler,
                            uint32_t period);
 
 /**

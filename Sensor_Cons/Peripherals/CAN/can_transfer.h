@@ -1,29 +1,29 @@
 /**
-  ******************************************************************************
-  * @file    can_transfer.h
-  * @brief   CAN frame transmit and receive
-  * @details Blocking and non-blocking data path for one CAN handle. Wraps
-  *          HAL_CAN_AddTxMessage / HAL_CAN_GetRxMessage with frame conversion,
-  *          timeout handling and callback dispatch.
-  *
-  * CAN Transfer Responsibilities:
-  * - CAN_Transmit/Receive: Frame conversion, HAL calls, timeout/abort, callbacks
-  * - Mailbox/FIFO queries: Free level, pending count, per-FIFO checks
-  * - Abort: Cancel a queued transmit by mailbox index
-  *
-  * Transmit Flow:
-  * 1. Convert CAN_Frame -> CAN_TxHeaderTypeDef (StdId/ExtId, IDE, RTR, DLC)
-  * 2. HAL_CAN_AddTxMessage() — picks a free mailbox
-  * 3. If timeout > 0, poll HAL_CAN_IsTxMessagePending() until done or timeout
-  * 4. On timeout, abort the mailbox so it does not stay occupied
-  * 5. Bump tx_count, return
-  *
-  * Receive Flow:
-  * 1. If no FIFO has data and timeout == 0, return immediately
-  * 2. Otherwise poll until a FIFO has data or timeout expires
-  * 3. HAL_CAN_GetRxMessage() from the non-empty FIFO
-  * 4. Convert CAN_RxHeaderTypeDef -> CAN_Frame, bump rx_count, fire callback
-  */
+ ******************************************************************************
+ * @file    can_transfer.h
+ * @brief   CAN frame transmit and receive
+ * @details Blocking and non-blocking data path for one CAN handle. Wraps
+ *          HAL_CAN_AddTxMessage / HAL_CAN_GetRxMessage with frame conversion,
+ *          timeout handling and callback dispatch.
+ *
+ * CAN Transfer Responsibilities:
+ * - CAN_Transmit/Receive: Frame conversion, HAL calls, timeout/abort, callbacks
+ * - Mailbox/FIFO queries: Free level, pending count, per-FIFO checks
+ * - Abort: Cancel a queued transmit by mailbox index
+ *
+ * Transmit Flow:
+ * 1. Convert CAN_Frame -> CAN_TxHeaderTypeDef (StdId/ExtId, IDE, RTR, DLC)
+ * 2. HAL_CAN_AddTxMessage() — picks a free mailbox
+ * 3. If timeout > 0, poll HAL_CAN_IsTxMessagePending() until done or timeout
+ * 4. On timeout, abort the mailbox so it does not stay occupied
+ * 5. Bump tx_count, return
+ *
+ * Receive Flow:
+ * 1. If no FIFO has data and timeout == 0, return immediately
+ * 2. Otherwise poll until a FIFO has data or timeout expires
+ * 3. HAL_CAN_GetRxMessage() from the non-empty FIFO
+ * 4. Convert CAN_RxHeaderTypeDef -> CAN_Frame, bump rx_count, fire callback
+ */
 
 #ifndef CAN_TRANSFER_H
 #define CAN_TRANSFER_H

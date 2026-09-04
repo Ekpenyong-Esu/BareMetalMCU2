@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ov7670_io.h
-  * @brief   SCCB (I2C) register access for the OV7670
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ov7670_io.h
+ * @brief   SCCB (I2C) register access for the OV7670
+ ******************************************************************************
+ */
 
 #ifndef OV7670_IO_H
 #define OV7670_IO_H
@@ -23,8 +23,8 @@ typedef struct {
 } OV7670_RegVal_t;
 
 /**
- * @note These run before OV7670_Init() completes, so they only require an I2C
- *       handle - not a fully initialised driver.
+ * @note These run before OV7670_Init() completes, so they only require the
+ *       SCCB device to be registered on its bus - not a fully initialised driver.
  */
 OV7670_StatusTypeDef OV7670_WriteReg(OV7670_Handle_t *hov7670, uint8_t reg, uint8_t value);
 OV7670_StatusTypeDef OV7670_ReadReg(OV7670_Handle_t *hov7670, uint8_t reg, uint8_t *value);
@@ -32,8 +32,8 @@ OV7670_StatusTypeDef OV7670_ReadReg(OV7670_Handle_t *hov7670, uint8_t reg, uint8
 /**
  * @brief Read-modify-write the bits selected by @p mask.
  */
-OV7670_StatusTypeDef OV7670_UpdateReg(OV7670_Handle_t *hov7670, uint8_t reg,
-                                      uint8_t mask, uint8_t value);
+OV7670_StatusTypeDef OV7670_UpdateReg(OV7670_Handle_t *hov7670, uint8_t reg, uint8_t mask,
+                                      uint8_t value);
 
 /**
  * @brief Write entries until one with address OV7670_REG_LIST_END is reached.

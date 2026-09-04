@@ -21,7 +21,7 @@ extern "C" {
  * @retval  EEPROM_StatusTypeDef Operation status
  * @note    This operation can take several seconds
  */
-EEPROM_StatusTypeDef EEPROM_Erase(EEPROM_HandleTypeDef* handle);
+EEPROM_StatusTypeDef EEPROM_Erase(EEPROM_HandleTypeDef *handle);
 
 /**
  * @brief   Erase a range of EEPROM memory
@@ -30,8 +30,8 @@ EEPROM_StatusTypeDef EEPROM_Erase(EEPROM_HandleTypeDef* handle);
  * @param   length Number of bytes to erase
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_EraseRange(EEPROM_HandleTypeDef* handle,
-                                       uint16_t startAddress, uint16_t length);
+EEPROM_StatusTypeDef EEPROM_EraseRange(EEPROM_HandleTypeDef *handle, uint16_t startAddress,
+                                       uint16_t length);
 
 /**
  * @brief   Verify that stored data matches a buffer
@@ -41,8 +41,8 @@ EEPROM_StatusTypeDef EEPROM_EraseRange(EEPROM_HandleTypeDef* handle,
  * @param   length Number of bytes to verify
  * @retval  EEPROM_StatusTypeDef EEPROM_OK if match, EEPROM_ERROR if mismatch
  */
-EEPROM_StatusTypeDef EEPROM_Verify(EEPROM_HandleTypeDef* handle,
-                                   uint16_t address, const uint8_t* data, uint16_t length);
+EEPROM_StatusTypeDef EEPROM_Verify(EEPROM_HandleTypeDef *handle, uint16_t address,
+                                   const uint8_t *data, uint16_t length);
 
 /**
  * @brief   Write a test pattern, read it back and restore the original bytes
@@ -50,7 +50,7 @@ EEPROM_StatusTypeDef EEPROM_Verify(EEPROM_HandleTypeDef* handle,
  * @param   testAddress Address to use for the test
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_Test(EEPROM_HandleTypeDef* handle, uint16_t testAddress);
+EEPROM_StatusTypeDef EEPROM_Test(EEPROM_HandleTypeDef *handle, uint16_t testAddress);
 
 #ifdef __cplusplus
 }

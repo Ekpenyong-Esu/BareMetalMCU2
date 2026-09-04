@@ -1,9 +1,11 @@
 /**
-  ******************************************************************************
-  * @file    qspi_hw.h
-  * @brief   Board wiring and SPI transport bring-up for the serial NOR flash
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    qspi_hw.h
+ * @brief   Chip select and bus registration for the serial NOR flash
+ * @note    The SPI pins belong to the bus the application opened; the only
+ *          pin this driver owns is the chip select named in its config.
+ ******************************************************************************
+ */
 
 #ifndef QSPI_HW_H
 #define QSPI_HW_H
@@ -14,21 +16,27 @@ extern "C" {
 
 #include "qspi_types.h"
 
-/* SPI1 on GPIOB, chip select driven in software. */
-#define QSPI_SCK_PIN                    GPIO_PIN_3    /* PB3 - SPI1_SCK */
-#define QSPI_MISO_PIN                   GPIO_PIN_4    /* PB4 - SPI1_MISO */
-#define QSPI_MOSI_PIN                   GPIO_PIN_5    /* PB5 - SPI1_MOSI */
-#define QSPI_NCS_PIN                    GPIO_PIN_6    /* PB6 - chip select */
-#define QSPI_GPIO_PORT                  GPIOB
+/**
+ * @brief Configure the chip-select pin as an output and idle it high.
+ */
+QSPI_StatusTypeDef QSPI_HW_InitCS(QSPI_HandleStructTypeDef *hqspi);
 
-QSPI_StatusTypeDef QSPI_HW_InitGPIO(void);
-QSPI_StatusTypeDef QSPI_HW_InitSPI(QSPI_HandleStructTypeDef *hqspi);
-void QSPI_HW_DeInitSPI(QSPI_HandleStructTypeDef *hqspi);
+/**
+ * @brief Release the chip-select pin.
+ */
+void QSPI_HW_DeInitCS(QSPI_HandleStructTypeDef *hqspi);
+
+/**
+ * @brief Register the flash on its bus with the settings the part needs.
+ * @note  Re-registering after a prescaler change is enough; the bus is
+ *        reprogrammed on the next transfer.
+ */
+QSPI_StatusTypeDef QSPI_HW_RegisterDevice(QSPI_HandleStructTypeDef *hqspi);
 
 /**
  * @brief Assert (true) or release (false) the flash chip select.
  */
-void QSPI_ChipSelect(bool select);
+void QSPI_ChipSelect(const QSPI_HandleStructTypeDef *hqspi, bool select);
 
 #ifdef __cplusplus
 }

@@ -1,14 +1,14 @@
 /**
-  ******************************************************************************
-  * @file    sys.h
-  * @brief   System module interface
-  * @details This file contains all the function prototypes for
-  *          system configuration and error handling.
-  *          It provides core system functions for the STM32F429 board.
-  * @version 1.0
-  * @date    2025-04-15
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    sys.h
+ * @brief   System module interface
+ * @details This file contains all the function prototypes for
+ *          system configuration and error handling.
+ *          It provides core system functions for the STM32F429 board.
+ * @version 1.0
+ * @date    2025-04-15
+ ******************************************************************************
+ */
 
 #ifndef __SYS_H__
 #define __SYS_H__

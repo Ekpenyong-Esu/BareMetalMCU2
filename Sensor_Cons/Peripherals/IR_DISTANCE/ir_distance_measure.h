@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ir_distance_measure.h
-  * @brief   IR distance sensor measurement and conversion
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ir_distance_measure.h
+ * @brief   IR distance sensor measurement and conversion
+ ******************************************************************************
+ */
 
 #ifndef IR_DISTANCE_MEASURE_H
 #define IR_DISTANCE_MEASURE_H

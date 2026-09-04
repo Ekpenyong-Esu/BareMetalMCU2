@@ -1,32 +1,32 @@
 /**
-  ******************************************************************************
-  * @file    can_core.h
-  * @brief   CAN lifecycle, mode switching and handle registry
-  * @details Owns initialization and the instance-to-handle registry that lets
-  *          the HAL MspInit and ISR callbacks find the right handle. Replaces
-  *          the former singleton, so CAN1 and CAN2 can be used together.
-  *
-  * CAN Core Responsibilities:
-  * - CAN_Init/DeInit: Full peripheral setup (clock, GPIO, bit timing, HAL init)
-  * - Mode switching: Normal / loopback / silent without full reinit
-  * - Handle registry: Maps CAN instance -> handle for HAL callback routing
-  * - Status queries: Mailbox fill, FIFO depth, last error, counters
-  * - Error bookkeeping: Classification and sticky last-error
-  *
-  * Multi-CAN Support:
-  * - CAN1 and CAN2 can be used simultaneously
-  * - Each has its own handle; registry in can_core.c maps instance to handle
-  * - HAL callbacks (HAL_CAN_TxMailbox*CompleteCallback, HAL_CAN_RxFifo*MsgPendingCallback,
-  *   HAL_CAN_ErrorCallback) use this registry to find the correct handle
-  *
-  * Initialization Sequence:
-  * 1. Validate pins (no default — caller must supply TX/RX on this board)
-  * 2. Resolve instance (NULL -> CAN1), register handle before HAL_CAN_Init
-  *    so HAL_CAN_MspInit can find it for clock/GPIO setup
-  * 3. CAN_ApplyBaudRate() — derives prescaler/BS1/BS2 from live PCLK1
-  * 4. HAL_CAN_Init() + HAL_CAN_Start()
-  * 5. Mark handle initialized
-  */
+ ******************************************************************************
+ * @file    can_core.h
+ * @brief   CAN lifecycle, mode switching and handle registry
+ * @details Owns initialization and the instance-to-handle registry that lets
+ *          the HAL MspInit and ISR callbacks find the right handle. Replaces
+ *          the former singleton, so CAN1 and CAN2 can be used together.
+ *
+ * CAN Core Responsibilities:
+ * - CAN_Init/DeInit: Full peripheral setup (clock, GPIO, bit timing, HAL init)
+ * - Mode switching: Normal / loopback / silent without full reinit
+ * - Handle registry: Maps CAN instance -> handle for HAL callback routing
+ * - Status queries: Mailbox fill, FIFO depth, last error, counters
+ * - Error bookkeeping: Classification and sticky last-error
+ *
+ * Multi-CAN Support:
+ * - CAN1 and CAN2 can be used simultaneously
+ * - Each has its own handle; registry in can_core.c maps instance to handle
+ * - HAL callbacks (HAL_CAN_TxMailbox*CompleteCallback, HAL_CAN_RxFifo*MsgPendingCallback,
+ *   HAL_CAN_ErrorCallback) use this registry to find the correct handle
+ *
+ * Initialization Sequence:
+ * 1. Validate pins (no default — caller must supply TX/RX on this board)
+ * 2. Resolve instance (NULL -> CAN1), register handle before HAL_CAN_Init
+ *    so HAL_CAN_MspInit can find it for clock/GPIO setup
+ * 3. CAN_ApplyBaudRate() — derives prescaler/BS1/BS2 from live PCLK1
+ * 4. HAL_CAN_Init() + HAL_CAN_Start()
+ * 5. Mark handle initialized
+ */
 
 #ifndef CAN_CORE_H
 #define CAN_CORE_H

@@ -1,6 +1,6 @@
 /**
  * @file ts_core.c
- * @brief Touchscreen lifecycle, controller bring-up and handle registry
+ * @brief Touchscreen lifecycle and controller bring-up
  */
 
 #include "ts_core.h"
@@ -8,19 +8,18 @@
 #include "ts_events.h"
 #include "ts_calibration.h"
 #include "ts_stmpe811.h"
-#include "i2c.h"
 #include "log.h"
 #include <string.h>
 
 /* Private constants ---------------------------------------------------------*/
-#define TS_ADC_CTRL_12BIT               0x49U   /*!< BSP setting: 64 sample time, 12-bit, internal reference */
-#define TS_ADC_CLOCK_3_25MHZ            0x01U   /*!< ADC_CTRL2: 3.25 MHz ADC clock */
-#define TS_TSC_CFG_DEFAULT              0x9AU   /*!< 4-sample average, 500us detect delay, 500us settling */
-#define TS_FIFO_THRESHOLD_SINGLE        0x01U   /*!< Interrupt after a single point */
-#define TS_TSC_FRACT_XYZ_DEFAULT        0x01U   /*!< Z pressure: 7 fractional, 1 whole */
-#define TS_TSC_DRIVE_50MA               0x01U   /*!< TSC pin driving capability */
-#define TS_PROBE_TRIALS                 3U      /*!< Address attempts when probing */
-#define TS_PROBE_TIMEOUT                100U    /*!< Probe timeout per attempt, ms */
+#define TS_ADC_CTRL_12BIT 0x49U    /*!< BSP setting: 64 sample time, 12-bit, internal reference */
+#define TS_ADC_CLOCK_3_25MHZ 0x01U /*!< ADC_CTRL2: 3.25 MHz ADC clock */
+#define TS_TSC_CFG_DEFAULT 0x9AU   /*!< 4-sample average, 500us detect delay, 500us settling */
+#define TS_FIFO_THRESHOLD_SINGLE 0x01U /*!< Interrupt after a single point */
+#define TS_TSC_FRACT_XYZ_DEFAULT 0x01U /*!< Z pressure: 7 fractional, 1 whole */
+#define TS_TSC_DRIVE_50MA 0x01U        /*!< TSC pin driving capability */
+#define TS_PROBE_TRIALS 3U             /*!< Address attempts when probing */
+#define TS_PROBE_TIMEOUT 100U          /*!< Probe timeout per attempt, ms */
 
 /** One entry of the fixed controller start-up sequence. */
 typedef struct {
@@ -32,42 +31,26 @@ typedef struct {
 
 /* Applied in order once TSC and ADC are powered; see the STMPE811 datasheet. */
 static const TS_RegisterWrite_t s_startupSequence[] = {
-    {STMPE811_REG_ADC_CTRL2,     TS_ADC_CLOCK_3_25MHZ},
-    {STMPE811_REG_TSC_CFG,       TS_TSC_CFG_DEFAULT},
-    {STMPE811_REG_FIFO_TH,       TS_FIFO_THRESHOLD_SINGLE},
-    {STMPE811_REG_FIFO_STA,      STMPE811_FIFO_RESET},
-    {STMPE811_REG_FIFO_STA,      STMPE811_FIFO_OPERATIONAL},
+    {STMPE811_REG_ADC_CTRL2, TS_ADC_CLOCK_3_25MHZ},
+    {STMPE811_REG_TSC_CFG, TS_TSC_CFG_DEFAULT},
+    {STMPE811_REG_FIFO_TH, TS_FIFO_THRESHOLD_SINGLE},
+    {STMPE811_REG_FIFO_STA, STMPE811_FIFO_RESET},
+    {STMPE811_REG_FIFO_STA, STMPE811_FIFO_OPERATIONAL},
     {STMPE811_REG_TSC_FRACT_XYZ, TS_TSC_FRACT_XYZ_DEFAULT},
-    {STMPE811_REG_TSC_I_DRIVE,   TS_TSC_DRIVE_50MA},
-    {STMPE811_REG_TSC_CTRL,      STMPE811_TSC_CTRL_EN},
-    {STMPE811_REG_INT_STA,       STMPE811_INT_CLEAR_ALL},
+    {STMPE811_REG_TSC_I_DRIVE, TS_TSC_DRIVE_50MA},
+    {STMPE811_REG_TSC_CTRL, STMPE811_TSC_CTRL_EN},
+    {STMPE811_REG_INT_STA, STMPE811_INT_CLEAR_ALL},
 };
 
-static TS_HandleTypeDef *s_handle = NULL;   /*!< Handle the touch interrupt resolves to */
-
 /* Private functions ---------------------------------------------------------*/
-
-/**
- * @brief Adopt the shared I2C3 handle when the caller supplied an unconfigured one
- * @param hts Touchscreen handle
- */
-static void TS_ResolveBus(TS_HandleTypeDef *hts)
-{
-    TS_IO_BusInit();
-
-    if (hts->hi2c->Instance == NULL) {
-        hts->hi2c = I2C_GetHandle();
-    }
-}
 
 /**
  * @brief Confirm an STMPE811 is answering on the bus
  * @param hts Touchscreen handle
  * @return TS_StatusTypeDef TS_DEVICE_NOT_FOUND when the ID does not match
  */
-static TS_StatusTypeDef TS_CheckDevice(TS_HandleTypeDef *hts)
-{
-    if (TS_IO_IsDeviceReady(TS_PROBE_TRIALS, TS_PROBE_TIMEOUT) != TS_OK) {
+static TS_StatusTypeDef TS_CheckDevice(TS_HandleTypeDef *hts) {
+    if (TS_IO_IsDeviceReady(hts, TS_PROBE_TRIALS, TS_PROBE_TIMEOUT) != TS_OK) {
         log_debug("TS: Device not found on I2C bus");
         return TS_DEVICE_NOT_FOUND;
     }
@@ -94,8 +77,7 @@ static TS_StatusTypeDef TS_CheckDevice(TS_HandleTypeDef *hts)
  * @param mask Bits to clear
  * @return TS_StatusTypeDef Status of the operation
  */
-static TS_StatusTypeDef TS_ClearRegisterBits(TS_HandleTypeDef *hts, uint8_t reg, uint8_t mask)
-{
+static TS_StatusTypeDef TS_ClearRegisterBits(TS_HandleTypeDef *hts, uint8_t reg, uint8_t mask) {
     uint8_t value = 0;
     if (TS_ReadRegister(hts, reg, &value) != TS_OK) {
         return TS_COMMUNICATION_ERROR;
@@ -115,8 +97,7 @@ static TS_StatusTypeDef TS_ClearRegisterBits(TS_HandleTypeDef *hts, uint8_t reg,
  * @return TS_StatusTypeDef Status of the operation
  * @note Sequence based on ST BSP STMPE811_TS_Init()
  */
-static TS_StatusTypeDef TS_ConfigureController(TS_HandleTypeDef *hts)
-{
+static TS_StatusTypeDef TS_ConfigureController(TS_HandleTypeDef *hts) {
     if (TS_Reset(hts) != TS_OK) {
         return TS_COMMUNICATION_ERROR;
     }
@@ -136,7 +117,7 @@ static TS_StatusTypeDef TS_ConfigureController(TS_HandleTypeDef *hts)
     if (TS_WriteRegister(hts, STMPE811_REG_ADC_CTRL1, TS_ADC_CTRL_12BIT) != TS_OK) {
         return TS_COMMUNICATION_ERROR;
     }
-    HAL_Delay(2);   /* ADC needs to stabilise before its clock is selected */
+    HAL_Delay(2); /* ADC needs to stabilise before its clock is selected */
 
     for (size_t i = 0; i < (sizeof(s_startupSequence) / sizeof(s_startupSequence[0])); i++) {
         if (TS_WriteRegister(hts, s_startupSequence[i].reg, s_startupSequence[i].value) != TS_OK) {
@@ -151,31 +132,30 @@ static TS_StatusTypeDef TS_ConfigureController(TS_HandleTypeDef *hts)
 
 /* Public functions ----------------------------------------------------------*/
 
-TS_HandleTypeDef* TS_GetHandle(void)
-{
-    return s_handle;
-}
+TS_StatusTypeDef TS_Init(TS_HandleTypeDef *hts, const TS_ConfigTypeDef *config) {
+    if (hts == NULL || config == NULL || config->bus == NULL) {
+        return TS_INVALID_PARAM;
+    }
 
-TS_StatusTypeDef TS_Init(TS_HandleTypeDef *hts, I2C_HandleTypeDef *hi2c)
-{
-    if (hts == NULL || hi2c == NULL) {
+    /* The mapping scales onto the display, so a zero size would fold every
+       touch onto one pixel; the driver has no display of its own to assume. */
+    if (config->displayWidth == 0 || config->displayHeight == 0) {
         return TS_INVALID_PARAM;
     }
 
     memset(hts, 0, sizeof(TS_HandleTypeDef));
-    hts->hi2c = hi2c;
+    hts->Config = *config;
+    if (hts->Config.address == 0) {
+        hts->Config.address = STMPE811_I2C_ADDRESS;
+    }
     TS_GetDefaultCalibration(&hts->Calibration);
-    s_handle = hts;
 
-    TS_ResolveBus(hts);
-
-    TS_StatusTypeDef status = TS_CheckDevice(hts);
+    TS_StatusTypeDef status = TS_IO_DeviceInit(hts, hts->Config.bus, hts->Config.address);
     if (status != TS_OK) {
         return status;
     }
 
-    TS_ConfigTypeDef defaultConfig = TS_GetDefaultConfig();
-    status = TS_Configure(hts, &defaultConfig);
+    status = TS_CheckDevice(hts);
     if (status != TS_OK) {
         return status;
     }
@@ -190,7 +170,9 @@ TS_StatusTypeDef TS_Init(TS_HandleTypeDef *hts, I2C_HandleTypeDef *hi2c)
         return status;
     }
 
-    if (hts->Config.InterruptEnable) {
+    /* Without an INT pin the controller still flags touches, but the
+       application polls for them instead of taking an EXTI edge. */
+    if (hts->Config.InterruptEnable && hts->Config.intPort != NULL) {
         status = TS_ITConfig(hts);
         if (status != TS_OK) {
             return status;
@@ -201,8 +183,7 @@ TS_StatusTypeDef TS_Init(TS_HandleTypeDef *hts, I2C_HandleTypeDef *hi2c)
     return TS_OK;
 }
 
-TS_StatusTypeDef TS_DeInit(TS_HandleTypeDef *hts)
-{
+TS_StatusTypeDef TS_DeInit(TS_HandleTypeDef *hts) {
     if (hts == NULL) {
         return TS_INVALID_PARAM;
     }
@@ -211,21 +192,17 @@ TS_StatusTypeDef TS_DeInit(TS_HandleTypeDef *hts)
        the first error is what the caller hears about. */
     TS_StatusTypeDef status = TS_EnableInterrupt(hts, false);
 
-    if (TS_WriteRegister(hts, STMPE811_REG_SYS_CTRL2,
-                         STMPE811_SYS_CTRL2_TSC_OFF) != TS_OK && status == TS_OK) {
+    if (TS_WriteRegister(hts, STMPE811_REG_SYS_CTRL2, STMPE811_SYS_CTRL2_TSC_OFF) != TS_OK &&
+        status == TS_OK) {
         status = TS_COMMUNICATION_ERROR;
     }
 
     hts->IsInitialized = false;
-    if (s_handle == hts) {
-        s_handle = NULL;
-    }
 
     return status;
 }
 
-TS_StatusTypeDef TS_Configure(TS_HandleTypeDef *hts, TS_ConfigTypeDef *config)
-{
+TS_StatusTypeDef TS_Configure(TS_HandleTypeDef *hts, const TS_ConfigTypeDef *config) {
     if (hts == NULL || config == NULL) {
         return TS_INVALID_PARAM;
     }
@@ -234,8 +211,7 @@ TS_StatusTypeDef TS_Configure(TS_HandleTypeDef *hts, TS_ConfigTypeDef *config)
     return TS_OK;
 }
 
-TS_StatusTypeDef TS_Reset(TS_HandleTypeDef *hts)
-{
+TS_StatusTypeDef TS_Reset(TS_HandleTypeDef *hts) {
     if (hts == NULL) {
         return TS_INVALID_PARAM;
     }
@@ -248,20 +224,15 @@ TS_StatusTypeDef TS_Reset(TS_HandleTypeDef *hts)
     return TS_OK;
 }
 
-TS_ConfigTypeDef TS_GetDefaultConfig(void)
-{
-    TS_ConfigTypeDef config = {
-        .InterruptEnable = true
-    };
+TS_ConfigTypeDef TS_GetDefaultConfig(void) {
+    TS_ConfigTypeDef config = {.InterruptEnable = true};
 
     return config;
 }
 
-TS_StatusTypeDef TS_RegisterCallbacks(TS_HandleTypeDef *hts,
-                                      void (*touch_callback)(void),
+TS_StatusTypeDef TS_RegisterCallbacks(TS_HandleTypeDef *hts, void (*touch_callback)(void),
                                       void (*release_callback)(void),
-                                      void (*gesture_callback)(TS_GestureTypeDef))
-{
+                                      void (*gesture_callback)(TS_GestureTypeDef)) {
     if (hts == NULL) {
         return TS_INVALID_PARAM;
     }
@@ -269,6 +240,16 @@ TS_StatusTypeDef TS_RegisterCallbacks(TS_HandleTypeDef *hts,
     hts->TouchCallback = touch_callback;
     hts->ReleaseCallback = release_callback;
     hts->GestureCallback = gesture_callback;
+
+    return TS_OK;
+}
+
+TS_StatusTypeDef TS_SetActivityCallback(TS_HandleTypeDef *hts, void (*activity_callback)(void)) {
+    if (hts == NULL) {
+        return TS_INVALID_PARAM;
+    }
+
+    hts->ActivityCallback = activity_callback;
 
     return TS_OK;
 }

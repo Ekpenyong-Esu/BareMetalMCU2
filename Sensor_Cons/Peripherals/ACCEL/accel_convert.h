@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    accel_convert.h
-  * @brief   Raw-sample decoding and unit conversion for the MMA8452Q
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    accel_convert.h
+ * @brief   Raw-sample decoding and unit conversion for the MMA8452Q
+ ******************************************************************************
+ */
 
 #ifndef ACCEL_CONVERT_H
 #define ACCEL_CONVERT_H

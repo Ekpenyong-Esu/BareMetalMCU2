@@ -11,8 +11,7 @@
 
 /* Spins until the TX callback raises txComplete; self-contained, so this mode
    never depends on the driver's other files. */
-static UART_Status_t WaitForFlag(volatile bool *flag, uint32_t timeout)
-{
+static UART_Status_t WaitForFlag(const volatile bool *flag, uint32_t timeout) {
     uint32_t startTick = HAL_GetTick();
 
     while (!*flag) {
@@ -25,8 +24,8 @@ static UART_Status_t WaitForFlag(volatile bool *flag, uint32_t timeout)
 }
 
 /* Reception lands in the ring; this drains a complete packet out of it. */
-static UART_Status_t WaitForRingData(UART_Handle_t *handle, uint8_t *data, uint16_t size, uint32_t timeout)
-{
+static UART_Status_t WaitForRingData(UART_Handle_t *handle, uint8_t *data, uint16_t size,
+                                     uint32_t timeout) {
     uint32_t startTick = HAL_GetTick();
 
     while (timeout > 0 && !handle->rxComplete) {
@@ -50,8 +49,7 @@ static UART_Status_t WaitForRingData(UART_Handle_t *handle, uint8_t *data, uint1
 /* Reception is armed the same way whether it is the first call or a re-arm
    from interrupt context, so both paths share this. Bytes always land in the
    driver's landing buffer; the caller's buffer is filled from the ring. */
-static bool StartReceive(UART_Handle_t* handle)
-{
+static bool StartReceive(UART_Handle_t *handle) {
     if (HAL_UARTEx_ReceiveToIdle_IT(handle->huart, handle->rxBuffer, handle->rxSize) == HAL_OK) {
         return true;
     }
@@ -60,8 +58,7 @@ static bool StartReceive(UART_Handle_t* handle)
     return HAL_UART_Receive_IT(handle->huart, handle->rxBuffer, handle->rxSize) == HAL_OK;
 }
 
-UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* config)
-{
+UART_Status_t UART_Interrupt_Init(UART_Handle_t *handle, const UART_Config_t *config) {
     if (handle == NULL || config == NULL || config->instance == NULL || handle->huart == NULL) {
         log_debug("Interrupt UART: handle, huart or config is NULL");
         return UART_ERROR;
@@ -75,8 +72,10 @@ UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* co
     RingBuffer_Init(&handle->rxRing);
     memset(handle->huart, 0, sizeof(UART_HandleTypeDef));
 
-    /* Publish before HAL_UART_Init(), which calls into HAL_UART_MspInit(). */
-    UART_SetActiveHandle(handle);
+    /* Register before HAL_UART_Init(), which calls into HAL_UART_MspInit(). */
+    if (UART_Register(handle) != UART_OK) {
+        return UART_ERROR;
+    }
 
     handle->huart->Instance = config->instance;
     handle->huart->Init.BaudRate = config->baudRate;
@@ -89,6 +88,7 @@ UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* co
 
     if (HAL_UART_Init(handle->huart) != HAL_OK) {
         log_debug("Interrupt UART initialization failed");
+        UART_Unregister(handle);
         return UART_ERROR;
     }
 
@@ -102,8 +102,7 @@ UART_Status_t UART_Interrupt_Init(UART_Handle_t* handle, const UART_Config_t* co
 }
 
 /* Both transfer directions share the same preconditions. */
-static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, uint16_t size)
-{
+static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, uint16_t size) {
     if (handle == NULL) {
         log_debug("UART handle is NULL");
         return false;
@@ -127,15 +126,15 @@ static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, ui
     return true;
 }
 
-UART_Status_t UART_Interrupt_Transmit(UART_Handle_t* handle, const uint8_t* data, uint16_t size, uint32_t timeout)
-{
+UART_Status_t UART_Interrupt_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size,
+                                      uint32_t timeout) {
     if (!IsReadyForTransfer(handle, data, size)) {
         return UART_ERROR;
     }
 
     handle->txComplete = false;
 
-    if (HAL_UART_Transmit_IT(handle->huart, (uint8_t*)data, size) != HAL_OK) {
+    if (HAL_UART_Transmit_IT(handle->huart, (uint8_t *)data, size) != HAL_OK) {
         log_debug("UART Transmit failed");
         return UART_ERROR;
     }
@@ -147,8 +146,8 @@ UART_Status_t UART_Interrupt_Transmit(UART_Handle_t* handle, const uint8_t* data
     return WaitForFlag(&handle->txComplete, timeout);
 }
 
-UART_Status_t UART_Interrupt_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size, uint32_t timeout)
-{
+UART_Status_t UART_Interrupt_Receive(UART_Handle_t *handle, uint8_t *data, uint16_t size,
+                                     uint32_t timeout) {
     if (!IsReadyForTransfer(handle, data, size)) {
         return UART_ERROR;
     }
@@ -170,19 +169,18 @@ UART_Status_t UART_Interrupt_Receive(UART_Handle_t* handle, uint8_t* data, uint1
     return WaitForRingData(handle, data, size, timeout);
 }
 
-bool UART_Interrupt_Rearm(UART_Handle_t* handle)
-{
+bool UART_Interrupt_Rearm(UART_Handle_t *handle) {
     return StartReceive(handle);
 }
 
-bool UART_Interrupt_Recover(UART_Handle_t* handle)
-{
+bool UART_Interrupt_Recover(UART_Handle_t *handle) {
     /* Interrupt mode needs the peripheral rebuilt before reception can restart. */
     return HAL_UART_Init(handle->huart) == HAL_OK;
 }
 
 /*
- * The UART interrupt vector is owned by Core, not this driver.
- * USART1_IRQHandler() is defined in Core/Src/stm32f4xx_it.c and dispatches
- * into the callbacks in uart_events.c via HAL_UART_IRQHandler().
+ * The UART interrupt vectors are owned by Core, not this driver.
+ * USARTx_IRQHandler() in Core/Src/stm32f4xx_it.c calls UART_IRQHandler(USARTx),
+ * which finds the link by instance and dispatches into the callbacks in
+ * uart_events.c via HAL_UART_IRQHandler().
  */

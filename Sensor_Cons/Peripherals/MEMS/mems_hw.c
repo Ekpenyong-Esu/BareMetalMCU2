@@ -1,98 +1,73 @@
 /**
-  ******************************************************************************
-  * @file    mems_hw.c
-  * @brief   Board wiring for the on-board L3GD20
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mems_hw.c
+ * @brief   Chip select and interrupt inputs of one L3GD20
+ ******************************************************************************
+ */
 
 #include "mems_hw.h"
 #include "gpio.h"
 
-static GPIO_TypeDef *MEMS_CsPort(const MEMS_HandleTypeDef *hmems)
-{
-    if (hmems != NULL && hmems->CS_Port != NULL && hmems->CS_Pin != 0U) {
-        return hmems->CS_Port;
-    }
-    return MEMS_CS_GPIO_PORT;
-}
-
-static uint16_t MEMS_CsPin(const MEMS_HandleTypeDef *hmems)
-{
-    if (hmems != NULL && hmems->CS_Port != NULL && hmems->CS_Pin != 0U) {
-        return hmems->CS_Pin;
-    }
-    return MEMS_CS_PIN;
-}
-
-static void MEMS_InitCsPin(GPIO_TypeDef *port, uint16_t pin)
-{
+static MEMS_StatusTypeDef MEMS_InitCsPin(GPIO_TypeDef *port, uint16_t pin) {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
     GPIO_InitStruct.Pin = pin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIO_Driver_Pin_Init(port, &GPIO_InitStruct);
+    if (GPIO_Driver_Pin_Init(port, &GPIO_InitStruct) != HAL_OK) {
+        return MEMS_ERROR;
+    }
 
+    /* Idle high before the first transfer, or the part sees a partial frame. */
     HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
-}
-
-MEMS_StatusTypeDef MEMS_HW_InitGPIO(MEMS_HandleTypeDef *hmems)
-{
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_TypeDef *csPort = NULL;
-    uint16_t csPin = 0U;
-
-    /* GPIO driver enables the port clock for each configured port */
-    csPort = MEMS_CsPort(hmems);
-    csPin = MEMS_CsPin(hmems);
-    MEMS_InitCsPin(csPort, csPin);
-
-    GPIO_InitStruct.Pin = MEMS_SPI_SCK_PIN | MEMS_SPI_MISO_PIN | MEMS_SPI_MOSI_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF5_SPI5;
-    GPIO_Driver_Pin_Init(MEMS_SPI_GPIO_PORT, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = MEMS_INT1_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Alternate = 0;
-    GPIO_Driver_Pin_Init(MEMS_INT1_GPIO_PORT, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = MEMS_INT2_PIN;
-    GPIO_Driver_Pin_Init(MEMS_INT2_GPIO_PORT, &GPIO_InitStruct);
 
     return MEMS_OK;
 }
 
-void MEMS_SetCS(MEMS_HandleTypeDef *hmems, GPIO_TypeDef *csPort, uint16_t csPin)
-{
-    if (hmems == NULL) {
-        return;
+/* A NULL port means the application left that interrupt line unconnected. */
+static MEMS_StatusTypeDef MEMS_InitIntPin(GPIO_TypeDef *port, uint16_t pin) {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    if (port == NULL) {
+        return MEMS_OK;
     }
 
-    hmems->CS_Port = csPort;
-    hmems->CS_Pin = csPin;
-
-    if (csPort != NULL && csPin != 0U) {
-        MEMS_InitCsPin(csPort, csPin);
+    GPIO_InitStruct.Pin = pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    if (GPIO_Driver_Pin_Init(port, &GPIO_InitStruct) != HAL_OK) {
+        return MEMS_ERROR;
     }
+
+    return MEMS_OK;
 }
 
-void MEMS_CS_High(MEMS_HandleTypeDef *hmems)
-{
-    GPIO_TypeDef *port = MEMS_CsPort(hmems);
-    uint16_t pin = MEMS_CsPin(hmems);
+MEMS_StatusTypeDef MEMS_HW_InitGPIO(MEMS_HandleTypeDef *hmems) {
+    MEMS_StatusTypeDef status = MEMS_OK;
 
-    HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
+    if (hmems == NULL || hmems->CS_Port == NULL || hmems->CS_Pin == 0U) {
+        return MEMS_INVALID_PARAM;
+    }
+
+    /* GPIO driver enables the port clock for each configured port */
+    status = MEMS_InitCsPin(hmems->CS_Port, hmems->CS_Pin);
+    if (status != MEMS_OK) {
+        return status;
+    }
+
+    status = MEMS_InitIntPin(hmems->INT1_Port, hmems->INT1_Pin);
+    if (status != MEMS_OK) {
+        return status;
+    }
+
+    return MEMS_InitIntPin(hmems->INT2_Port, hmems->INT2_Pin);
 }
 
-void MEMS_CS_Low(MEMS_HandleTypeDef *hmems)
-{
-    GPIO_TypeDef *port = MEMS_CsPort(hmems);
-    uint16_t pin = MEMS_CsPin(hmems);
+void MEMS_CS_High(MEMS_HandleTypeDef *hmems) {
+    HAL_GPIO_WritePin(hmems->CS_Port, hmems->CS_Pin, GPIO_PIN_SET);
+}
 
-    HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
+void MEMS_CS_Low(MEMS_HandleTypeDef *hmems) {
+    HAL_GPIO_WritePin(hmems->CS_Port, hmems->CS_Pin, GPIO_PIN_RESET);
 }

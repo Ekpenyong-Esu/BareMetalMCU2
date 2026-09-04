@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ov7670_core.c
-  * @brief   Lifecycle for the OV7670 camera driver
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ov7670_core.c
+ * @brief   Lifecycle for the OV7670 camera driver
+ ******************************************************************************
+ */
 
 #include "ov7670_core.h"
 #include "ov7670_control.h"
@@ -11,10 +11,9 @@
 #include "ov7670_io.h"
 #include "ov7670_regs.h"
 
-#define OV7670_DEFAULT_LEVEL            128U    /**< Neutral brightness/contrast/saturation */
+#define OV7670_DEFAULT_LEVEL 128U /**< Neutral brightness/contrast/saturation */
 
-OV7670_StatusTypeDef OV7670_GetDefaultConfig(OV7670_Config_t *config)
-{
+OV7670_StatusTypeDef OV7670_GetDefaultConfig(OV7670_Config_t *config) {
     if (config == NULL) {
         return OV7670_INVALID_PARAM;
     }
@@ -32,11 +31,10 @@ OV7670_StatusTypeDef OV7670_GetDefaultConfig(OV7670_Config_t *config)
     return OV7670_OK;
 }
 
-OV7670_StatusTypeDef OV7670_GetChipID(OV7670_Handle_t *hov7670, uint16_t *chip_id)
-{
-    OV7670_StatusTypeDef status;
-    uint8_t pid;
-    uint8_t ver;
+OV7670_StatusTypeDef OV7670_GetChipID(OV7670_Handle_t *hov7670, uint16_t *chip_id) {
+    OV7670_StatusTypeDef status = OV7670_OK;
+    uint8_t pid = 0;
+    uint8_t ver = 0;
 
     if (hov7670 == NULL || chip_id == NULL) {
         return OV7670_INVALID_PARAM;
@@ -57,8 +55,7 @@ OV7670_StatusTypeDef OV7670_GetChipID(OV7670_Handle_t *hov7670, uint16_t *chip_i
     return OV7670_OK;
 }
 
-OV7670_StatusTypeDef OV7670_Config(OV7670_Handle_t *hov7670, const OV7670_Config_t *config)
-{
+OV7670_StatusTypeDef OV7670_Config(OV7670_Handle_t *hov7670, const OV7670_Config_t *config) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
 
     if (status != OV7670_OK) {
@@ -69,21 +66,36 @@ OV7670_StatusTypeDef OV7670_Config(OV7670_Handle_t *hov7670, const OV7670_Config
     }
 
     status = OV7670_SetResolution(hov7670, config->resolution);
-    if (status == OV7670_OK) { status = OV7670_SetFormat(hov7670, config->format); }
-    if (status == OV7670_OK) { status = OV7670_SetBrightness(hov7670, config->brightness); }
-    if (status == OV7670_OK) { status = OV7670_SetContrast(hov7670, config->contrast); }
-    if (status == OV7670_OK) { status = OV7670_SetSaturation(hov7670, config->saturation); }
-    if (status == OV7670_OK) { status = OV7670_SetFlipHorizontal(hov7670, config->flip_horizontal); }
-    if (status == OV7670_OK) { status = OV7670_SetFlipVertical(hov7670, config->flip_vertical); }
-    if (status == OV7670_OK) { status = OV7670_SetNightMode(hov7670, config->night_mode); }
-    if (status == OV7670_OK) { status = OV7670_SetTestPattern(hov7670, config->test_pattern); }
+    if (status == OV7670_OK) {
+        status = OV7670_SetFormat(hov7670, config->format);
+    }
+    if (status == OV7670_OK) {
+        status = OV7670_SetBrightness(hov7670, config->brightness);
+    }
+    if (status == OV7670_OK) {
+        status = OV7670_SetContrast(hov7670, config->contrast);
+    }
+    if (status == OV7670_OK) {
+        status = OV7670_SetSaturation(hov7670, config->saturation);
+    }
+    if (status == OV7670_OK) {
+        status = OV7670_SetFlipHorizontal(hov7670, config->flip_horizontal);
+    }
+    if (status == OV7670_OK) {
+        status = OV7670_SetFlipVertical(hov7670, config->flip_vertical);
+    }
+    if (status == OV7670_OK) {
+        status = OV7670_SetNightMode(hov7670, config->night_mode);
+    }
+    if (status == OV7670_OK) {
+        status = OV7670_SetTestPattern(hov7670, config->test_pattern);
+    }
 
     return status;
 }
 
-OV7670_StatusTypeDef OV7670_Reset(OV7670_Handle_t *hov7670)
-{
-    OV7670_StatusTypeDef status;
+OV7670_StatusTypeDef OV7670_Reset(OV7670_Handle_t *hov7670) {
+    OV7670_StatusTypeDef status = OV7670_OK;
 
     if (hov7670 == NULL) {
         return OV7670_INVALID_PARAM;
@@ -99,16 +111,14 @@ OV7670_StatusTypeDef OV7670_Reset(OV7670_Handle_t *hov7670)
     return OV7670_OK;
 }
 
-OV7670_StatusTypeDef OV7670_Init(OV7670_Handle_t *hov7670,
-                                 DCMI_HandleTypeDef *hdcmi,
-                                 const I2C_ConfigTypeDef *busConfig)
-{
-    OV7670_StatusTypeDef status;
+OV7670_StatusTypeDef OV7670_Init(OV7670_Handle_t *hov7670, DCMI_HandleTypeDef *hdcmi,
+                                 I2C_Bus_t *bus) {
+    OV7670_StatusTypeDef status = OV7670_OK;
     OV7670_Config_t default_config;
-    I2C_ConfigTypeDef i2cConfig;
+    I2C_ConfigTypeDef sccbConfig;
     uint16_t chip_id = 0;
 
-    if (hov7670 == NULL || hdcmi == NULL) {
+    if (hov7670 == NULL || hdcmi == NULL || bus == NULL) {
         return OV7670_INVALID_PARAM;
     }
 
@@ -116,8 +126,9 @@ OV7670_StatusTypeDef OV7670_Init(OV7670_Handle_t *hov7670,
     hov7670->initialized = false;
     hov7670->chip_id = 0;
 
-    i2cConfig = (busConfig != NULL) ? *busConfig : I2C_ConfigDefault();
-    if (I2C_DeviceInit(&hov7670->device, OV7670_I2C_ADDRESS, &i2cConfig) != I2C_OK) {
+    sccbConfig = I2C_ConfigDefault();
+    sccbConfig.ClockSpeed = OV7670_SCCB_CLOCK_HZ;
+    if (I2C_DeviceInit(&hov7670->device, bus, OV7670_I2C_ADDRESS, &sccbConfig) != I2C_OK) {
         return OV7670_I2C_ERROR;
     }
 
@@ -154,8 +165,7 @@ OV7670_StatusTypeDef OV7670_Init(OV7670_Handle_t *hov7670,
     return OV7670_OK;
 }
 
-OV7670_StatusTypeDef OV7670_DeInit(OV7670_Handle_t *hov7670)
-{
+OV7670_StatusTypeDef OV7670_DeInit(OV7670_Handle_t *hov7670) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
 
     if (status != OV7670_OK) {
@@ -170,7 +180,6 @@ OV7670_StatusTypeDef OV7670_DeInit(OV7670_Handle_t *hov7670)
     return OV7670_OK;
 }
 
-OV7670_StatusTypeDef OV7670_GetStatus(OV7670_Handle_t *hov7670)
-{
+OV7670_StatusTypeDef OV7670_GetStatus(OV7670_Handle_t *hov7670) {
     return OV7670_CheckReady(hov7670);
 }

@@ -38,14 +38,14 @@ extern "C" {
 /** A single phase of the pattern: hold @p state for @p durationMs. */
 typedef struct {
     LedState_t state;
-    uint32_t   durationMs;
+    uint32_t durationMs;
 } LedPatternFrame_t;
 
 typedef struct {
-    const LedPatternFrame_t* frames;       /**< Frame table (must stay allocated) */
-    uint32_t                 frameCount;   /**< Number of entries in the table */
-    uint32_t                 currentFrame; /**< Index of the active frame */
-    uint32_t                 frameStartMs; /**< Tick when the current frame began */
+    const LedPatternFrame_t *frames; /**< Frame table (must stay allocated) */
+    uint32_t frameCount;             /**< Number of entries in the table */
+    uint32_t currentFrame;           /**< Index of the active frame */
+    uint32_t frameStartMs;           /**< Tick when the current frame began */
 } LedPattern_t;
 
 /* Exported functions --------------------------------------------------------*/
@@ -57,29 +57,28 @@ typedef struct {
  * @param  frameCount Number of entries in @p frames
  * @retval true on success
  */
-bool LedPattern_Init(LedPattern_t* pattern, const LedPatternFrame_t* frames,
-                     uint32_t frameCount);
+bool LedPattern_Init(LedPattern_t *pattern, const LedPatternFrame_t *frames, uint32_t frameCount);
 
 /**
  * @brief  Reset the player to the first frame
  * @param  pattern Player handle
  * @param  nowMs   Current tick in milliseconds
  */
-void LedPattern_Start(LedPattern_t* pattern, uint32_t nowMs);
+void LedPattern_Start(LedPattern_t *pattern, uint32_t nowMs);
 
 /**
  * @brief  Advance to the next frame when the current one has elapsed
  * @param  pattern Player handle
  * @param  nowMs   Current tick in milliseconds
  */
-void LedPattern_Update(LedPattern_t* pattern, uint32_t nowMs);
+void LedPattern_Update(LedPattern_t *pattern, uint32_t nowMs);
 
 /**
  * @brief  Get the on/off state of the current frame
  * @param  pattern Player handle
  * @retval LED_ON or LED_OFF
  */
-LedState_t LedPattern_GetState(const LedPattern_t* pattern);
+LedState_t LedPattern_GetState(const LedPattern_t *pattern);
 
 /**
  * @brief  Get how long the current frame has been running
@@ -89,7 +88,7 @@ LedState_t LedPattern_GetState(const LedPattern_t* pattern);
  * @param  nowMs   Current tick in milliseconds
  * @retval Milliseconds since the current frame began
  */
-uint32_t LedPattern_GetElapsedMs(const LedPattern_t* pattern, uint32_t nowMs);
+uint32_t LedPattern_GetElapsedMs(const LedPattern_t *pattern, uint32_t nowMs);
 
 #ifdef __cplusplus
 }

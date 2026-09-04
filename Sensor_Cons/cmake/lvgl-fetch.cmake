@@ -11,7 +11,7 @@
 # For beginners:
 # - You don't need to manually download LVGL
 # - CMake handles everything automatically during build
-# - LVGL configuration is in: Peripherals/LVGL/lv_conf.h
+# - LVGL configuration is in: Applications/gui_app/lv_conf.h
 # ============================================================================
 
 include(FetchContent)
@@ -25,7 +25,7 @@ include(FetchContent)
 
 # Set the path to lv_conf.h BEFORE calling FetchContent
 # LVGL v9 needs to know where to find the configuration file
-set(LV_CONF_PATH ${CMAKE_SOURCE_DIR}/Peripherals/LVGL_App/lv_conf.h CACHE STRING "" FORCE)
+set(LV_CONF_PATH ${CMAKE_SOURCE_DIR}/Applications/gui_app/lv_conf.h CACHE STRING "" FORCE)
 
 FetchContent_Declare(
   lvgl                                          # Project name used internally
@@ -34,8 +34,8 @@ FetchContent_Declare(
 )
 
 # Set the path to lv_conf.h so LVGL can find it during configuration
-set(LV_CONF_PATH ${CMAKE_SOURCE_DIR}/Peripherals/LVGL_App/lv_conf.h CACHE STRING "" FORCE)
-set(LV_BUILD_CONF_PATH ${CMAKE_SOURCE_DIR}/Peripherals/LVGL_App/lv_conf.h CACHE STRING "" FORCE)
+set(LV_CONF_PATH ${CMAKE_SOURCE_DIR}/Applications/gui_app/lv_conf.h CACHE STRING "" FORCE)
+set(LV_BUILD_CONF_PATH ${CMAKE_SOURCE_DIR}/Applications/gui_app/lv_conf.h CACHE STRING "" FORCE)
 
 # Actually download and make LVGL available to CMake
 FetchContent_MakeAvailable(lvgl)
@@ -75,8 +75,8 @@ endif()
 # code can find lv_conf.h regardless of whether LVGL targets are namespaced
 # or ALIASed (calling target_* on ALIAS targets is not allowed).
 if(TARGET ${CMAKE_PROJECT_NAME})
-  target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/Peripherals/LVGL)
+  target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/Applications/gui_app)
 else()
   # Fallback for very early inclusion cases: add the directory globally
-  include_directories(${CMAKE_SOURCE_DIR}/Peripherals/LVGL)
+  include_directories(${CMAKE_SOURCE_DIR}/Applications/gui_app)
 endif()

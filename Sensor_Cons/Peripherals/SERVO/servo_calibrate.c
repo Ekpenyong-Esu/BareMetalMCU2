@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    servo_calibrate.c
-  * @brief   Servo travel-limit calibration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    servo_calibrate.c
+ * @brief   Servo travel-limit calibration
+ ******************************************************************************
+ */
 
 #include "servo_calibrate.h"
 #include "servo_control.h"
@@ -12,13 +12,13 @@
 
 /* A limit change can leave the resting angle outside the new range, which every
    later SERVO_SetAngle would then reject. */
-static SERVO_StatusTypeDef SERVO_ClampToRange(SERVO_Handle_t *hservo)
-{
+static SERVO_StatusTypeDef SERVO_ClampToRange(SERVO_Handle_t *hservo) {
     SERVO_Config_t *config = &hservo->config;
 
     if (config->defaultAngle < config->minAngle) {
         config->defaultAngle = config->minAngle;
-    } else if (config->defaultAngle > config->maxAngle) {
+    }
+    else if (config->defaultAngle > config->maxAngle) {
         config->defaultAngle = config->maxAngle;
     }
 
@@ -32,8 +32,7 @@ static SERVO_StatusTypeDef SERVO_ClampToRange(SERVO_Handle_t *hservo)
     return SERVO_OK;
 }
 
-SERVO_StatusTypeDef SERVO_CalibrateMin(SERVO_Handle_t *hservo, uint16_t angle)
-{
+SERVO_StatusTypeDef SERVO_CalibrateMin(SERVO_Handle_t *hservo, uint16_t angle) {
     SERVO_CHECK_HANDLE(hservo);
 
     if (angle >= hservo->config.maxAngle) {
@@ -45,8 +44,7 @@ SERVO_StatusTypeDef SERVO_CalibrateMin(SERVO_Handle_t *hservo, uint16_t angle)
     return SERVO_ClampToRange(hservo);
 }
 
-SERVO_StatusTypeDef SERVO_CalibrateMax(SERVO_Handle_t *hservo, uint16_t angle)
-{
+SERVO_StatusTypeDef SERVO_CalibrateMax(SERVO_Handle_t *hservo, uint16_t angle) {
     SERVO_CHECK_HANDLE(hservo);
 
     if (angle <= hservo->config.minAngle || angle > SERVO_MAX_ANGLE) {
@@ -58,8 +56,7 @@ SERVO_StatusTypeDef SERVO_CalibrateMax(SERVO_Handle_t *hservo, uint16_t angle)
     return SERVO_ClampToRange(hservo);
 }
 
-SERVO_StatusTypeDef SERVO_ResetCalibration(SERVO_Handle_t *hservo)
-{
+SERVO_StatusTypeDef SERVO_ResetCalibration(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 
     hservo->config = SERVO_GetDefaultConfig();

@@ -18,11 +18,8 @@
 
 /* ========================== Base Timer ========================== */
 
-HAL_StatusTypeDef TIM_Init(TIM_HandleTypeDef *htim,
-                           TIM_TypeDef *instance,
-                           uint32_t prescaler,
-                           uint32_t period)
-{
+HAL_StatusTypeDef TIM_Init(TIM_HandleTypeDef *htim, TIM_TypeDef *instance, uint32_t prescaler,
+                           uint32_t period) {
     log_debug("TIM: Initializing Timer");
 
     if (htim == NULL || instance == NULL) {
@@ -43,48 +40,42 @@ HAL_StatusTypeDef TIM_Init(TIM_HandleTypeDef *htim,
     return status;
 }
 
-HAL_StatusTypeDef TIM_Start(TIM_HandleTypeDef *htim)
-{
+HAL_StatusTypeDef TIM_Start(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_Base_Start(htim);
 }
 
-HAL_StatusTypeDef TIM_Stop(TIM_HandleTypeDef *htim)
-{
+HAL_StatusTypeDef TIM_Stop(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_Base_Stop(htim);
 }
 
-HAL_StatusTypeDef TIM_Start_IT(TIM_HandleTypeDef *htim)
-{
+HAL_StatusTypeDef TIM_Start_IT(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_Base_Start_IT(htim);
 }
 
-HAL_StatusTypeDef TIM_Stop_IT(TIM_HandleTypeDef *htim)
-{
+HAL_StatusTypeDef TIM_Stop_IT(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_Base_Stop_IT(htim);
 }
 
-uint32_t TIM_GetCounter(TIM_HandleTypeDef *htim)
-{
+uint32_t TIM_GetCounter(TIM_HandleTypeDef *htim) {
     if (htim == NULL) {
         return 0U;
     }
     return __HAL_TIM_GET_COUNTER(htim);
 }
 
-void TIM_SetCounter(TIM_HandleTypeDef *htim, uint32_t value)
-{
+void TIM_SetCounter(TIM_HandleTypeDef *htim, uint32_t value) {
     if (htim != NULL) {
         __HAL_TIM_SET_COUNTER(htim, value);
     }

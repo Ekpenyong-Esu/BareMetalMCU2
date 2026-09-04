@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mcp2515_core.h
-  * @brief   Lifecycle, mode and bit timing for the MCP2515
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mcp2515_core.h
+ * @brief   Lifecycle, mode and bit timing for the MCP2515
+ ******************************************************************************
+ */
 
 #ifndef MCP2515_CORE_H
 #define MCP2515_CORE_H
@@ -17,10 +17,10 @@ extern "C" {
 /**
  * @brief   Bring up the controller and leave it in the requested mode
  * @param   hmcp Caller-owned handle
- * @param   config Chip-select pin, crystal, bit rate and target mode
+ * @param   config Bus, chip-select pin, crystal, bit rate and target mode
  * @retval  MCP2515_Status_t Status of the operation
- * @note    Registers a device on the shared SPI bus, so the display and gyro
- *          on the same wires are unaffected.
+ * @note    Registers a device on the caller's already-open bus, so other chips
+ *          sharing the same wires are unaffected.
  */
 MCP2515_Status_t MCP2515_Init(MCP2515_Handle_t *hmcp, const MCP2515_Config_t *config);
 

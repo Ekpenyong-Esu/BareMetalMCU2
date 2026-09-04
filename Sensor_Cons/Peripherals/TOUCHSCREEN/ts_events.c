@@ -4,18 +4,13 @@
  */
 
 #include "ts_events.h"
-#include "ts_core.h"
 #include "ts_io.h"
 #include "ts_gesture.h"
 #include "ts_stmpe811.h"
 #include "gpio.h"
 #include "log.h"
-#include "app_low_power.h"
 
-static volatile bool s_irqPending = false;  /*!< Set by the EXTI ISR, consumed by TS_ServiceIRQ() */
-
-TS_StatusTypeDef TS_EnableInterrupt(TS_HandleTypeDef *hts, bool enable)
-{
+TS_StatusTypeDef TS_EnableInterrupt(TS_HandleTypeDef *hts, bool enable) {
     if (hts == NULL) {
         return TS_INVALID_PARAM;
     }
@@ -29,15 +24,15 @@ TS_StatusTypeDef TS_EnableInterrupt(TS_HandleTypeDef *hts, bool enable)
         }
         if (TS_WriteRegister(hts, STMPE811_REG_INT_CTRL,
                              STMPE811_INT_CTRL_POL_LOW | STMPE811_INT_CTRL_EDGE |
-                             STMPE811_INT_CTRL_ENABLE) != TS_OK) {
+                                 STMPE811_INT_CTRL_ENABLE) != TS_OK) {
             return TS_COMMUNICATION_ERROR;
         }
-    } else {
+    }
+    else {
         if (TS_WriteRegister(hts, STMPE811_REG_INT_EN, 0x00) != TS_OK) {
             return TS_COMMUNICATION_ERROR;
         }
-        if (TS_WriteRegister(hts, STMPE811_REG_INT_CTRL,
-                             STMPE811_INT_CTRL_DISABLE) != TS_OK) {
+        if (TS_WriteRegister(hts, STMPE811_REG_INT_CTRL, STMPE811_INT_CTRL_DISABLE) != TS_OK) {
             return TS_COMMUNICATION_ERROR;
         }
     }
@@ -45,33 +40,50 @@ TS_StatusTypeDef TS_EnableInterrupt(TS_HandleTypeDef *hts, bool enable)
     return TS_OK;
 }
 
-TS_StatusTypeDef TS_ITConfig(TS_HandleTypeDef *hts)
-{
-    if (hts == NULL) {
+TS_StatusTypeDef TS_ITConfig(TS_HandleTypeDef *hts) {
+    if (hts == NULL || hts->Config.intPort == NULL) {
         return TS_INVALID_PARAM;
     }
 
     GPIO_InitTypeDef gpioInit = {0};
-    gpioInit.Pin = TS_INT_PIN;
+    gpioInit.Pin = hts->Config.intPin;
     gpioInit.Mode = GPIO_MODE_IT_FALLING;
     gpioInit.Pull = GPIO_PULLUP;
     gpioInit.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_Driver_Pin_Init(TS_INT_GPIO_PORT, &gpioInit);
+    if (GPIO_Driver_Pin_Init(hts->Config.intPort, &gpioInit) != HAL_OK) {
+        return TS_ERROR;
+    }
 
-    HAL_NVIC_SetPriority(TS_INT_EXTI_IRQn, TS_INT_NVIC_PRIORITY, 0x00);
-    HAL_NVIC_EnableIRQ(TS_INT_EXTI_IRQn);
+    if (GPIO_Driver_EnableIRQ(hts->Config.intPin, TS_INT_NVIC_PRIORITY, 0x00) != HAL_OK) {
+        return TS_ERROR;
+    }
 
     log_debug("TS_ITConfig Initialized");
     return TS_OK;
 }
 
-bool TS_IrqPending(void)
-{
-    return s_irqPending;
+void TS_EXTI_Callback(TS_HandleTypeDef *hts) {
+    if (hts == NULL) {
+        return;
+    }
+
+    if (hts->ActivityCallback != NULL) {
+        hts->ActivityCallback();
+    }
+
+    /* Clearing the STMPE811 needs I2C, so defer it to TS_ServiceIRQ(). */
+    hts->IrqPending = true;
 }
 
-void TS_IRQHandler(TS_HandleTypeDef *hts)
-{
+bool TS_IrqPending(const TS_HandleTypeDef *hts) {
+    if (hts == NULL) {
+        return false;
+    }
+
+    return hts->IrqPending;
+}
+
+void TS_IRQHandler(TS_HandleTypeDef *hts) {
     if (hts == NULL) {
         return;
     }
@@ -103,29 +115,11 @@ void TS_IRQHandler(TS_HandleTypeDef *hts)
     }
 }
 
-void TS_ServiceIRQ(void)
-{
-    TS_HandleTypeDef *hts = TS_GetHandle();
-
-    if (s_irqPending && TS_CheckReady(hts) == TS_OK) {
-        s_irqPending = false;
-        TS_IRQHandler(hts);
-    }
-}
-
-/**
- * @brief EXTI line callback for the touch interrupt pin
- * @param GPIO_Pin Pin that raised the edge
- */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-    if (GPIO_Pin != TS_INT_PIN) {
+void TS_ServiceIRQ(TS_HandleTypeDef *hts) {
+    if (TS_CheckReady(hts) != TS_OK || !hts->IrqPending) {
         return;
     }
 
-    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
-    APP_TouchActivity();
-
-    /* Clearing the STMPE811 needs I2C, so defer it to TS_ServiceIRQ(). */
-    s_irqPending = true;
+    hts->IrqPending = false;
+    TS_IRQHandler(hts);
 }

@@ -6,8 +6,8 @@
  ******************************************************************************
  */
 
-#ifndef __RTC_TIMESTAMP_H
-#define __RTC_TIMESTAMP_H
+#ifndef RTC_TIMESTAMP_H
+#define RTC_TIMESTAMP_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +24,7 @@ extern "C" {
  * @param  sTime: Pointer to Time structure
  * @retval uint32_t: Seconds since Jan 1 1970, or 0 on invalid input
  */
-uint32_t RTC_DateTimeToTimestamp(const RTC_Date_t* sDate, const RTC_Time_t* sTime);
+uint32_t RTC_DateTimeToTimestamp(const RTC_Date_t *sDate, const RTC_Time_t *sTime);
 
 /**
  * @brief  Convert a Unix timestamp to a calendar date and time
@@ -33,7 +33,7 @@ uint32_t RTC_DateTimeToTimestamp(const RTC_Date_t* sDate, const RTC_Time_t* sTim
  * @param  sTime: Pointer to Time structure to fill
  * @retval None
  */
-void RTC_TimestampToDateTime(uint32_t timestamp, RTC_Date_t* sDate, RTC_Time_t* sTime);
+void RTC_TimestampToDateTime(uint32_t timestamp, RTC_Date_t *sDate, RTC_Time_t *sTime);
 
 /**
  * @brief  Read the RTC as a Unix timestamp
@@ -52,4 +52,4 @@ RTC_StatusTypeDef RTC_SetTimestamp(uint32_t timestamp);
 }
 #endif
 
-#endif /* __RTC_TIMESTAMP_H */
+#endif /* RTC_TIMESTAMP_H */

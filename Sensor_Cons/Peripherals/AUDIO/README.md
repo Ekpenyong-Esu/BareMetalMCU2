@@ -1,224 +1,141 @@
 # Audio Driver for STM32F429
 
-This directory contains a comprehensive audio driver implementation for the STM32F429 microcontroller, supporting both SAI (Serial Audio Interface) and I2S audio protocols.
+Playback driver for an I2S or SAI transport feeding an external codec
+(Cirrus Logic CS43L22 over I2C). The driver never picks hardware: the
+application owns an `AUDIO_Handle_t` and tells `AUDIO_Init()` which
+instance, pins, DMA stream and control bus carry the audio.
 
 ## Features
 
-- **Multiple Audio Interfaces**: Support for SAI and I2S interfaces
+- **Multiple Audio Interfaces**: SAI or I2S, selected per handle
 - **Flexible Configuration**: Configurable sample rates, bit depths, and channel configurations
-- **DMA Support**: Efficient DMA-based audio playback
-- **Codec Integration**: Cirrus Logic CS43L22 control over I2C
-- **Buffer Management**: Circular buffer implementation for continuous audio streaming
+- **DMA Support**: Circular DMA playback from a buffer inside the handle
+- **Codec Integration**: CS43L22 control over a caller-owned `I2C_Bus_t`
 - **Volume Control**: Digital volume control with mute functionality
-- **Statistics**: Performance monitoring and error tracking
+- **Statistics**: Sample counts, overflows and transfer errors per handle
 
 ## Files
 
-- `audio.h` - Main header file with function prototypes and type definitions
-- `audio.c` - Core audio driver implementation
-- `audio_example.c` - Example functions demonstrating audio functionality
+- `audio_core.[ch]` - Handle lifecycle, registry, play/stop/pause/volume API
+- `audio_types.h` - `AUDIO_ConfigTypeDef`, `AUDIO_Handle_t` and status codes
+- `audio_i2s.c` / `audio_sai.c` - Transport backends; read instance and pins from the config
+- `audio_dma.[ch]` - Transmit DMA stream setup from the config
+- `audio_codec.[ch]` - CS43L22 register map, reset and volume translation
+- `audio_buffer.[ch]` - Playback ring buffer bookkeeping
+- `audio_events.c` - HAL callbacks and the DMA vector entry point
 
 ## Supported Audio Formats
 
 - **Sample Rates**: 8kHz, 11.025kHz, 16kHz, 22.05kHz, 32kHz, 44.1kHz, 48kHz, 96kHz
 - **Bit Depths**: 16-bit, 24-bit, 32-bit
 - **Channels**: Mono and Stereo
-- **Interfaces**: SAI (Serial Audio Interface), I2S (Inter-IC Sound)
+- **Interfaces**: SAI1 Block A/B, or SPI2/SPI3 in I2S mode
 
-## Hardware Requirements
+## Wiring is supplied by the application
 
-### SAI Interface (Recommended)
-- SAI1 peripheral on STM32F429
-- Cirrus Logic CS43L22 codec (external; the DISC1 has no onboard codec)
-- I2C3 for codec control, plus the codec RESET line on PD4
+Nothing in this directory names a port, pin, DMA stream or I2C bus. The
+config carries all of it; a pin with a NULL port is treated as not wired
+(MCLK is then not driven, and the codec reset pulse is skipped).
 
-### I2S Interface (Alternative)
-- SPI3 peripheral configured for I2S
-- Compatible I2S audio codec
-- Master clock (MCK) output support
-
-## Pin Configuration
-
-### SAI Interface
-```
-SAI1_MCK  -> PE2   (Audio Master Clock)
-SAI1_SD   -> PE4   (Audio Data)
-SAI1_FS   -> PE5   (Audio Frame Sync)
-SAI1_SCK  -> PE6   (Audio Serial Clock)
-```
-
-### I2S Interface
-```
-I2S3_WS   -> PC0   (Word Select)
-I2S3_CK   -> PC10  (Serial Clock)
-I2S3_SD   -> PC12  (Serial Data)
-```
-
-## Usage Examples
-
-### Basic Initialization
 ```c
-#include "audio.h"
+#include "audio_core.h"
+#include "i2c.h"
 
-void main(void) {
-    // Initialize with default settings (SAI, 44.1kHz, 16-bit, Stereo)
-    AUDIO_Init();
+static I2C_Bus_t      s_ctrlBus;   /* opened once by the application */
+static AUDIO_Handle_t s_audio;     /* holds HAL handles, DMA memory, codec device */
 
-    // Or initialize with custom configuration
-    AUDIO_ConfigTypeDef config = {
-        .Interface = AUDIO_INTERFACE_SAI,
-        .SampleRate = AUDIO_FREQ_48K,
-        .BitDepth = AUDIO_FORMAT_16BIT,
-        .Channels = AUDIO_CHANNEL_STEREO,
-        .BufferSize = 4096,
-        .EnableDMA = true
+void App_AudioInit(void)
+{
+    I2C_BusConfig_t busCfg = { .instance = I2C3, .sclPort = GPIOA, .sclPin = GPIO_PIN_8,
+                               .sdaPort = GPIOC, .sdaPin = GPIO_PIN_9 };
+    I2C_BusInit(&s_ctrlBus, &busCfg);
+
+    AUDIO_ConfigTypeDef cfg = {
+        .Interface  = AUDIO_INTERFACE_SAI,
+        .SampleRate = AUDIO_FREQ_44K,
+        .BitDepth   = AUDIO_FORMAT_16BIT,
+        .Channels   = AUDIO_CHANNEL_STEREO,
+        .BufferSize = AUDIO_BUFFER_SIZE_DEFAULT,
+        .EnableDMA  = true,
+
+        .saiBlock   = SAI1_Block_A,
+        .mclkPin    = { GPIOE, GPIO_PIN_2 },
+        .sdPin      = { GPIOE, GPIO_PIN_4 },
+        .wsPin      = { GPIOE, GPIO_PIN_5 },   /* FS */
+        .ckPin      = { GPIOE, GPIO_PIN_6 },   /* SCK */
+        .alternate  = 0,                       /* derive from the instance */
+        .dmaStream  = DMA2_Stream3,
+        .dmaChannel = DMA_CHANNEL_0,
+
+        .codecBus      = &s_ctrlBus,           /* NULL = transport only */
+        .codecAddress  = 0,                    /* 0 = CS43L22 default 0x94 */
+        .codecResetPin = { GPIOD, GPIO_PIN_4 },
     };
-    AUDIO_Init_Custom(&config);
+    AUDIO_Init(&s_audio, &cfg);
 }
 ```
 
+For I2S set `.Interface = AUDIO_INTERFACE_I2S`, `.i2sInstance = SPI3` (or
+SPI2) and the WS/CK/SD pins; `alternate` resolves to AF5 for SPI2 and AF6
+for SPI3 unless overridden.
+
+The DMA stream named in the config must have its vector routed to
+`AUDIO_IRQHandler()` in `stm32f4xx_it.c`. The handler services every
+registered handle, so one call serves any stream.
+
 ### Audio Playback
+
 ```c
-// Generate or load audio data
 uint8_t audioData[4096];
 
-// Write data to audio buffer
-AUDIO_WriteBuffer(audioData, sizeof(audioData));
-
-// Start playback
-AUDIO_Play();
-
-// Playback runs in background via DMA
-// ... do other tasks ...
-
-// Stop playback when done
-AUDIO_Stop();
+AUDIO_WriteBuffer(&s_audio, audioData, sizeof(audioData));
+AUDIO_Play(&s_audio);
+/* ... playback runs in the background via DMA ... */
+AUDIO_Stop(&s_audio);
 ```
 
 ### Volume Control
-```c
-// Set volume to 50%
-AUDIO_SetVolume(50);
-
-// Mute audio
-AUDIO_SetMute(true);
-
-// Unmute audio
-AUDIO_SetMute(false);
-```
-
-## Example Functions
-
-The `audio_example.c` file contains several example functions:
-
-- `AUDIO_Example_Init()` - Basic initialization
-- `AUDIO_Example_Playback()` - Sine wave generation and playback
-- `AUDIO_Example_Recording()` - Audio recording demonstration
-- `AUDIO_Example_VolumeControl()` - Volume control demonstration
-- `AUDIO_Example_AudioMixing()` - Audio stream mixing
-- `AUDIO_Example_Statistics()` - Performance statistics
-- `AUDIO_Example_RunAll()` - Complete demonstration
-
-## Integration with Main Application
-
-Add the following to your main.c:
 
 ```c
-#include "audio.h"
-#include "audio_example.h"
-
-// In main function
-int main(void) {
-    // Initialize HAL and system clocks
-    HAL_Init();
-    SystemClock_Config();
-
-    // Run audio examples
-    AUDIO_Example_RunAll();
-
-    while (1) {
-        // Main application loop
-    }
-}
+AUDIO_SetVolume(&s_audio, 50);
+AUDIO_SetMute(&s_audio, true);
+AUDIO_SetMute(&s_audio, false);
 ```
 
-## Configuration Options
+Volume and mute return `AUDIO_NOT_READY` on a handle opened without a
+codec bus.
 
-### Audio PLL Settings
-The driver configures the audio PLL for proper clock generation:
-- PLL_M: 8
-- PLL_N: 344
-- PLL_P: 7
-- PLL_Q: 7
+## Buffer Sizes
 
-### Buffer Sizes
-- Default buffer size: 4096 bytes
-- Minimum buffer size: 256 bytes
-- Maximum buffer size: 16384 bytes
-
-### DMA Configuration
-- DMA2 Stream 1 Channel 0 for SAI
-- Circular mode for continuous streaming
-- High priority for audio data
+- Default and maximum buffer size: `AUDIO_BUFFER_SIZE_DEFAULT` (4096 bytes),
+  reserved inside each `AUDIO_Handle_t`
+- Place the handle in DMA-reachable RAM (not CCM)
 
 ## Error Handling
 
-The driver provides comprehensive error handling:
-
 - `AUDIO_OK` - Operation successful
 - `AUDIO_ERROR` - General error
-- `AUDIO_BUSY` - Peripheral busy
+- `AUDIO_BUSY` - Handle already registered or no registry slot free
 - `AUDIO_TIMEOUT` - Operation timeout
-- `AUDIO_INVALID_PARAM` - Invalid parameter
-- `AUDIO_NOT_READY` - System not ready
+- `AUDIO_INVALID_PARAM` - Missing instance, pin or stream in the config
+- `AUDIO_NOT_READY` - Handle not initialised, or no codec on this handle
 - `AUDIO_OVERFLOW` - Buffer overflow
 - `AUDIO_UNDERFLOW` - Buffer underflow
 
-## Performance Considerations
-
-- Use DMA for continuous audio streaming to minimize CPU usage
-- Buffer sizes should be multiples of audio frame sizes
-- Higher sample rates require more processing power
-- Monitor CPU usage statistics for optimization
-
-## Codec Integration
-
-The driver includes placeholder functions for codec control:
-- `AUDIO_CodecInit()` - Initialize audio codec
-- `AUDIO_Codec_WriteRegister()` - Write codec register
-- `AUDIO_Codec_ReadRegister()` - Read codec register
-
-These functions need to be implemented based on your specific audio codec.
-
 ## Troubleshooting
 
-### Common Issues
-1. **No Audio Output**: Check codec power and I2C communication
+1. **No Audio Output**: Check codec power, reset line and I2C bus
 2. **Distorted Audio**: Verify sample rate and bit depth settings
 3. **Buffer Overflows**: Increase buffer size or reduce sample rate
-4. **DMA Errors**: Check DMA channel configuration and priorities
+4. **DMA Errors**: Check that the stream/channel pair serves the chosen instance
+   (RM0090 table 42/43) and that its vector calls `AUDIO_IRQHandler()`
 
-### Debug Information
-Use `AUDIO_GetStatistics()` to monitor:
-- Sample count
-- Buffer overflows/underflows
-- Synchronization errors
-- CPU usage
+Use `AUDIO_GetStatistics()` to monitor sample count, overflows and
+synchronization errors.
 
 ## Dependencies
 
-- STM32F4xx HAL library
-- CMSIS core
-- Math library (for audio processing functions)
-
-## Future Enhancements
-
-- Support for additional audio codecs
-- USB audio class support
-- Advanced audio processing (equalizer, reverb)
-- Multi-channel audio support
-- Bluetooth audio integration
-
-## License
-
-This audio driver is provided as-is for educational and development purposes.
+- STM32F4xx HAL library (I2S, SAI, DMA, GPIO)
+- `Peripherals/I2C` bus driver for codec control
+- `Peripherals/DMA` for stream-to-IRQ lookup
+- `Peripherals/GPIO` for pin setup

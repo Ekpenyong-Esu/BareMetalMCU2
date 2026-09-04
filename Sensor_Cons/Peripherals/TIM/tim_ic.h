@@ -50,9 +50,7 @@ extern "C" {
  * @param  period    Auto-reload value (max count before overflow)
  * @retval HAL_OK on success, HAL_ERROR if arguments invalid or HAL init fails
  */
-HAL_StatusTypeDef TIM_IC_Init(TIM_HandleTypeDef *htim,
-                              TIM_TypeDef *instance,
-                              uint32_t prescaler,
+HAL_StatusTypeDef TIM_IC_Init(TIM_HandleTypeDef *htim, TIM_TypeDef *instance, uint32_t prescaler,
                               uint32_t period);
 
 /**
@@ -67,8 +65,7 @@ HAL_StatusTypeDef TIM_IC_Init(TIM_HandleTypeDef *htim,
  *                  or TIM_ICPOLARITY_BOTHEDGE
  * @retval HAL_OK on success, HAL_ERROR if htim is NULL or HAL config fails
  */
-HAL_StatusTypeDef TIM_IC_ConfigChannel(TIM_HandleTypeDef *htim,
-                                       uint32_t channel,
+HAL_StatusTypeDef TIM_IC_ConfigChannel(TIM_HandleTypeDef *htim, uint32_t channel,
                                        uint32_t polarity);
 
 /**

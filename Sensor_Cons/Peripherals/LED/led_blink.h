@@ -21,10 +21,10 @@ extern "C" {
  * @brief Blink engine state
  */
 typedef struct {
-    LedHandle_t* led;       /**< LED being driven */
-    uint32_t periodMs;      /**< Full on+off period */
-    uint32_t lastToggleMs;  /**< Time of the last toggle */
-    bool running;           /**< Blinking active flag */
+    LedHandle_t *led;      /**< LED being driven */
+    uint32_t periodMs;     /**< Full on+off period */
+    uint32_t lastToggleMs; /**< Time of the last toggle */
+    bool running;          /**< Blinking active flag */
 } LedBlink_t;
 
 /* Exported functions --------------------------------------------------------*/
@@ -35,7 +35,7 @@ typedef struct {
  * @param   led Pointer to an initialized LED handle
  * @retval  true if successful, false otherwise
  */
-bool LedBlink_Init(LedBlink_t* blink, LedHandle_t* led);
+bool LedBlink_Init(LedBlink_t *blink, LedHandle_t *led);
 
 /**
  * @brief   Start blinking
@@ -44,14 +44,14 @@ bool LedBlink_Init(LedBlink_t* blink, LedHandle_t* led);
  * @param   nowMs Current time in milliseconds
  * @retval  true if successful, false otherwise
  */
-bool LedBlink_Start(LedBlink_t* blink, uint32_t periodMs, uint32_t nowMs);
+bool LedBlink_Start(LedBlink_t *blink, uint32_t periodMs, uint32_t nowMs);
 
 /**
  * @brief   Stop blinking and switch the LED off
  * @param   blink Pointer to blink engine
  * @retval  true if successful, false otherwise
  */
-bool LedBlink_Stop(LedBlink_t* blink);
+bool LedBlink_Stop(LedBlink_t *blink);
 
 /**
  * @brief   Toggle the LED when the current half-period has elapsed
@@ -59,14 +59,14 @@ bool LedBlink_Stop(LedBlink_t* blink);
  * @param   nowMs Current time in milliseconds
  * @retval  true if successful, false otherwise
  */
-bool LedBlink_Update(LedBlink_t* blink, uint32_t nowMs);
+bool LedBlink_Update(LedBlink_t *blink, uint32_t nowMs);
 
 /**
  * @brief   Check whether the engine is blinking
  * @param   blink Pointer to blink engine
  * @retval  true if blinking, false otherwise
  */
-bool LedBlink_IsRunning(const LedBlink_t* blink);
+bool LedBlink_IsRunning(const LedBlink_t *blink);
 
 #ifdef __cplusplus
 }

@@ -16,8 +16,7 @@
  * @param   config Pointer to LED configuration
  * @retval  bool True when the pin was configured
  */
-static bool Led_GPIO_Init(const LedConfig_t* config)
-{
+static bool Led_GPIO_Init(const LedConfig_t *config) {
     GPIO_InitTypeDef gpioInit = {0};
 
     gpioInit.Pin = config->pin;
@@ -33,14 +32,16 @@ static bool Led_GPIO_Init(const LedConfig_t* config)
  * @param   handle Pointer to LED handle
  * @param   state LED state to set
  */
-static void Led_SetPhysical(LedHandle_t* handle, LedState_t state)
-{
+static void Led_SetPhysical(LedHandle_t *handle, LedState_t state) {
     GPIO_PinState pinState = GPIO_PIN_RESET;
 
     /* Determine pin state based on active level and desired LED state */
     if (handle->config.activeLow) {
-        pinState = (state == LED_ON) ? GPIO_PIN_RESET : GPIO_PIN_SET;  // The LED is connected to power and the mcu drives it low to turn on
-    } else {
+        pinState =
+            (state == LED_ON) ? GPIO_PIN_RESET : GPIO_PIN_SET; // The LED is connected to power and
+                                                               // the mcu drives it low to turn on
+    }
+    else {
         pinState = (state == LED_ON) ? GPIO_PIN_SET : GPIO_PIN_RESET;
     }
 
@@ -58,13 +59,8 @@ static void Led_SetPhysical(LedHandle_t* handle, LedState_t state)
  * @param   pin GPIO pin number
  * @retval  true if successful, false otherwise
  */
-bool Led_Init(LedHandle_t* handle, GPIO_TypeDef* port, uint16_t pin)
-{
-    LedConfig_t config = {
-        .port = port,
-        .pin = pin,
-        .activeLow = false
-    };
+bool Led_Init(LedHandle_t *handle, GPIO_TypeDef *port, uint16_t pin) {
+    LedConfig_t config = {.port = port, .pin = pin, .activeLow = false};
 
     return Led_InitCustom(handle, &config);
 }
@@ -75,8 +71,7 @@ bool Led_Init(LedHandle_t* handle, GPIO_TypeDef* port, uint16_t pin)
  * @param   config Pointer to configuration structure
  * @retval  true if successful, false otherwise
  */
-bool Led_InitCustom(LedHandle_t* handle, const LedConfig_t* config)
-{
+bool Led_InitCustom(LedHandle_t *handle, const LedConfig_t *config) {
     if (handle == NULL || config == NULL || config->port == NULL) {
         return false;
     }
@@ -106,8 +101,7 @@ bool Led_InitCustom(LedHandle_t* handle, const LedConfig_t* config)
  * @param   state LED state to set
  * @retval  true if successful, false otherwise
  */
-bool Led_SetState(LedHandle_t* handle, LedState_t state)
-{
+bool Led_SetState(LedHandle_t *handle, LedState_t state) {
     if (handle == NULL || !handle->initialized) {
         return false;
     }
@@ -121,8 +115,7 @@ bool Led_SetState(LedHandle_t* handle, LedState_t state)
  * @param   handle Pointer to LED handle
  * @retval  true if successful, false otherwise
  */
-bool Led_On(LedHandle_t* handle)
-{
+bool Led_On(LedHandle_t *handle) {
     return Led_SetState(handle, LED_ON);
 }
 
@@ -131,8 +124,7 @@ bool Led_On(LedHandle_t* handle)
  * @param   handle Pointer to LED handle
  * @retval  true if successful, false otherwise
  */
-bool Led_Off(LedHandle_t* handle)
-{
+bool Led_Off(LedHandle_t *handle) {
     return Led_SetState(handle, LED_OFF);
 }
 
@@ -141,8 +133,7 @@ bool Led_Off(LedHandle_t* handle)
  * @param   handle Pointer to LED handle
  * @retval  true if successful, false otherwise
  */
-bool Led_Toggle(LedHandle_t* handle)
-{
+bool Led_Toggle(LedHandle_t *handle) {
     if (handle == NULL || !handle->initialized) {
         return false;
     }
@@ -156,8 +147,7 @@ bool Led_Toggle(LedHandle_t* handle)
  * @param   handle Pointer to LED handle
  * @retval  Current LED state
  */
-LedState_t Led_GetState(const LedHandle_t* handle)
-{
+LedState_t Led_GetState(const LedHandle_t *handle) {
     if (handle == NULL || !handle->initialized) {
         return LED_OFF;
     }
@@ -170,7 +160,6 @@ LedState_t Led_GetState(const LedHandle_t* handle)
  * @param   handle Pointer to LED handle
  * @retval  true if LED is on, false otherwise
  */
-bool Led_IsOn(const LedHandle_t* handle)
-{
+bool Led_IsOn(const LedHandle_t *handle) {
     return (Led_GetState(handle) == LED_ON);
 }

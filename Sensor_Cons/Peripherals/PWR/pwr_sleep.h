@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    pwr_sleep.h
-  * @brief   Sleep mode entry (CPU halted, peripherals and clocks running)
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    pwr_sleep.h
+ * @brief   Sleep mode entry (CPU halted, peripherals and clocks running)
+ ******************************************************************************
+ */
 
 #ifndef __PWR_SLEEP_H__
 #define __PWR_SLEEP_H__

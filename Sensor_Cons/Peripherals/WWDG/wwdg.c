@@ -11,9 +11,8 @@
 static WWDG_HandleTypeDef s_hwwdg;
 static bool s_initialized = false;
 
-static WWDG_StatusTypeDef WWDG_ValidateConfig(const WWDG_ConfigTypeDef *config)
-{
-    uint32_t divider;
+static WWDG_StatusTypeDef WWDG_ValidateConfig(const WWDG_ConfigTypeDef *config) {
+    uint32_t divider = 0;
 
     if (config->Counter < WWDG_COUNTER_MIN || config->Counter > WWDG_COUNTER_MAX) {
         return WWDG_INVALID_PARAM;
@@ -31,8 +30,7 @@ static WWDG_StatusTypeDef WWDG_ValidateConfig(const WWDG_ConfigTypeDef *config)
     return WWDG_GetPrescalerDivider(config->Prescaler, &divider);
 }
 
-WWDG_StatusTypeDef WWDG_GetDefaultConfig(WWDG_ConfigTypeDef *config)
-{
+WWDG_StatusTypeDef WWDG_GetDefaultConfig(WWDG_ConfigTypeDef *config) {
     if (config == NULL) {
         return WWDG_INVALID_PARAM;
     }
@@ -45,9 +43,8 @@ WWDG_StatusTypeDef WWDG_GetDefaultConfig(WWDG_ConfigTypeDef *config)
     return WWDG_OK;
 }
 
-WWDG_StatusTypeDef WWDG_Init_Custom(const WWDG_ConfigTypeDef *config)
-{
-    WWDG_StatusTypeDef status;
+WWDG_StatusTypeDef WWDG_Init_Custom(const WWDG_ConfigTypeDef *config) {
+    WWDG_StatusTypeDef status = WWDG_OK;
 
     if (config == NULL) {
         return WWDG_INVALID_PARAM;
@@ -80,14 +77,13 @@ WWDG_StatusTypeDef WWDG_Init_Custom(const WWDG_ConfigTypeDef *config)
 
     s_initialized = true;
 
-    log_debug("WWDG: armed, counter 0x%02lX window 0x%02lX",
-              (unsigned long)config->Counter, (unsigned long)config->Window);
+    log_debug("WWDG: armed, counter 0x%02lX window 0x%02lX", (unsigned long)config->Counter,
+              (unsigned long)config->Window);
 
     return WWDG_OK;
 }
 
-WWDG_StatusTypeDef WWDG_Init(void)
-{
+WWDG_StatusTypeDef WWDG_Init(void) {
     WWDG_ConfigTypeDef config;
 
     (void)WWDG_GetDefaultConfig(&config);
@@ -95,8 +91,7 @@ WWDG_StatusTypeDef WWDG_Init(void)
     return WWDG_Init_Custom(&config);
 }
 
-WWDG_StatusTypeDef WWDG_DeInit(void)
-{
+WWDG_StatusTypeDef WWDG_DeInit(void) {
     if (!s_initialized) {
         return WWDG_OK;
     }
@@ -113,36 +108,39 @@ WWDG_StatusTypeDef WWDG_DeInit(void)
     return WWDG_NOT_SUPPORTED;
 }
 
-bool WWDG_IsInitialized(void)
-{
+bool WWDG_IsInitialized(void) {
     return s_initialized;
 }
 
-WWDG_HandleTypeDef *WWDG_GetHandle(void)
-{
+WWDG_HandleTypeDef *WWDG_GetHandle(void) {
     return s_initialized ? &s_hwwdg : NULL;
 }
 
-bool WWDG_WasResetSource(void)
-{
+bool WWDG_WasResetSource(void) {
     return (__HAL_RCC_GET_FLAG(RCC_FLAG_WWDGRST) != RESET);
 }
 
-void WWDG_ClearResetFlag(void)
-{
+void WWDG_ClearResetFlag(void) {
     __HAL_RCC_CLEAR_RESET_FLAGS();
 }
 
-const char *WWDG_GetStatusString(WWDG_StatusTypeDef status)
-{
+const char *WWDG_GetStatusString(WWDG_StatusTypeDef status) {
     switch (status) {
-        case WWDG_OK:            return "WWDG_OK";
-        case WWDG_ERROR:         return "WWDG_ERROR";
-        case WWDG_TIMEOUT:       return "WWDG_TIMEOUT";
-        case WWDG_INVALID_PARAM: return "WWDG_INVALID_PARAM";
-        case WWDG_WINDOW_ERROR:  return "WWDG_WINDOW_ERROR";
-        case WWDG_NOT_READY:     return "WWDG_NOT_READY";
-        case WWDG_NOT_SUPPORTED: return "WWDG_NOT_SUPPORTED";
-        default:                 return "UNKNOWN_STATUS";
+        case WWDG_OK:
+            return "WWDG_OK";
+        case WWDG_ERROR:
+            return "WWDG_ERROR";
+        case WWDG_TIMEOUT:
+            return "WWDG_TIMEOUT";
+        case WWDG_INVALID_PARAM:
+            return "WWDG_INVALID_PARAM";
+        case WWDG_WINDOW_ERROR:
+            return "WWDG_WINDOW_ERROR";
+        case WWDG_NOT_READY:
+            return "WWDG_NOT_READY";
+        case WWDG_NOT_SUPPORTED:
+            return "WWDG_NOT_SUPPORTED";
+        default:
+            return "UNKNOWN_STATUS";
     }
 }

@@ -1,10 +1,10 @@
 /**
-  ******************************************************************************
-  * @file    ultrasonic_capture.h
-  * @brief   Capture timer setup and microsecond timing (internal)
-  * @details Not part of the public ultrasonic.h aggregator.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ultrasonic_capture.h
+ * @brief   Capture timer setup and microsecond timing (internal)
+ * @details Not part of the public ultrasonic.h aggregator.
+ ******************************************************************************
+ */
 
 #ifndef ULTRASONIC_CAPTURE_H
 #define ULTRASONIC_CAPTURE_H

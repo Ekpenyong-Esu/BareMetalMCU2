@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ultrasonic_measure.c
-  * @brief   Ultrasonic measurement cycle
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ultrasonic_measure.c
+ * @brief   Ultrasonic measurement cycle
+ ******************************************************************************
+ */
 
 #include "ultrasonic_measure.h"
 #include "ultrasonic_capture.h"
@@ -12,9 +12,8 @@
 #include "tim_ic.h"
 #include "log.h"
 
-ULTRASONIC_StatusTypeDef ULTRASONIC_StartMeasurement(ULTRASONIC_Handle_t *hultra)
-{
-    ULTRASONIC_StatusTypeDef status;
+ULTRASONIC_StatusTypeDef ULTRASONIC_StartMeasurement(ULTRASONIC_Handle_t *hultra) {
+    ULTRASONIC_StatusTypeDef status = ULTRASONIC_OK;
 
     ULTRASONIC_CHECK_HANDLE(hultra);
 
@@ -42,8 +41,7 @@ ULTRASONIC_StatusTypeDef ULTRASONIC_StartMeasurement(ULTRASONIC_Handle_t *hultra
     return ULTRASONIC_OK;
 }
 
-ULTRASONIC_StatusTypeDef ULTRASONIC_AbortMeasurement(ULTRASONIC_Handle_t *hultra)
-{
+ULTRASONIC_StatusTypeDef ULTRASONIC_AbortMeasurement(ULTRASONIC_Handle_t *hultra) {
     ULTRASONIC_CHECK_HANDLE(hultra);
 
     (void)ULTRASONIC_CAPTURE_Disarm(hultra->htim, hultra->channel);
@@ -56,15 +54,13 @@ ULTRASONIC_StatusTypeDef ULTRASONIC_AbortMeasurement(ULTRASONIC_Handle_t *hultra
     return ULTRASONIC_OK;
 }
 
-bool ULTRASONIC_IsMeasurementComplete(const ULTRASONIC_Handle_t *hultra)
-{
+bool ULTRASONIC_IsMeasurementComplete(const ULTRASONIC_Handle_t *hultra) {
     return (hultra != NULL) ? hultra->measurementDone : false;
 }
 
 ULTRASONIC_StatusTypeDef ULTRASONIC_WaitForMeasurement(ULTRASONIC_Handle_t *hultra,
-                                                       uint32_t timeout)
-{
-    uint32_t startTime;
+                                                       uint32_t timeout) {
+    uint32_t startTime = 0;
 
     ULTRASONIC_CHECK_HANDLE(hultra);
 
@@ -82,10 +78,9 @@ ULTRASONIC_StatusTypeDef ULTRASONIC_WaitForMeasurement(ULTRASONIC_Handle_t *hult
     return ULTRASONIC_OK;
 }
 
-ULTRASONIC_StatusTypeDef ULTRASONIC_Measure(ULTRASONIC_Handle_t *hultra, uint16_t *distance)
-{
-    ULTRASONIC_StatusTypeDef status;
-    uint16_t measured;
+ULTRASONIC_StatusTypeDef ULTRASONIC_Measure(ULTRASONIC_Handle_t *hultra, uint16_t *distance) {
+    ULTRASONIC_StatusTypeDef status = ULTRASONIC_OK;
+    uint16_t measured = 0;
 
     ULTRASONIC_CHECK_HANDLE(hultra);
 
@@ -117,8 +112,7 @@ ULTRASONIC_StatusTypeDef ULTRASONIC_Measure(ULTRASONIC_Handle_t *hultra, uint16_
     return ULTRASONIC_OK;
 }
 
-uint16_t ULTRASONIC_MeasureDistance(ULTRASONIC_Handle_t *hultra)
-{
+uint16_t ULTRASONIC_MeasureDistance(ULTRASONIC_Handle_t *hultra) {
     uint16_t distance = 0;
 
     (void)ULTRASONIC_Measure(hultra, &distance);
@@ -126,14 +120,12 @@ uint16_t ULTRASONIC_MeasureDistance(ULTRASONIC_Handle_t *hultra)
     return distance;
 }
 
-uint16_t ULTRASONIC_GetDistance(const ULTRASONIC_Handle_t *hultra)
-{
+uint16_t ULTRASONIC_GetDistance(const ULTRASONIC_Handle_t *hultra) {
     return (hultra != NULL) ? hultra->lastDistance : 0U;
 }
 
-void ULTRASONIC_TIM_IC_CaptureCallback(ULTRASONIC_Handle_t *hultra)
-{
-    uint32_t capture;
+void ULTRASONIC_TIM_IC_CaptureCallback(ULTRASONIC_Handle_t *hultra) {
+    uint32_t capture = 0;
 
     if (hultra == NULL || !hultra->isInitialized) {
         return;
@@ -151,8 +143,8 @@ void ULTRASONIC_TIM_IC_CaptureCallback(ULTRASONIC_Handle_t *hultra)
         case ULTRASONIC_ECHO_WAIT_FALLING:
             /* Only the raw width is taken here; the conversion and the logging
                belong to the caller, not to interrupt context. */
-            hultra->echoTicks = ULTRASONIC_EchoWidth(hultra->echoStart, capture,
-                                                     ULTRASONIC_ECHO_PERIOD);
+            hultra->echoTicks =
+                ULTRASONIC_EchoWidth(hultra->echoStart, capture, ULTRASONIC_ECHO_PERIOD);
             hultra->echoState = ULTRASONIC_ECHO_IDLE;
             hultra->measurementDone = true;
             (void)ULTRASONIC_CAPTURE_Disarm(hultra->htim, hultra->channel);

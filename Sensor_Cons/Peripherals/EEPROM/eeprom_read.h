@@ -22,8 +22,7 @@ extern "C" {
  * @param   data Pointer to store the read byte
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_ReadByte(EEPROM_HandleTypeDef* handle,
-                                     uint16_t address, uint8_t* data);
+EEPROM_StatusTypeDef EEPROM_ReadByte(EEPROM_HandleTypeDef *handle, uint16_t address, uint8_t *data);
 
 /**
  * @brief   Read a byte range
@@ -33,8 +32,8 @@ EEPROM_StatusTypeDef EEPROM_ReadByte(EEPROM_HandleTypeDef* handle,
  * @param   length Number of bytes to read
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_Read(EEPROM_HandleTypeDef* handle,
-                                 uint16_t address, uint8_t* data, uint16_t length);
+EEPROM_StatusTypeDef EEPROM_Read(EEPROM_HandleTypeDef *handle, uint16_t address, uint8_t *data,
+                                 uint16_t length);
 
 /**
  * @brief   Read a 16-bit big-endian value
@@ -43,8 +42,8 @@ EEPROM_StatusTypeDef EEPROM_Read(EEPROM_HandleTypeDef* handle,
  * @param   data Pointer to store the value
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_ReadWord(EEPROM_HandleTypeDef* handle,
-                                     uint16_t address, uint16_t* data);
+EEPROM_StatusTypeDef EEPROM_ReadWord(EEPROM_HandleTypeDef *handle, uint16_t address,
+                                     uint16_t *data);
 
 /**
  * @brief   Read a 32-bit big-endian value
@@ -53,8 +52,8 @@ EEPROM_StatusTypeDef EEPROM_ReadWord(EEPROM_HandleTypeDef* handle,
  * @param   data Pointer to store the value
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_ReadDWord(EEPROM_HandleTypeDef* handle,
-                                      uint16_t address, uint32_t* data);
+EEPROM_StatusTypeDef EEPROM_ReadDWord(EEPROM_HandleTypeDef *handle, uint16_t address,
+                                      uint32_t *data);
 
 /**
  * @brief   Read a float stored in native byte order
@@ -63,8 +62,7 @@ EEPROM_StatusTypeDef EEPROM_ReadDWord(EEPROM_HandleTypeDef* handle,
  * @param   data Pointer to store the value
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_ReadFloat(EEPROM_HandleTypeDef* handle,
-                                      uint16_t address, float* data);
+EEPROM_StatusTypeDef EEPROM_ReadFloat(EEPROM_HandleTypeDef *handle, uint16_t address, float *data);
 
 #ifdef __cplusplus
 }

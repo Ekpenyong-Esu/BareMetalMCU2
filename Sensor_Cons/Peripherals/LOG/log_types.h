@@ -27,12 +27,7 @@ extern "C" {
 /**
  * @brief Severity of a log line
  */
-typedef enum {
-    LOG_LEVEL_DEBUG,
-    LOG_LEVEL_INFO,
-    LOG_LEVEL_WARNING,
-    LOG_LEVEL_ERROR
-} log_level_t;
+typedef enum { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARNING, LOG_LEVEL_ERROR } log_level_t;
 
 /**
  * @brief Where finished log lines are written
@@ -42,8 +37,8 @@ typedef enum {
  * adding one file, not editing the core.
  */
 typedef struct {
-    const char *name;                                 /*!< Backend name, for diagnostics */
-    void (*write)(const char *text, size_t length);   /*!< Emit one NUL-terminated line */
+    const char *name;                               /*!< Backend name, for diagnostics */
+    void (*write)(const char *text, size_t length); /*!< Emit one NUL-terminated line */
 } log_sink_t;
 
 #ifdef __cplusplus

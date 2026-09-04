@@ -1,26 +1,30 @@
 /**
-  ******************************************************************************
-  * @file    ssd1331.h
-  * @brief   SSD1331 0.95" 96x64 colour OLED driver - public aggregator
-  * @details Four-wire SPI panel. The bus is the shared SPI driver; the three
-  *          control lines are given per display, so the driver stays free of
-  *          board wiring.
-  *
-  * Example
-  * -------
-  *   SSD1331_Handle_t oled;
-  *   const SSD1331_Config_t config = {
-  *       .csPort = GPIOC, .csPin = GPIO_PIN_4,
-  *       .dcPort = GPIOC, .dcPin = GPIO_PIN_5,
-  *       .rstPort = GPIOB, .rstPin = GPIO_PIN_1
-  *   };
-  *
-  *   SSD1331_Init(&oled, &config);
-  *   SSD1331_SetCursor(&oled, 0, 0);
-  *   SSD1331_WriteString(&oled, "Hello", SSD1331_COLOR_CYAN, SSD1331_COLOR_BLACK);
-  *   SSD1331_UpdateScreen(&oled);
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ssd1331.h
+ * @brief   SSD1331 0.95" 96x64 colour OLED driver - public aggregator
+ * @details Four-wire SPI panel. The application opens the SPI bus and names
+ *          the three control lines per display, so the driver stays free of
+ *          board wiring.
+ *
+ * Example
+ * -------
+ *   SPI_Bus_t bus;                       // opened by the application
+ *   SPI_BusInit(&bus, &busConfig);
+ *
+ *   SSD1331_Handle_t oled;
+ *   const SSD1331_Config_t config = {
+ *       .bus = &bus,                     // .baudRatePrescaler = 0: driver default
+ *       .csPort = GPIOC, .csPin = GPIO_PIN_4,
+ *       .dcPort = GPIOC, .dcPin = GPIO_PIN_5,
+ *       .rstPort = GPIOB, .rstPin = GPIO_PIN_1
+ *   };
+ *
+ *   SSD1331_Init(&oled, &config);
+ *   SSD1331_SetCursor(&oled, 0, 0);
+ *   SSD1331_WriteString(&oled, "Hello", SSD1331_COLOR_CYAN, SSD1331_COLOR_BLACK);
+ *   SSD1331_UpdateScreen(&oled);
+ ******************************************************************************
+ */
 
 #ifndef SSD1331_H
 #define SSD1331_H

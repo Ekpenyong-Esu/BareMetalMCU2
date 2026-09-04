@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    accel_core.h
-  * @brief   Lifecycle and identity for the MMA8452Q accelerometer
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    accel_core.h
+ * @brief   Lifecycle and identity for the MMA8452Q accelerometer
+ ******************************************************************************
+ */
 
 #ifndef ACCEL_CORE_H
 #define ACCEL_CORE_H
@@ -14,22 +14,22 @@ extern "C" {
 
 #include "accel_types.h"
 
-ACCEL_StatusTypeDef ACCEL_Init(void);
-ACCEL_StatusTypeDef ACCEL_Init_Custom(const ACCEL_ConfigTypeDef *config);
-ACCEL_StatusTypeDef ACCEL_DeInit(void);
+/**
+ * @brief Register the part on an open bus, claim its chip select and apply @p config.
+ * @param bus    Caller-owned bus, already opened with SPI_BusInit()
+ * @param csPort Chip-select port; the driver drives it, the caller picks it
+ * @param csPin  Chip-select pin
+ * @param config Settings to apply, or NULL for 100 Hz, +/-2g, active mode
+ */
+ACCEL_StatusTypeDef ACCEL_Init(ACCEL_Handle_t *haccel, SPI_Bus_t *bus, GPIO_TypeDef *csPort,
+                               uint16_t csPin, const ACCEL_ConfigTypeDef *config);
+ACCEL_StatusTypeDef ACCEL_DeInit(ACCEL_Handle_t *haccel);
 
 /**
  * @brief Verify the device answers with the expected WHO_AM_I value.
  */
-ACCEL_StatusTypeDef ACCEL_IsReady(void);
-ACCEL_StatusTypeDef ACCEL_GetDeviceID(uint8_t *deviceId);
-
-/**
- * @brief Last range written to the device; used to scale samples without an
- *        extra bus transaction per read.
- */
-uint8_t ACCEL_GetCachedRange(void);
-void    ACCEL_CacheRange(uint8_t range);
+ACCEL_StatusTypeDef ACCEL_IsReady(ACCEL_Handle_t *haccel);
+ACCEL_StatusTypeDef ACCEL_GetDeviceID(ACCEL_Handle_t *haccel, uint8_t *deviceId);
 
 #ifdef __cplusplus
 }

@@ -17,35 +17,31 @@ static DMA2D_Device s_device;
 
 /* Public functions ----------------------------------------------------------*/
 
-DMA2D_Device* DMA2D_GetDevice(void)
-{
+DMA2D_Device *DMA2D_GetDevice(void) {
     return &s_device;
 }
 
-bool DMA2D_IsInitialized(void)
-{
+bool DMA2D_IsInitialized(void) {
     return s_device.status.initialized;
 }
 
-bool DMA2D_IsBusy(void)
-{
+bool DMA2D_IsBusy(void) {
     return (s_device.hal.State == HAL_DMA2D_STATE_BUSY);
 }
 
-void DMA2D_UpdateStatus(HAL_StatusTypeDef result)
-{
+void DMA2D_UpdateStatus(HAL_StatusTypeDef result) {
     s_device.status.state = s_device.hal.State;
     s_device.status.last_error = result;
 
     if (result == HAL_OK) {
         s_device.status.transfer_count++;
-    } else if (result != HAL_BUSY) {
+    }
+    else if (result != HAL_BUSY) {
         s_device.status.error_count++;
     }
 }
 
-HAL_StatusTypeDef DMA2D_GetStatus(DMA2D_Status *status)
-{
+HAL_StatusTypeDef DMA2D_GetStatus(DMA2D_Status *status) {
     if (status == NULL) {
         log_error("DMA2D status pointer is NULL");
         return HAL_ERROR;
@@ -55,8 +51,7 @@ HAL_StatusTypeDef DMA2D_GetStatus(DMA2D_Status *status)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef DMA2D_Init(const DMA2D_Config *config)
-{
+HAL_StatusTypeDef DMA2D_Init(const DMA2D_Config *config) {
     log_debug("Initializing DMA2D peripheral");
 
     HAL_StatusTypeDef result = DMA2D_ValidateConfig(config);
@@ -86,10 +81,8 @@ HAL_StatusTypeDef DMA2D_Init(const DMA2D_Config *config)
 
         s_device.hal.LayerCfg[DMA2D_FOREGROUND_LAYER].InputColorMode = config->color_mode;
         s_device.hal.LayerCfg[DMA2D_FOREGROUND_LAYER].InputAlpha =
-            DMA2D_MakeColor((uint8_t)config->red_value,
-                            (uint8_t)config->green_value,
-                            (uint8_t)config->blue_value,
-                            (uint8_t)config->alpha_value);
+            DMA2D_MakeColor((uint8_t)config->red_value, (uint8_t)config->green_value,
+                            (uint8_t)config->blue_value, (uint8_t)config->alpha_value);
         s_device.hal.LayerCfg[DMA2D_FOREGROUND_LAYER].InputOffset = config->output_offset;
 
         /* HAL_DMA2D_ConfigLayer copies LayerCfg into the registers, so it has to
@@ -104,8 +97,7 @@ HAL_StatusTypeDef DMA2D_Init(const DMA2D_Config *config)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef DMA2D_DeInit(void)
-{
+HAL_StatusTypeDef DMA2D_DeInit(void) {
     log_debug("Deinitializing DMA2D peripheral");
 
     if (!s_device.status.initialized) {
@@ -140,8 +132,7 @@ HAL_StatusTypeDef DMA2D_DeInit(void)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef DMA2D_ConfigLayer(uint32_t layer, const DMA2D_LayerConfig *layer_config)
-{
+HAL_StatusTypeDef DMA2D_ConfigLayer(uint32_t layer, const DMA2D_LayerConfig *layer_config) {
     log_debug("Configuring DMA2D layer %lu", (unsigned long)layer);
 
     HAL_StatusTypeDef result = DMA2D_ValidateLayerConfig(layer_config);
@@ -181,8 +172,7 @@ HAL_StatusTypeDef DMA2D_ConfigLayer(uint32_t layer, const DMA2D_LayerConfig *lay
     return HAL_OK;
 }
 
-HAL_StatusTypeDef DMA2D_PollForTransfer(uint32_t timeout)
-{
+HAL_StatusTypeDef DMA2D_PollForTransfer(uint32_t timeout) {
     log_debug("Polling for DMA2D transfer completion, timeout=%lu", (unsigned long)timeout);
 
     if (!s_device.status.initialized) {
@@ -200,8 +190,7 @@ HAL_StatusTypeDef DMA2D_PollForTransfer(uint32_t timeout)
     return result;
 }
 
-HAL_StatusTypeDef DMA2D_Abort(void)
-{
+HAL_StatusTypeDef DMA2D_Abort(void) {
     log_debug("Aborting DMA2D transfer");
 
     if (!s_device.status.initialized) {
@@ -212,7 +201,8 @@ HAL_StatusTypeDef DMA2D_Abort(void)
     HAL_StatusTypeDef result = HAL_DMA2D_Abort(&s_device.hal);
     if (result != HAL_OK) {
         log_error("DMA2D abort failed: %s", DMA2D_GetErrorString(result));
-    } else {
+    }
+    else {
         log_info("DMA2D transfer aborted successfully");
     }
 
@@ -220,8 +210,7 @@ HAL_StatusTypeDef DMA2D_Abort(void)
     return result;
 }
 
-HAL_StatusTypeDef DMA2D_EnableLCDMode(uint32_t color_mode)
-{
+HAL_StatusTypeDef DMA2D_EnableLCDMode(uint32_t color_mode) {
     log_info("Enabling DMA2D LCD mode");
 
     if (!s_device.status.initialized) {
@@ -244,7 +233,6 @@ HAL_StatusTypeDef DMA2D_EnableLCDMode(uint32_t color_mode)
     return HAL_OK;
 }
 
-void DMA2D_ISR_Dispatch(void)
-{
+void DMA2D_ISR_Dispatch(void) {
     HAL_DMA2D_IRQHandler(&s_device.hal);
 }

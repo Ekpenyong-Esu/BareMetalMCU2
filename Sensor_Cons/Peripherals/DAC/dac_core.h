@@ -4,14 +4,14 @@
  *
  * STM32F4 DAC Initialization:
  * - Enables DAC clock (RCC_APB1ENR_DACEN)
- * - Configures PA4 as analog output (GPIO_MODE_ANALOG)
+ * - Configures the pin named in the config as analog output (GPIO_MODE_ANALOG)
  * - Initializes HAL DAC with the requested trigger, output buffer, alignment
- * - Only DAC_CHANNEL_1 is supported; channel 2 (PA5) is not wired on this board
+ * - DAC_CHANNEL_1 or DAC_CHANNEL_2; the application says which pin carries it
+ *   (PA4 for channel 1, PA5 for channel 2 on STM32F4)
  *
  * MSP (HAL_DAC_MspInit/MspDeInit):
- * - Implemented in dac.c (not weak HAL defaults) to ensure proper pin/clock management
- * - MspInit: enables DAC clock, configures PA4 as analog
- * - MspDeInit: disables DAC clock, resets PA4 to analog (reset state)
+ * - Implemented in dac.c (not weak HAL defaults) to ensure the clock is gated
+ * - The output pin is handled by DAC_Init()/DAC_DeInit() from the config
  */
 
 #ifndef DAC_CORE_H
@@ -26,15 +26,14 @@ extern "C" {
 /**
  * @brief   Initialize the DAC peripheral
  *
- * Validates the configuration (only CH1, valid trigger/buffer/alignment),
- * initializes the HAL DAC, configures the channel, and marks the handle
- * as initialized. The MSP (clock + GPIO) is handled by HAL_DAC_MspInit()
- * in dac.c.
+ * Validates the configuration (channel, output pin, trigger/buffer/alignment),
+ * drives the output pin as analog, initializes the HAL DAC, configures the
+ * channel, and marks the handle as initialized.
  *
  * @param   hdac Handle to populate (must be zeroed or uninitialized)
- * @param   config Requested configuration (channel, trigger, output_buffer, alignment)
+ * @param   config Requested configuration (channel, outPort/outPin, trigger,
+ *                 output_buffer, alignment)
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR on invalid config or HAL failure
- * @note    Only DAC_CHANNEL_1 is supported; the MSP wires PA4 alone.
  */
 HAL_StatusTypeDef DAC_Init(DAC_HandleStruct *hdac, const DAC_ConfigTypeDef *config);
 
@@ -42,7 +41,8 @@ HAL_StatusTypeDef DAC_Init(DAC_HandleStruct *hdac, const DAC_ConfigTypeDef *conf
  * @brief   Deinitialize the DAC peripheral and release its clock and pin
  *
  * Calls HAL_DAC_DeInit() which invokes HAL_DAC_MspDeInit() to disable the
- * DAC clock and return PA4 to its reset state. Clears the initialized flag.
+ * DAC clock, then returns the output pin to its reset state. Clears the
+ * initialized flag.
  *
  * @param   hdac Handle
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not initialized or HAL fails
@@ -61,14 +61,12 @@ bool DAC_IsInitialized(const DAC_HandleStruct *hdac);
  * @brief   Report whether a channel argument matches the initialized channel
  *
  * The HAL treats every value other than DAC_CHANNEL_1 as channel 2,
- * so an unchecked argument silently drives an unconfigured pin (PA5).
- * This guard prevents that.
+ * so an unchecked argument silently drives a pin this handle never
+ * configured. This guard prevents that.
  *
  * @param   hdac Handle
  * @param   channel Channel supplied by the caller
- * @retval  bool true when the channel may be used with this handle (must be CH1)
- * @note    The HAL treats every value other than DAC_CHANNEL_1 as channel 2,
- *          so an unchecked argument silently drives an unconfigured pin.
+ * @retval  bool true when the channel matches the one this handle was opened with
  */
 bool DAC_IsChannelValid(const DAC_HandleStruct *hdac, uint32_t channel);
 

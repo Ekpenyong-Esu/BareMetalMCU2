@@ -27,8 +27,8 @@ HAL_StatusTypeDef FMC_Driver_NAND_Write(FMC_Driver_Handle_t *handle, uint32_t ad
  * @param address Byte offset from the start of the device, page aligned
  * @param size    Byte count, a whole multiple of the page size
  */
-HAL_StatusTypeDef FMC_Driver_NAND_Read(FMC_Driver_Handle_t *handle, uint32_t address,
-                                       uint8_t *data, uint32_t size);
+HAL_StatusTypeDef FMC_Driver_NAND_Read(FMC_Driver_Handle_t *handle, uint32_t address, uint8_t *data,
+                                       uint32_t size);
 
 /**
  * @brief Erase the NAND block containing a byte offset

@@ -14,28 +14,38 @@ This folder contains the driver for the Nokia 5110 LCD display (84x48 pixels) fo
 
 ## Hardware Connections
 
-The Nokia 5110 LCD requires the following connections to the STM32F429 Discovery board:
+The driver has no fixed wiring. The application opens an `SPI_Bus_t` for
+DIN/CLK and names the three control lines in `NOKIA5110_Config_t`:
 
-| Nokia 5110 Pin | STM32F429 Pin | Description |
-|----------------|----------------|-------------|
-| RST           | PB1           | Reset pin |
-| CE            | PB0           | Chip Enable (SPI CS) |
-| DC            | PB2           | Data/Command select |
-| DIN           | PF9           | SPI MOSI (shared with ILI9341) |
-| CLK           | PF7           | SPI SCK (shared with ILI9341) |
-| VCC           | 3.3V          | Power supply |
-| GND           | GND           | Ground |
-| BL            | 3.3V/NC       | Backlight (optional) |
+| Nokia 5110 Pin | Config field        | Description |
+|----------------|---------------------|-------------|
+| RST           | `RstPort`/`RstPin`  | Reset; `RstPort = NULL` if the module resets itself |
+| CE            | `CePort`/`CePin`    | Chip Enable (SPI CS) |
+| DC            | `DcPort`/`DcPin`    | Data/Command select |
+| DIN, CLK      | `Bus`               | MOSI/SCK of the bus opened with `SPI_BusInit` |
+| VCC           | 3.3V                | Power supply |
+| GND           | GND                 | Ground |
+| BL            | 3.3V/NC             | Backlight (optional) |
 
 ## Usage Example
 
 ```c
 #include "nokia5110.h"
+#include "spi.h"
 
+SPI_Bus_t bus;                     // owned by the application
 NOKIA5110_Handle_t hnok;
 
+SPI_BusInit(&bus, &busConfig);     // e.g. SPI5 on PF7/PF9
+
+NOKIA5110_Config_t config = NOKIA5110_GetDefaultConfig();
+config.Bus = &bus;
+config.RstPort = GPIOB; config.RstPin = GPIO_PIN_1;
+config.CePort  = GPIOB; config.CePin  = GPIO_PIN_0;
+config.DcPort  = GPIOB; config.DcPin  = GPIO_PIN_2;
+
 // Initialize the LCD
-if (NOKIA5110_Init(&hnok) == NOKIA5110_OK) {
+if (NOKIA5110_Init(&hnok, &config) == NOKIA5110_OK) {
     // Draw some text
     NOKIA5110_DrawText(&hnok, 0, 0, "Hello World!", 1);
 
@@ -84,8 +94,9 @@ if (NOKIA5110_Init(&hnok) == NOKIA5110_OK) {
 
 ## Notes
 
-- The driver uses SPI5 which is shared with the ILI9341 display
-- Make sure to initialize SPI before using the Nokia 5110
+- The bus may be shared with other devices; the driver registers its own
+  `SPI_Device_t` inside the handle, so several panels can coexist
+- Open the bus with `SPI_BusInit` before calling `NOKIA5110_Init`
 - The display buffer is 84x6 bytes (504 bytes total)
 - Text rendering uses a built-in 5x7 ASCII font
 - All drawing operations modify the buffer; call `NOKIA5110_Update()` to refresh the display

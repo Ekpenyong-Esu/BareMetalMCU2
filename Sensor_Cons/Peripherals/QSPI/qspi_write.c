@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    qspi_write.c
-  * @brief   Program paths for the serial NOR flash
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    qspi_write.c
+ * @brief   Program paths for the serial NOR flash
+ ******************************************************************************
+ */
 
 #include "qspi_write.h"
 #include "qspi_flash.h"
@@ -13,8 +13,7 @@
 #include "qspi_util.h"
 
 QSPI_StatusTypeDef QSPI_WritePage(QSPI_HandleStructTypeDef *hqspi, uint32_t address,
-                                  const uint8_t *data, uint32_t size)
-{
+                                  const uint8_t *data, uint32_t size) {
     QSPI_StatusTypeDef ready = QSPI_CheckReady(hqspi);
     if (ready != QSPI_OK || data == NULL) {
         return QSPI_INVALID_PARAM;
@@ -33,14 +32,14 @@ QSPI_StatusTypeDef QSPI_WritePage(QSPI_HandleStructTypeDef *hqspi, uint32_t addr
         return status;
     }
 
-    QSPI_ChipSelect(true);
+    QSPI_ChipSelect(hqspi, true);
 
     status = QSPI_SendCommandWithAddress(hqspi, QSPI_CMD_PAGE_PROGRAM, address);
     if (status == QSPI_OK) {
         status = QSPI_SendData(hqspi, data, size);
     }
 
-    QSPI_ChipSelect(false);
+    QSPI_ChipSelect(hqspi, false);
 
     if (status != QSPI_OK) {
         return status;
@@ -50,8 +49,7 @@ QSPI_StatusTypeDef QSPI_WritePage(QSPI_HandleStructTypeDef *hqspi, uint32_t addr
 }
 
 QSPI_StatusTypeDef QSPI_Write(QSPI_HandleStructTypeDef *hqspi, uint32_t address,
-                              const uint8_t *data, uint32_t size)
-{
+                              const uint8_t *data, uint32_t size) {
     QSPI_StatusTypeDef ready = QSPI_CheckReady(hqspi);
     if (ready != QSPI_OK || data == NULL) {
         return QSPI_INVALID_PARAM;

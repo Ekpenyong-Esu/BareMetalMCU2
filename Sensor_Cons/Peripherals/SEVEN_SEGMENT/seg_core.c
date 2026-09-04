@@ -15,31 +15,30 @@
 /* Private functions ---------------------------------------------------------*/
 
 /** @brief The only place the driver type is inspected */
-static const SegDriverOps_t* Seg_OpsFor(SegDriverType_t type)
-{
+static const SegDriverOps_t *Seg_OpsFor(SegDriverType_t type) {
     switch (type) {
-        case SEG_DRIVER_GPIO:   return &SegGpioOps;
-        case SEG_DRIVER_HT1621: return &SegHt1621Ops;
-        default:                return NULL;
+        case SEG_DRIVER_GPIO:
+            return &SegGpioOps;
+        case SEG_DRIVER_HT1621:
+            return &SegHt1621Ops;
+        default:
+            return NULL;
     }
 }
 
-static uint8_t Seg_ConfiguredDigitCount(const SegDisplayConfig_t* config)
-{
-    return (config->driverType == SEG_DRIVER_GPIO)
-           ? config->config.gpio.digitCount
-           : config->config.ht1621.digitCount;
+static uint8_t Seg_ConfiguredDigitCount(const SegDisplayConfig_t *config) {
+    return (config->driverType == SEG_DRIVER_GPIO) ? config->config.gpio.digitCount
+                                                   : config->config.ht1621.digitCount;
 }
 
 /* Exported functions --------------------------------------------------------*/
 
-SegStatus_t Seg_Init(SegDisplayHandle_t* handle, const SegDisplayConfig_t* config)
-{
+SegStatus_t Seg_Init(SegDisplayHandle_t *handle, const SegDisplayConfig_t *config) {
     if (handle == NULL || config == NULL) {
         return SEG_INVALID_PARAM;
     }
 
-    const SegDriverOps_t* ops = Seg_OpsFor(config->driverType);
+    const SegDriverOps_t *ops = Seg_OpsFor(config->driverType);
     if (ops == NULL) {
         return SEG_INVALID_PARAM;
     }
@@ -66,8 +65,7 @@ SegStatus_t Seg_Init(SegDisplayHandle_t* handle, const SegDisplayConfig_t* confi
     return SEG_OK;
 }
 
-SegStatus_t Seg_DeInit(SegDisplayHandle_t* handle)
-{
+SegStatus_t Seg_DeInit(SegDisplayHandle_t *handle) {
     SegStatus_t status = Seg_CheckReady(handle);
     if (status != SEG_OK) {
         return status;
@@ -79,8 +77,7 @@ SegStatus_t Seg_DeInit(SegDisplayHandle_t* handle)
     return SEG_OK;
 }
 
-SegStatus_t Seg_Enable(SegDisplayHandle_t* handle)
-{
+SegStatus_t Seg_Enable(SegDisplayHandle_t *handle) {
     SegStatus_t status = Seg_CheckReady(handle);
     if (status != SEG_OK) {
         return status;
@@ -92,8 +89,7 @@ SegStatus_t Seg_Enable(SegDisplayHandle_t* handle)
     return SEG_OK;
 }
 
-SegStatus_t Seg_Disable(SegDisplayHandle_t* handle)
-{
+SegStatus_t Seg_Disable(SegDisplayHandle_t *handle) {
     SegStatus_t status = Seg_CheckReady(handle);
     if (status != SEG_OK) {
         return status;
@@ -105,8 +101,7 @@ SegStatus_t Seg_Disable(SegDisplayHandle_t* handle)
     return SEG_OK;
 }
 
-SegStatus_t Seg_Clear(SegDisplayHandle_t* handle)
-{
+SegStatus_t Seg_Clear(SegDisplayHandle_t *handle) {
     SegStatus_t status = Seg_CheckReady(handle);
     if (status != SEG_OK) {
         return status;
@@ -117,8 +112,7 @@ SegStatus_t Seg_Clear(SegDisplayHandle_t* handle)
     return Seg_Refresh(handle);
 }
 
-SegStatus_t Seg_Update(SegDisplayHandle_t* handle)
-{
+SegStatus_t Seg_Update(SegDisplayHandle_t *handle) {
     SegStatus_t status = Seg_CheckReady(handle);
     if (status != SEG_OK) {
         return status;
@@ -131,8 +125,7 @@ SegStatus_t Seg_Update(SegDisplayHandle_t* handle)
     return SEG_OK;
 }
 
-SegStatus_t Seg_Refresh(SegDisplayHandle_t* handle)
-{
+SegStatus_t Seg_Refresh(SegDisplayHandle_t *handle) {
     SegStatus_t status = Seg_CheckReady(handle);
     if (status != SEG_OK) {
         return status;
@@ -143,7 +136,6 @@ SegStatus_t Seg_Refresh(SegDisplayHandle_t* handle)
     return SEG_OK;
 }
 
-uint8_t Seg_GetDigitCount(const SegDisplayHandle_t* handle)
-{
+uint8_t Seg_GetDigitCount(const SegDisplayHandle_t *handle) {
     return (Seg_CheckReady(handle) == SEG_OK) ? handle->digitCount : 0U;
 }

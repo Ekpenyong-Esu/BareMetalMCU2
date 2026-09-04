@@ -13,12 +13,11 @@
  *        blocks is addressed correctly instead of wrapping at 8 bits.
  */
 static bool FMC_Driver_NAND_Address(const FMC_Driver_Handle_t *handle, uint32_t address,
-                                    NAND_AddressTypeDef *nandAddress)
-{
+                                    NAND_AddressTypeDef *nandAddress) {
     const NAND_DeviceConfigTypeDef *geometry = &handle->hnand.Config;
-    uint32_t page;
-    uint32_t block;
-    uint32_t plane;
+    uint32_t page = 0;
+    uint32_t block = 0;
+    uint32_t plane = 0;
 
     if (geometry->PageSize == 0U || geometry->BlockSize == 0U || geometry->PlaneSize == 0U) {
         return false;
@@ -44,8 +43,7 @@ static bool FMC_Driver_NAND_Address(const FMC_Driver_Handle_t *handle, uint32_t 
 }
 
 HAL_StatusTypeDef FMC_Driver_NAND_Init(FMC_Driver_Handle_t *handle,
-                                       const FMC_Driver_NAND_Config_t *config)
-{
+                                       const FMC_Driver_NAND_Config_t *config) {
     FMC_NAND_PCC_TimingTypeDef comSpaceTiming = {0};
     FMC_NAND_PCC_TimingTypeDef attSpaceTiming = {0};
     NAND_DeviceConfigTypeDef deviceConfig = {0};
@@ -54,8 +52,8 @@ HAL_StatusTypeDef FMC_Driver_NAND_Init(FMC_Driver_Handle_t *handle,
         return HAL_ERROR;
     }
 
-    if (config->pageSize == 0U || config->blockSize == 0U ||
-        config->planeSize == 0U || config->planeNbr == 0U || config->blockNbr == 0U) {
+    if (config->pageSize == 0U || config->blockSize == 0U || config->planeSize == 0U ||
+        config->planeNbr == 0U || config->blockNbr == 0U) {
         log_error("FMC: NAND geometry is incomplete");
         return HAL_ERROR;
     }
@@ -112,9 +110,8 @@ HAL_StatusTypeDef FMC_Driver_NAND_Init(FMC_Driver_Handle_t *handle,
  */
 static HAL_StatusTypeDef FMC_Driver_NAND_CheckTransfer(FMC_Driver_Handle_t *handle,
                                                        uint32_t address, const void *data,
-                                                       uint32_t size, uint32_t *pageCount)
-{
-    uint32_t pageSize;
+                                                       uint32_t size, uint32_t *pageCount) {
+    uint32_t pageSize = 0;
 
     if (handle == NULL || data == NULL || !handle->initialized ||
         handle->memoryType != FMC_DRIVER_MEMORY_NAND) {
@@ -138,11 +135,10 @@ static HAL_StatusTypeDef FMC_Driver_NAND_CheckTransfer(FMC_Driver_Handle_t *hand
 }
 
 HAL_StatusTypeDef FMC_Driver_NAND_Write(FMC_Driver_Handle_t *handle, uint32_t address,
-                                        const uint8_t *data, uint32_t size)
-{
+                                        const uint8_t *data, uint32_t size) {
     NAND_AddressTypeDef nandAddress = {0};
     uint32_t pageCount = 0U;
-    HAL_StatusTypeDef status;
+    HAL_StatusTypeDef status = HAL_OK;
 
     status = FMC_Driver_NAND_CheckTransfer(handle, address, data, size, &pageCount);
     if (status != HAL_OK) {
@@ -155,8 +151,8 @@ HAL_StatusTypeDef FMC_Driver_NAND_Write(FMC_Driver_Handle_t *handle, uint32_t ad
     }
 
     /* The whole run is passed to HAL, which walks the pages itself. */
-    if (HAL_NAND_Write_Page_8b(&handle->hnand, &nandAddress,
-                               (uint8_t *)(uintptr_t)data, pageCount) != HAL_OK) {
+    if (HAL_NAND_Write_Page_8b(&handle->hnand, &nandAddress, (uint8_t *)(uintptr_t)data,
+                               pageCount) != HAL_OK) {
         handle->errorCode = FMC_DRIVER_ERROR_OPERATION;
         return HAL_ERROR;
     }
@@ -164,12 +160,11 @@ HAL_StatusTypeDef FMC_Driver_NAND_Write(FMC_Driver_Handle_t *handle, uint32_t ad
     return HAL_OK;
 }
 
-HAL_StatusTypeDef FMC_Driver_NAND_Read(FMC_Driver_Handle_t *handle, uint32_t address,
-                                       uint8_t *data, uint32_t size)
-{
+HAL_StatusTypeDef FMC_Driver_NAND_Read(FMC_Driver_Handle_t *handle, uint32_t address, uint8_t *data,
+                                       uint32_t size) {
     NAND_AddressTypeDef nandAddress = {0};
     uint32_t pageCount = 0U;
-    HAL_StatusTypeDef status;
+    HAL_StatusTypeDef status = HAL_OK;
 
     status = FMC_Driver_NAND_CheckTransfer(handle, address, data, size, &pageCount);
     if (status != HAL_OK) {
@@ -189,13 +184,11 @@ HAL_StatusTypeDef FMC_Driver_NAND_Read(FMC_Driver_Handle_t *handle, uint32_t add
     return HAL_OK;
 }
 
-HAL_StatusTypeDef FMC_Driver_NAND_EraseBlock(FMC_Driver_Handle_t *handle, uint32_t address)
-{
+HAL_StatusTypeDef FMC_Driver_NAND_EraseBlock(FMC_Driver_Handle_t *handle, uint32_t address) {
     NAND_AddressTypeDef nandAddress = {0};
-    uint32_t blockBytes;
+    uint32_t blockBytes = 0;
 
-    if (handle == NULL || !handle->initialized ||
-        handle->memoryType != FMC_DRIVER_MEMORY_NAND) {
+    if (handle == NULL || !handle->initialized || handle->memoryType != FMC_DRIVER_MEMORY_NAND) {
         return HAL_ERROR;
     }
 

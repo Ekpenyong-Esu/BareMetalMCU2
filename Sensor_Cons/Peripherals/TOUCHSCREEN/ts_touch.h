@@ -32,12 +32,13 @@ TS_StatusTypeDef TS_GetSingleTouch(TS_HandleTypeDef *hts, uint16_t *xPos, uint16
 /**
  * @brief Read the current touch point, reporting an idle panel as a normal result
  * @param hts Touchscreen handle
- * @param x Destination X
- * @param y Destination Y
+ * @param xPos Destination X
+ * @param yPos Destination Y
  * @param pressed Set to 1 while the panel is touched, 0 otherwise
  * @return TS_StatusTypeDef TS_OK even when nothing is touched
  */
-TS_StatusTypeDef TS_GetTouchState(TS_HandleTypeDef *hts, uint16_t *x, uint16_t *y, uint8_t *pressed);
+TS_StatusTypeDef TS_GetTouchState(TS_HandleTypeDef *hts, uint16_t *xPos, uint16_t *yPos,
+                                  uint8_t *pressed);
 
 /**
  * @brief Report whether the controller FIFO holds any samples

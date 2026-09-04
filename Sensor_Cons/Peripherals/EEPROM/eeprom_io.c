@@ -10,25 +10,22 @@
 /* Private defines -----------------------------------------------------------*/
 /** A 1-byte memory address can only span 256 bytes; anything beyond that is
  *  selected through the low bits of the I2C device address (M24C04/08/16). */
-#define EEPROM_BLOCK_SIZE       256U
+#define EEPROM_BLOCK_SIZE 256U
 
 /* Private functions ---------------------------------------------------------*/
 
 /**
  * @brief Number of memory-block bits that live in the I2C device address
  */
-static uint8_t EEPROM_IO_BlockBits(const EEPROM_HandleTypeDef* handle)
-{
+static uint8_t EEPROM_IO_BlockBits(const EEPROM_HandleTypeDef *handle) {
     uint8_t bits = 0;
-    uint32_t blocks;
+    uint32_t blocks = 0;
 
-    if (handle->config.addressSize != 1U)
-    {
+    if (handle->config.addressSize != 1U) {
         return 0;
     }
 
-    for (blocks = handle->config.totalSize / EEPROM_BLOCK_SIZE; blocks > 1U; blocks >>= 1)
-    {
+    for (blocks = handle->config.totalSize / EEPROM_BLOCK_SIZE; blocks > 1U; blocks >>= 1) {
         bits++;
     }
 
@@ -38,39 +35,32 @@ static uint8_t EEPROM_IO_BlockBits(const EEPROM_HandleTypeDef* handle)
 /**
  * @brief 8-bit I2C device address for the block containing @p address
  */
-static uint16_t EEPROM_IO_DeviceAddress(const EEPROM_HandleTypeDef* handle,
-                                        uint16_t address,
-                                        uint8_t blockBits)
-{
+static uint16_t EEPROM_IO_DeviceAddress(const EEPROM_HandleTypeDef *handle, uint16_t address,
+                                        uint8_t blockBits) {
     const uint8_t blockMask = (uint8_t)((1U << blockBits) - 1U);
     const uint8_t block = (uint8_t)((address / EEPROM_BLOCK_SIZE) & blockMask);
 
     return (uint16_t)((handle->activeAddress | block) << 1);
 }
 
-/* One EEPROM part answers to several addresses when its memory is split into
-   blocks, so the device record travels with the block being addressed. */
-static I2C_Device_t s_device;
-
 /**
- * @brief The bus device record, pointed at @p devAddr
+ * @brief The handle's device record, pointed at @p devAddr
+ * @note  One EEPROM part answers to several addresses when its memory is
+ *        split into blocks, so the record follows the block being addressed.
  */
-static I2C_Device_t *EEPROM_IO_Device(uint16_t devAddr)
-{
-    s_device.address = devAddr;
+static I2C_Device_t *EEPROM_IO_Device(EEPROM_HandleTypeDef *handle, uint16_t devAddr) {
+    handle->device.address = devAddr;
 
-    return &s_device;
+    return &handle->device;
 }
 
 /**
  * @brief Bytes left in the current block, i.e. the largest safe transfer
  */
-static uint16_t EEPROM_IO_ChunkLength(uint16_t address, uint16_t length, uint8_t blockBits)
-{
-    uint16_t remaining;
+static uint16_t EEPROM_IO_ChunkLength(uint16_t address, uint16_t length, uint8_t blockBits) {
+    uint16_t remaining = 0;
 
-    if (blockBits == 0U)
-    {
+    if (blockBits == 0U) {
         return length;
     }
 
@@ -82,44 +72,39 @@ static uint16_t EEPROM_IO_ChunkLength(uint16_t address, uint16_t length, uint8_t
 /**
  * @brief Address byte(s) sent on the bus; block bits have moved to the device address
  */
-static uint16_t EEPROM_IO_MemAddress(uint16_t address, uint8_t blockBits)
-{
+static uint16_t EEPROM_IO_MemAddress(uint16_t address, uint8_t blockBits) {
     return (blockBits == 0U) ? address : (uint16_t)(address % EEPROM_BLOCK_SIZE);
 }
 
 /* Public functions ----------------------------------------------------------*/
 
-void EEPROM_IO_Init(void)
-{
+EEPROM_StatusTypeDef EEPROM_IO_Init(EEPROM_HandleTypeDef *handle) {
     const I2C_ConfigTypeDef config = I2C_ConfigDefault();
+    const uint16_t devAddr = (uint16_t)(handle->config.i2cAddress << 1);
 
-    /* The address is filled in per transfer; registering here only fixes the
-       bus settings the part expects. */
-    I2C_DeviceInit(&s_device, 0U, &config);
+    /* The address is re-pointed per transfer; registering here fixes the bus
+       the chip sits on and the bus settings the part expects. */
+    if (I2C_DeviceInit(&handle->device, handle->bus, devAddr, &config) != I2C_OK) {
+        return EEPROM_ERROR;
+    }
+
+    return EEPROM_OK;
 }
 
-EEPROM_StatusTypeDef EEPROM_IO_Write(const EEPROM_HandleTypeDef* handle,
-                                     uint16_t address,
-                                     const uint8_t* data,
-                                     uint16_t length)
-{
+EEPROM_StatusTypeDef EEPROM_IO_Write(EEPROM_HandleTypeDef *handle, uint16_t address,
+                                     const uint8_t *data, uint16_t length) {
     const uint8_t blockBits = EEPROM_IO_BlockBits(handle);
     uint16_t done = 0;
 
-    while (done < length)
-    {
+    while (done < length) {
         const uint16_t offset = (uint16_t)(address + done);
         const uint16_t chunk = EEPROM_IO_ChunkLength(offset, (uint16_t)(length - done), blockBits);
         uint16_t devAddr = EEPROM_IO_DeviceAddress(handle, offset, blockBits);
         uint16_t memAddr = EEPROM_IO_MemAddress(offset, blockBits);
 
-        if (I2C_Mem_Write(EEPROM_IO_Device(devAddr),
-                          memAddr,
-                          handle->config.addressSize,
-                          (uint8_t*)(uintptr_t)(data + done),
-                          chunk,
-                          EEPROM_TIMEOUT_DEFAULT) != I2C_OK)
-        {
+        if (I2C_Mem_Write(EEPROM_IO_Device(handle, devAddr), memAddr, handle->config.addressSize,
+                          (uint8_t *)(uintptr_t)(data + done), chunk,
+                          EEPROM_TIMEOUT_DEFAULT) != I2C_OK) {
             return EEPROM_ERROR;
         }
 
@@ -129,29 +114,20 @@ EEPROM_StatusTypeDef EEPROM_IO_Write(const EEPROM_HandleTypeDef* handle,
     return EEPROM_OK;
 }
 
-EEPROM_StatusTypeDef EEPROM_IO_Read(const EEPROM_HandleTypeDef* handle,
-                                    uint16_t address,
-                                    uint8_t* data,
-                                    uint16_t length)
-{
+EEPROM_StatusTypeDef EEPROM_IO_Read(EEPROM_HandleTypeDef *handle, uint16_t address, uint8_t *data,
+                                    uint16_t length) {
     const uint8_t blockBits = EEPROM_IO_BlockBits(handle);
     uint16_t done = 0;
 
-    while (done < length)
-    {
+    while (done < length) {
         const uint16_t offset = (uint16_t)(address + done);
         const uint16_t chunk = EEPROM_IO_ChunkLength(offset, (uint16_t)(length - done), blockBits);
         uint16_t devAddr = EEPROM_IO_DeviceAddress(handle, offset, blockBits);
         uint16_t memAddr = EEPROM_IO_MemAddress(offset, blockBits);
         uint8_t *readPos = (uint8_t *)(uintptr_t)(data + done);
 
-        if (I2C_Mem_Read(EEPROM_IO_Device(devAddr),
-                         memAddr,
-                         handle->config.addressSize,
-                         readPos,
-                         chunk,
-                         EEPROM_TIMEOUT_DEFAULT) != I2C_OK)
-        {
+        if (I2C_Mem_Read(EEPROM_IO_Device(handle, devAddr), memAddr, handle->config.addressSize,
+                         readPos, chunk, EEPROM_TIMEOUT_DEFAULT) != I2C_OK) {
             return EEPROM_ERROR;
         }
 
@@ -161,13 +137,11 @@ EEPROM_StatusTypeDef EEPROM_IO_Read(const EEPROM_HandleTypeDef* handle,
     return EEPROM_OK;
 }
 
-EEPROM_StatusTypeDef EEPROM_IO_IsDeviceReady(const EEPROM_HandleTypeDef* handle)
-{
+EEPROM_StatusTypeDef EEPROM_IO_IsDeviceReady(EEPROM_HandleTypeDef *handle) {
     const uint16_t devAddr = (uint16_t)(handle->activeAddress << 1);
 
-    if (I2C_IsDeviceReady(EEPROM_IO_Device(devAddr), EEPROM_MAX_TRIALS,
-                          EEPROM_TIMEOUT_DEFAULT) != I2C_OK)
-    {
+    if (I2C_IsDeviceReady(EEPROM_IO_Device(handle, devAddr), EEPROM_MAX_TRIALS,
+                          EEPROM_TIMEOUT_DEFAULT) != I2C_OK) {
         return EEPROM_TIMEOUT;
     }
 

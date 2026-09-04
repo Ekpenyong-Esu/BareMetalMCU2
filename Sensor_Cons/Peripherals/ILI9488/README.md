@@ -15,17 +15,25 @@ This driver provides support for 4-inch TFT LCD displays with ILI9488 controller
 ## Hardware Requirements
 
 - ILI9488 TFT LCD display
-- SPI peripheral
-- 3 GPIO pins (CS, DC, RST)
+- An SPI bus opened by the application (`SPI_BusInit`)
+- 3 GPIO pins (CS, DC, RST), chosen by the application
 
 ## Usage Example
 
 ```c
 #include "ili9488.h"
 
-// Initialize display
+// The application owns the bus and decides which pins carry it
+SPI_BusConfig_t busConfig = { .instance = SPI2,
+                              .sckPort = GPIOB, .sckPin = GPIO_PIN_10,
+                              .misoPort = GPIOC, .misoPin = GPIO_PIN_2,
+                              .mosiPort = GPIOC, .mosiPin = GPIO_PIN_3 };
+SPI_Bus_t bus;
+SPI_BusInit(&bus, &busConfig);
+
+// Initialize display on that bus; the driver configures CS/DC/RST itself
 ILI9488_Handle_t hili;
-ILI9488_Init(&hili, GPIOB, GPIO_PIN_12, GPIOB, GPIO_PIN_13, GPIOB, GPIO_PIN_14);
+ILI9488_Init(&hili, &bus, GPIOB, GPIO_PIN_12, GPIOB, GPIO_PIN_13, GPIOB, GPIO_PIN_14);
 
 // Clear screen
 ILI9488_Clear(&hili, ILI9488_COLOR_BLACK);
@@ -56,6 +64,6 @@ cmake -DUSE_ILI9488=ON ..
 
 ## Dependencies
 
-- STM32 HAL SPI driver
+- `Peripherals/SPI` bus driver
 - GPIO driver
 - Standard C libraries

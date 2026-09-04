@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mems_io.c
-  * @brief   Register access over SPI for the L3GD20
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mems_io.c
+ * @brief   Register access over SPI for the L3GD20
+ ******************************************************************************
+ */
 
 #include "mems_io.h"
 #include "mems_hw.h"
@@ -15,11 +15,9 @@
  * @note  CS is released on every path so a failed transfer cannot leave the bus
  *        selected.
  */
-static MEMS_StatusTypeDef MEMS_Transfer(MEMS_HandleTypeDef *hmems, uint8_t command,
-                                       uint8_t *rxData, const uint8_t *txData,
-                                       uint8_t length)
-{
-    SPI_StatusTypeDef status;
+static MEMS_StatusTypeDef MEMS_Transfer(MEMS_HandleTypeDef *hmems, uint8_t command, uint8_t *rxData,
+                                        const uint8_t *txData, uint8_t length) {
+    SPI_StatusTypeDef status = SPI_OK;
 
     MEMS_CS_Low(hmems);
 
@@ -27,7 +25,8 @@ static MEMS_StatusTypeDef MEMS_Transfer(MEMS_HandleTypeDef *hmems, uint8_t comma
     if (status == SPI_OK) {
         if (rxData != NULL) {
             status = SPI_Receive(&hmems->device, rxData, length, MEMS_SPI_TIMEOUT);
-        } else {
+        }
+        else {
             status = SPI_Transmit(&hmems->device, (uint8_t *)txData, length, MEMS_SPI_TIMEOUT);
         }
     }
@@ -37,8 +36,7 @@ static MEMS_StatusTypeDef MEMS_Transfer(MEMS_HandleTypeDef *hmems, uint8_t comma
     return (status == SPI_OK) ? MEMS_OK : MEMS_COMMUNICATION_ERROR;
 }
 
-static uint8_t MEMS_CommandByte(uint8_t addr, uint8_t length, bool read)
-{
+static uint8_t MEMS_CommandByte(uint8_t addr, uint8_t length, bool read) {
     uint8_t command = addr;
 
     if (read) {
@@ -51,9 +49,8 @@ static uint8_t MEMS_CommandByte(uint8_t addr, uint8_t length, bool read)
     return command;
 }
 
-MEMS_StatusTypeDef MEMS_ReadRegisters(MEMS_HandleTypeDef *hmems, uint8_t start_addr,
-                                      uint8_t *data, uint8_t length)
-{
+MEMS_StatusTypeDef MEMS_ReadRegisters(MEMS_HandleTypeDef *hmems, uint8_t start_addr, uint8_t *data,
+                                      uint8_t length) {
     uint8_t command = 0U;
 
     if (hmems == NULL || data == NULL || length == 0U) {
@@ -68,8 +65,7 @@ MEMS_StatusTypeDef MEMS_ReadRegisters(MEMS_HandleTypeDef *hmems, uint8_t start_a
 }
 
 MEMS_StatusTypeDef MEMS_WriteRegisters(MEMS_HandleTypeDef *hmems, uint8_t start_addr,
-                                       const uint8_t *data, uint8_t length)
-{
+                                       const uint8_t *data, uint8_t length) {
     uint8_t command = 0U;
 
     if (hmems == NULL || data == NULL || length == 0U) {
@@ -83,20 +79,17 @@ MEMS_StatusTypeDef MEMS_WriteRegisters(MEMS_HandleTypeDef *hmems, uint8_t start_
     return MEMS_Transfer(hmems, command, NULL, data, length);
 }
 
-MEMS_StatusTypeDef MEMS_ReadRegister(MEMS_HandleTypeDef *hmems, uint8_t addr, uint8_t *data)
-{
+MEMS_StatusTypeDef MEMS_ReadRegister(MEMS_HandleTypeDef *hmems, uint8_t addr, uint8_t *data) {
     return MEMS_ReadRegisters(hmems, addr, data, 1U);
 }
 
-MEMS_StatusTypeDef MEMS_WriteRegister(MEMS_HandleTypeDef *hmems, uint8_t addr, uint8_t data)
-{
+MEMS_StatusTypeDef MEMS_WriteRegister(MEMS_HandleTypeDef *hmems, uint8_t addr, uint8_t data) {
     return MEMS_WriteRegisters(hmems, addr, &data, 1U);
 }
 
-MEMS_StatusTypeDef MEMS_UpdateRegister(MEMS_HandleTypeDef *hmems, uint8_t addr,
-                                       uint8_t mask, uint8_t value)
-{
-    MEMS_StatusTypeDef status;
+MEMS_StatusTypeDef MEMS_UpdateRegister(MEMS_HandleTypeDef *hmems, uint8_t addr, uint8_t mask,
+                                       uint8_t value) {
+    MEMS_StatusTypeDef status = MEMS_OK;
     uint8_t reg = 0U;
 
     status = MEMS_ReadRegister(hmems, addr, &reg);

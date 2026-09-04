@@ -1,16 +1,16 @@
 /**
-  ******************************************************************************
-  * @file    buzzer.h
-  * @brief   Buzzer driver — make sounds with a buzzer
-  * @details Supports two kinds of buzzers:
-  *          - Active buzzer: has its own oscillator, just needs on/off (GPIO).
-  *          - Passive buzzer: needs the MCU to generate the tone (PWM).
-  *
-  * How it works (in simple words):
-  * - Active: set the GPIO high to beep, low to stop.
-  * - Passive: the timer makes a square wave; changing the frequency changes
-  *   the pitch, changing the duty changes the volume.
-  */
+ ******************************************************************************
+ * @file    buzzer.h
+ * @brief   Buzzer driver — make sounds with a buzzer
+ * @details Supports two kinds of buzzers:
+ *          - Active buzzer: has its own oscillator, just needs on/off (GPIO).
+ *          - Passive buzzer: needs the MCU to generate the tone (PWM).
+ *
+ * How it works (in simple words):
+ * - Active: set the GPIO high to beep, low to stop.
+ * - Passive: the timer makes a square wave; changing the frequency changes
+ *   the pitch, changing the duty changes the volume.
+ */
 
 #ifndef BUZZER_H
 #define BUZZER_H
@@ -31,8 +31,8 @@ extern "C" {
  * square wave via PWM.
  */
 typedef enum {
-    BUZZER_MODE_ACTIVE_GPIO = 0,  ///< Active buzzer driven by GPIO high/low
-    BUZZER_MODE_PASSIVE_PWM       ///< Passive buzzer driven by PWM
+    BUZZER_MODE_ACTIVE_GPIO = 0, ///< Active buzzer driven by GPIO high/low
+    BUZZER_MODE_PASSIVE_PWM      ///< Passive buzzer driven by PWM
 } BuzzerMode_t;
 
 /**
@@ -43,12 +43,12 @@ typedef enum {
  *  - Passive mode: htim, channel, pwmTimerClockHz
  */
 typedef struct {
-    BuzzerMode_t mode;              ///< Active or passive
-    GPIO_TypeDef *port;             ///< GPIO port (active mode only)
-    uint16_t pin;                   ///< GPIO pin (active mode only)
-    TIM_HandleTypeDef *htim;        ///< Timer handle (passive mode only)
-    uint32_t channel;               ///< Timer channel (passive mode only)
-    uint32_t pwmTimerClockHz;       ///< Timer input clock in Hz (passive mode only)
+    BuzzerMode_t mode;        ///< Active or passive
+    GPIO_TypeDef *port;       ///< GPIO port (active mode only)
+    uint16_t pin;             ///< GPIO pin (active mode only)
+    TIM_HandleTypeDef *htim;  ///< Timer handle (passive mode only)
+    uint32_t channel;         ///< Timer channel (passive mode only)
+    uint32_t pwmTimerClockHz; ///< Timer input clock in Hz (passive mode only)
 } Buzzer_t;
 
 /**
@@ -79,8 +79,8 @@ HAL_StatusTypeDef Buzzer_InitActive(Buzzer_t *buzzer, GPIO_TypeDef *port, uint16
  * @param timerClockHz    Timer input clock in Hz (e.g., 84000000 for TIM9 on F4).
  * @return HAL_OK on success, HAL_ERROR on invalid arguments or PWM start failure.
  */
-HAL_StatusTypeDef Buzzer_InitPassive(Buzzer_t *buzzer, TIM_HandleTypeDef *htim,
-                                     uint32_t channel, uint32_t timerClockHz);
+HAL_StatusTypeDef Buzzer_InitPassive(Buzzer_t *buzzer, TIM_HandleTypeDef *htim, uint32_t channel,
+                                     uint32_t timerClockHz);
 
 /**
  * @brief Turn the buzzer on.
@@ -119,8 +119,7 @@ void Buzzer_Off(Buzzer_t *buzzer);
  * @return HAL_OK on success, HAL_ERROR if buzzer is not passive, frequency
  *         is out of range, or dutyPercent > 100.
  */
-HAL_StatusTypeDef Buzzer_Tone(Buzzer_t *buzzer, uint32_t frequencyHz,
-                              uint8_t dutyPercent);
+HAL_StatusTypeDef Buzzer_Tone(Buzzer_t *buzzer, uint32_t frequencyHz, uint8_t dutyPercent);
 
 /**
  * @brief Check whether the buzzer is currently producing sound.

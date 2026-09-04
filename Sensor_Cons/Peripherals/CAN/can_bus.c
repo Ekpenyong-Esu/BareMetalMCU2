@@ -1,19 +1,19 @@
 /**
-  ******************************************************************************
-  * @file    can_bus.c
-  * @brief   Backend-neutral CAN interface implementation
-  *
-  * This module hides the choice between on-chip bxCAN and external MCP2515
-  * behind one CAN_Bus_Send/Receive API:
-  * - Status translation: HAL / MCP2515 codes -> CAN_BusStatus
-  * - CAN_Bus_Init/DeInit: dispatch to the configured backend
-  * - CAN_Bus_Send/Receive/IsRxPending: frame conversion and backend dispatch
-  *
-  * Key Design Points:
-  * - CAN_BusFrame is the common shape; converted to CAN_Frame or MCP2515_Frame_t
-  * - MCP2515 has no blocking receive, so the wait loop lives here
-  * - Timeout is honoured by bxCAN only; MCP2515 reports CAN_BUS_BUSY
-  */
+ ******************************************************************************
+ * @file    can_bus.c
+ * @brief   Backend-neutral CAN interface implementation
+ *
+ * This module hides the choice between on-chip bxCAN and external MCP2515
+ * behind one CAN_Bus_Send/Receive API:
+ * - Status translation: HAL / MCP2515 codes -> CAN_BusStatus
+ * - CAN_Bus_Init/DeInit: dispatch to the configured backend
+ * - CAN_Bus_Send/Receive/IsRxPending: frame conversion and backend dispatch
+ *
+ * Key Design Points:
+ * - CAN_BusFrame is the common shape; converted to CAN_Frame or MCP2515_Frame_t
+ * - MCP2515 has no blocking receive, so the wait loop lives here
+ * - Timeout is honoured by bxCAN only; MCP2515 reports CAN_BUS_BUSY
+ */
 
 #include "can_bus.h"
 #include <string.h>
@@ -25,16 +25,22 @@
  * @param status MCP2515 status
  * @retval CAN_BusStatus Corresponding bus status
  */
-static CAN_BusStatus CAN_Bus_FromMcp(MCP2515_Status_t status)
-{
+static CAN_BusStatus CAN_Bus_FromMcp(MCP2515_Status_t status) {
     switch (status) {
-        case MCP2515_OK:              return CAN_BUS_OK;
-        case MCP2515_INVALID_PARAM:   return CAN_BUS_INVALID_PARAM;
-        case MCP2515_NOT_INITIALIZED: return CAN_BUS_NOT_INITIALIZED;
-        case MCP2515_TIMEOUT:         return CAN_BUS_TIMEOUT;
-        case MCP2515_NO_MESSAGE:      return CAN_BUS_NO_MESSAGE;
-        case MCP2515_TX_BUSY:         return CAN_BUS_BUSY;
-        default:                      return CAN_BUS_ERROR;
+        case MCP2515_OK:
+            return CAN_BUS_OK;
+        case MCP2515_INVALID_PARAM:
+            return CAN_BUS_INVALID_PARAM;
+        case MCP2515_NOT_INITIALIZED:
+            return CAN_BUS_NOT_INITIALIZED;
+        case MCP2515_TIMEOUT:
+            return CAN_BUS_TIMEOUT;
+        case MCP2515_NO_MESSAGE:
+            return CAN_BUS_NO_MESSAGE;
+        case MCP2515_TX_BUSY:
+            return CAN_BUS_BUSY;
+        default:
+            return CAN_BUS_ERROR;
     }
 }
 
@@ -43,13 +49,16 @@ static CAN_BusStatus CAN_Bus_FromMcp(MCP2515_Status_t status)
  * @param status HAL status
  * @retval CAN_BusStatus Corresponding bus status
  */
-static CAN_BusStatus CAN_Bus_FromHal(HAL_StatusTypeDef status)
-{
+static CAN_BusStatus CAN_Bus_FromHal(HAL_StatusTypeDef status) {
     switch (status) {
-        case HAL_OK:      return CAN_BUS_OK;
-        case HAL_TIMEOUT: return CAN_BUS_TIMEOUT;
-        case HAL_BUSY:    return CAN_BUS_BUSY;
-        default:          return CAN_BUS_ERROR;
+        case HAL_OK:
+            return CAN_BUS_OK;
+        case HAL_TIMEOUT:
+            return CAN_BUS_TIMEOUT;
+        case HAL_BUSY:
+            return CAN_BUS_BUSY;
+        default:
+            return CAN_BUS_ERROR;
     }
 }
 
@@ -62,8 +71,7 @@ static CAN_BusStatus CAN_Bus_FromHal(HAL_StatusTypeDef status)
  * @retval CAN_BusStatus CAN_BUS_OK on success
  */
 
-CAN_BusStatus CAN_Bus_Init(CAN_Bus *bus, const CAN_BusConfig *config)
-{
+CAN_BusStatus CAN_Bus_Init(CAN_Bus *bus, const CAN_BusConfig *config) {
     if (bus == NULL || config == NULL) {
         return CAN_BUS_INVALID_PARAM;
     }
@@ -77,13 +85,15 @@ CAN_BusStatus CAN_Bus_Init(CAN_Bus *bus, const CAN_BusConfig *config)
         if (status != HAL_OK) {
             return CAN_Bus_FromHal(status);
         }
-    } else if (config->backend == CAN_BUS_BACKEND_MCP2515) {
+    }
+    else if (config->backend == CAN_BUS_BACKEND_MCP2515) {
         MCP2515_Status_t status = MCP2515_Init(&bus->dev.mcp2515, &config->cfg.mcp2515);
 
         if (status != MCP2515_OK) {
             return CAN_Bus_FromMcp(status);
         }
-    } else {
+    }
+    else {
         return CAN_BUS_INVALID_PARAM;
     }
 
@@ -97,9 +107,8 @@ CAN_BusStatus CAN_Bus_Init(CAN_Bus *bus, const CAN_BusConfig *config)
  * @param bus Bus handle (must be initialized)
  * @retval CAN_BusStatus CAN_BUS_OK on success
  */
-CAN_BusStatus CAN_Bus_DeInit(CAN_Bus *bus)
-{
-    CAN_BusStatus status;
+CAN_BusStatus CAN_Bus_DeInit(CAN_Bus *bus) {
+    CAN_BusStatus status = CAN_BUS_OK;
 
     if (bus == NULL) {
         return CAN_BUS_INVALID_PARAM;
@@ -126,8 +135,7 @@ CAN_BusStatus CAN_Bus_DeInit(CAN_Bus *bus)
  * @param timeout Max wait in ms (bxCAN only; MCP2515 is non-blocking)
  * @retval CAN_BusStatus CAN_BUS_OK, CAN_BUS_BUSY or error
  */
-CAN_BusStatus CAN_Bus_Send(CAN_Bus *bus, const CAN_BusFrame *frame, uint32_t timeout)
-{
+CAN_BusStatus CAN_Bus_Send(CAN_Bus *bus, const CAN_BusFrame *frame, uint32_t timeout) {
     if (bus == NULL || frame == NULL || frame->length > 8U) {
         return CAN_BUS_INVALID_PARAM;
     }
@@ -163,15 +171,13 @@ CAN_BusStatus CAN_Bus_Send(CAN_Bus *bus, const CAN_BusFrame *frame, uint32_t tim
  * @param bus Bus handle
  * @retval bool true when a frame is available
  */
-bool CAN_Bus_IsRxPending(CAN_Bus *bus)
-{
+bool CAN_Bus_IsRxPending(CAN_Bus *bus) {
     if (bus == NULL || !bus->initialized) {
         return false;
     }
 
     if (bus->backend == CAN_BUS_BACKEND_BXCAN) {
-        return CAN_IsReceivePending(&bus->dev.bxcan, 0) ||
-               CAN_IsReceivePending(&bus->dev.bxcan, 1);
+        return CAN_IsReceivePending(&bus->dev.bxcan, 0) || CAN_IsReceivePending(&bus->dev.bxcan, 1);
     }
 
     return MCP2515_IsMessagePending(&bus->dev.mcp2515);
@@ -184,8 +190,7 @@ bool CAN_Bus_IsRxPending(CAN_Bus *bus)
  * @param timeout Max wait in ms
  * @retval CAN_BusStatus CAN_BUS_OK on success, CAN_BUS_NO_MESSAGE on timeout
  */
-CAN_BusStatus CAN_Bus_Receive(CAN_Bus *bus, CAN_BusFrame *frame, uint32_t timeout)
-{
+CAN_BusStatus CAN_Bus_Receive(CAN_Bus *bus, CAN_BusFrame *frame, uint32_t timeout) {
     if (bus == NULL || frame == NULL) {
         return CAN_BUS_INVALID_PARAM;
     }
@@ -196,8 +201,8 @@ CAN_BusStatus CAN_Bus_Receive(CAN_Bus *bus, CAN_BusFrame *frame, uint32_t timeou
     memset(frame, 0, sizeof(*frame));
 
     if (bus->backend == CAN_BUS_BACKEND_BXCAN) {
-        CAN_Frame in = {0};
-        HAL_StatusTypeDef status = CAN_Receive(&bus->dev.bxcan, &in, timeout);
+        CAN_Frame rxFrame = {0};
+        HAL_StatusTypeDef status = CAN_Receive(&bus->dev.bxcan, &rxFrame, timeout);
 
         if (status != HAL_OK) {
             /* An empty FIFO is a normal poll result, not a bus fault. */
@@ -205,11 +210,11 @@ CAN_BusStatus CAN_Bus_Receive(CAN_Bus *bus, CAN_BusFrame *frame, uint32_t timeou
                                                                   : CAN_Bus_FromHal(status);
         }
 
-        frame->id = in.id;
-        frame->extended = (in.frame_type == CAN_FRAME_EXTENDED);
-        frame->remote = in.remote_request;
-        frame->length = (in.data_length > 8U) ? 8U : in.data_length;
-        memcpy(frame->data, in.data, frame->length);
+        frame->id = rxFrame.id;
+        frame->extended = (rxFrame.frame_type == CAN_FRAME_EXTENDED);
+        frame->remote = rxFrame.remote_request;
+        frame->length = (rxFrame.data_length > 8U) ? 8U : rxFrame.data_length;
+        memcpy(frame->data, rxFrame.data, frame->length);
 
         return CAN_BUS_OK;
     }
@@ -222,18 +227,18 @@ CAN_BusStatus CAN_Bus_Receive(CAN_Bus *bus, CAN_BusFrame *frame, uint32_t timeou
         }
     }
 
-    MCP2515_Frame_t in = {0};
-    MCP2515_Status_t status = MCP2515_Receive(&bus->dev.mcp2515, &in);
+    MCP2515_Frame_t rxFrame = {0};
+    MCP2515_Status_t status = MCP2515_Receive(&bus->dev.mcp2515, &rxFrame);
 
     if (status != MCP2515_OK) {
         return CAN_Bus_FromMcp(status);
     }
 
-    frame->id = in.id;
-    frame->extended = in.extended;
-    frame->remote = in.remote;
-    frame->length = (in.length > 8U) ? 8U : in.length;
-    memcpy(frame->data, in.data, frame->length);
+    frame->id = rxFrame.id;
+    frame->extended = rxFrame.extended;
+    frame->remote = rxFrame.remote;
+    frame->length = (rxFrame.length > 8U) ? 8U : rxFrame.length;
+    memcpy(frame->data, rxFrame.data, frame->length);
 
     return CAN_BUS_OK;
 }

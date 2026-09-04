@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    flash_write.h
-  * @brief   Flash programming operations
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    flash_write.h
+ * @brief   Flash programming operations
+ ******************************************************************************
+ */
 
 #ifndef __FLASH_WRITE_H__
 #define __FLASH_WRITE_H__
@@ -57,7 +57,7 @@ FLASH_StatusTypeDef FLASH_WriteDoubleWord(uint32_t address, uint64_t data);
  * @param   length Number of bytes to write
  * @retval  FLASH_StatusTypeDef Operation status
  */
-FLASH_StatusTypeDef FLASH_WriteBuffer(uint32_t address, const uint8_t* data, uint32_t length);
+FLASH_StatusTypeDef FLASH_WriteBuffer(uint32_t address, const uint8_t *data, uint32_t length);
 
 /**
  * @brief   Write 32-bit buffer to Flash
@@ -67,7 +67,7 @@ FLASH_StatusTypeDef FLASH_WriteBuffer(uint32_t address, const uint8_t* data, uin
  * @param   count Number of 32-bit words to write
  * @retval  FLASH_StatusTypeDef Operation status
  */
-FLASH_StatusTypeDef FLASH_WriteBuffer32(uint32_t address, const uint32_t* data, uint32_t count);
+FLASH_StatusTypeDef FLASH_WriteBuffer32(uint32_t address, const uint32_t *data, uint32_t count);
 
 #ifdef __cplusplus
 }

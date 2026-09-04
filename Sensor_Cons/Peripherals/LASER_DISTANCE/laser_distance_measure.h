@@ -1,12 +1,12 @@
 /**
-  ******************************************************************************
-  * @file    laser_distance_measure.h
-  * @brief   Laser distance measurement control and result access
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    laser_distance_measure.h
+ * @brief   Laser distance measurement control and result access
+ ******************************************************************************
+ */
 
-#ifndef __LASER_DISTANCE_MEASURE_H__
-#define __LASER_DISTANCE_MEASURE_H__
+#ifndef LASER_DISTANCE_MEASURE_H
+#define LASER_DISTANCE_MEASURE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,8 +44,9 @@ uint16_t LASER_DISTANCE_MeasureDistance(LASER_DISTANCE_Handle_t *hlaser);
  * @param   measurement Pointer to measurement data structure
  * @retval  LASER_DISTANCE_StatusTypeDef Operation status
  */
-LASER_DISTANCE_StatusTypeDef LASER_DISTANCE_GetMeasurement(const LASER_DISTANCE_Handle_t *hlaser,
-                                                           LASER_DISTANCE_Measurement_t *measurement);
+LASER_DISTANCE_StatusTypeDef
+LASER_DISTANCE_GetMeasurement(const LASER_DISTANCE_Handle_t *hlaser,
+                              LASER_DISTANCE_Measurement_t *measurement);
 
 /**
  * @brief   Get last measured distance
@@ -59,7 +60,7 @@ uint16_t LASER_DISTANCE_GetDistance(const LASER_DISTANCE_Handle_t *hlaser);
  * @param   hlaser Pointer to laser distance sensor handle
  * @retval  bool True if measurement is ready
  */
-bool LASER_DISTANCE_IsMeasurementReady(const LASER_DISTANCE_Handle_t *hlaser);
+bool LASER_DISTANCE_IsMeasurementReady(LASER_DISTANCE_Handle_t *hlaser);
 
 /**
  * @brief   Change I2C address (VL53L0X only)
@@ -81,4 +82,4 @@ LASER_DISTANCE_StatusTypeDef LASER_DISTANCE_Calibrate(LASER_DISTANCE_Handle_t *h
 }
 #endif
 
-#endif /* __LASER_DISTANCE_MEASURE_H__ */
+#endif /* LASER_DISTANCE_MEASURE_H */

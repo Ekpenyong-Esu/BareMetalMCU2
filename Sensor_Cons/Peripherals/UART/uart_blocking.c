@@ -15,7 +15,7 @@
  *
  * Initialization:
  * - UART_Blocking_Init() configures UART, disables all interrupts
- * - Publishes handle as active before HAL_UART_Init() for MSP
+ * - Registers the handle under its instance before HAL_UART_Init() for MSP
  *
  * Transmit:
  * - HAL_UART_Transmit() polls TXE/TC flags until all bytes shifted out
@@ -45,8 +45,7 @@
  * @param config Desired configuration (baud rate, word length, stop bits, parity)
  * @retval UART_OK on success, UART_ERROR on invalid args or HAL init failure
  */
-UART_Status_t UART_Blocking_Init(UART_Handle_t* handle, const UART_Config_t* config)
-{
+UART_Status_t UART_Blocking_Init(UART_Handle_t *handle, const UART_Config_t *config) {
     if (handle == NULL || config == NULL || config->instance == NULL || handle->huart == NULL) {
         log_debug("Blocking UART: handle, huart or config is NULL");
         return UART_ERROR;
@@ -59,8 +58,10 @@ UART_Status_t UART_Blocking_Init(UART_Handle_t* handle, const UART_Config_t* con
     handle->config = *config;
     memset(handle->huart, 0, sizeof(UART_HandleTypeDef));
 
-    /* Publish before HAL_UART_Init(), which calls into HAL_UART_MspInit(). */
-    UART_SetActiveHandle(handle);
+    /* Register before HAL_UART_Init(), which calls into HAL_UART_MspInit(). */
+    if (UART_Register(handle) != UART_OK) {
+        return UART_ERROR;
+    }
 
     handle->huart->Instance = config->instance;
     handle->huart->Init.BaudRate = config->baudRate;
@@ -73,6 +74,7 @@ UART_Status_t UART_Blocking_Init(UART_Handle_t* handle, const UART_Config_t* con
 
     if (HAL_UART_Init(handle->huart) != HAL_OK) {
         log_debug("Blocking UART initialization failed");
+        UART_Unregister(handle);
         return UART_ERROR;
     }
 
@@ -89,8 +91,7 @@ UART_Status_t UART_Blocking_Init(UART_Handle_t* handle, const UART_Config_t* con
 }
 
 /* Both transfer directions share the same preconditions. */
-static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, uint16_t size)
-{
+static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, uint16_t size) {
     if (handle == NULL) {
         log_debug("UART handle is NULL");
         return false;
@@ -126,13 +127,13 @@ static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, ui
  * @param timeout Milliseconds to wait for transfer to complete
  * @retval UART_OK on success, UART_ERROR on invalid args, UART_TIMEOUT_ERROR on timeout
  */
-UART_Status_t UART_Blocking_Transmit(UART_Handle_t* handle, const uint8_t* data, uint16_t size, uint32_t timeout)
-{
+UART_Status_t UART_Blocking_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size,
+                                     uint32_t timeout) {
     if (!IsReadyForTransfer(handle, data, size)) {
         return UART_ERROR;
     }
 
-    if (HAL_UART_Transmit(handle->huart, (uint8_t*)data, size, timeout) != HAL_OK) {
+    if (HAL_UART_Transmit(handle->huart, (uint8_t *)data, size, timeout) != HAL_OK) {
         log_debug("Blocking UART Transmit failed");
         return UART_ERROR;
     }
@@ -163,9 +164,8 @@ UART_Status_t UART_Blocking_Transmit(UART_Handle_t* handle, const uint8_t* data,
  * @retval UART_OK on success (including partial frame), UART_TIMEOUT_ERROR if nothing arrived,
  *         UART_ERROR on overrun/framing/noise error or invalid args
  */
-UART_Status_t UART_Blocking_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size,
-                                    uint16_t* received, uint32_t timeout)
-{
+UART_Status_t UART_Blocking_Receive(UART_Handle_t *handle, uint8_t *data, uint16_t size,
+                                    uint16_t *received, uint32_t timeout) {
     if (received == NULL) {
         log_debug("UART received-count pointer is NULL");
         return UART_ERROR;
@@ -179,7 +179,8 @@ UART_Status_t UART_Blocking_Receive(UART_Handle_t* handle, uint8_t* data, uint16
 
     /* ReceiveToIdle returns on a gap in the stream, so a short frame does not
        have to wait out the whole timeout. */
-    HAL_StatusTypeDef status = HAL_UARTEx_ReceiveToIdle(handle->huart, data, size, received, timeout);
+    HAL_StatusTypeDef status =
+        HAL_UARTEx_ReceiveToIdle(handle->huart, data, size, received, timeout);
 
     if (status == HAL_TIMEOUT) {
         /* Data that arrived before the deadline still counts as a frame. */

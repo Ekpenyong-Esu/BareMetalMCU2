@@ -13,7 +13,7 @@ static void LogSinkPrintf_Write(const char *text, size_t length) {
 }
 
 static const log_sink_t LogSinkPrintf = {
-    .name  = "printf",
+    .name = "printf",
     .write = LogSinkPrintf_Write,
 };
 

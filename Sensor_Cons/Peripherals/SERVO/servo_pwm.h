@@ -1,11 +1,11 @@
 /**
-  ******************************************************************************
-  * @file    servo_pwm.h
-  * @brief   Servo PWM transport - internal to the SERVO driver
-  * @details Owns the GPIO alternate-function pin, the 50 Hz timer base and the
-  *          microsecond-to-compare-value mapping. Not part of servo.h.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    servo_pwm.h
+ * @brief   Servo PWM transport - internal to the SERVO driver
+ * @details Owns the GPIO alternate-function pin, the 50 Hz timer base and the
+ *          microsecond-to-compare-value mapping. Not part of servo.h.
+ ******************************************************************************
+ */
 
 #ifndef SERVO_PWM_H
 #define SERVO_PWM_H

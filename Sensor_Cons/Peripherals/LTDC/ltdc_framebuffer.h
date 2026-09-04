@@ -42,12 +42,13 @@ HAL_StatusTypeDef LTDC_CopyFramebuffer(LTDC_Driver_t *driver, uint8_t srcLayer, 
 /**
  * @brief Write one pixel to the active layer
  * @param driver Driver record
- * @param x X coordinate in panel space
- * @param y Y coordinate in panel space
+ * @param posX X coordinate in panel space
+ * @param posY Y coordinate in panel space
  * @param color Colour in the layer's own pixel format
  * @return HAL_StatusTypeDef HAL status
  */
-HAL_StatusTypeDef LTDC_DrawPixel(LTDC_Driver_t *driver, uint16_t x, uint16_t y, uint32_t color);
+HAL_StatusTypeDef LTDC_DrawPixel(LTDC_Driver_t *driver, uint16_t posX, uint16_t posY,
+                                 uint32_t color);
 
 #ifdef __cplusplus
 }

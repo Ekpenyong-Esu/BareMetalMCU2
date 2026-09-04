@@ -1,14 +1,13 @@
 /**
-  ******************************************************************************
-  * @file    servo_convert.c
-  * @brief   Angle <-> pulse width conversion and range validation
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    servo_convert.c
+ * @brief   Angle <-> pulse width conversion and range validation
+ ******************************************************************************
+ */
 
 #include "servo_convert.h"
 
-uint16_t SERVO_AngleToPulseWidth(uint16_t angle, const SERVO_Config_t *config)
-{
+uint16_t SERVO_AngleToPulseWidth(uint16_t angle, const SERVO_Config_t *config) {
     if (config == NULL) {
         return SERVO_DEFAULT_PULSE_WIDTH_US;
     }
@@ -32,8 +31,7 @@ uint16_t SERVO_AngleToPulseWidth(uint16_t angle, const SERVO_Config_t *config)
     return (uint16_t)(config->minPulseWidth + offset);
 }
 
-uint16_t SERVO_PulseWidthToAngle(uint16_t pulseWidth, const SERVO_Config_t *config)
-{
+uint16_t SERVO_PulseWidthToAngle(uint16_t pulseWidth, const SERVO_Config_t *config) {
     if (config == NULL) {
         return SERVO_DEFAULT_ANGLE;
     }
@@ -56,8 +54,7 @@ uint16_t SERVO_PulseWidthToAngle(uint16_t pulseWidth, const SERVO_Config_t *conf
     return (uint16_t)(config->minAngle + offset);
 }
 
-bool SERVO_IsValidAngle(uint16_t angle, const SERVO_Config_t *config)
-{
+bool SERVO_IsValidAngle(uint16_t angle, const SERVO_Config_t *config) {
     if (config == NULL) {
         /* angle is unsigned, so the SERVO_MIN_ANGLE (0) bound is implicit. */
         return (angle <= SERVO_MAX_ANGLE);
@@ -66,18 +63,15 @@ bool SERVO_IsValidAngle(uint16_t angle, const SERVO_Config_t *config)
     return (angle >= config->minAngle && angle <= config->maxAngle);
 }
 
-bool SERVO_IsValidPulseWidth(uint16_t pulseWidth, const SERVO_Config_t *config)
-{
+bool SERVO_IsValidPulseWidth(uint16_t pulseWidth, const SERVO_Config_t *config) {
     if (config == NULL) {
-        return (pulseWidth >= SERVO_MIN_PULSE_WIDTH_US &&
-                pulseWidth <= SERVO_MAX_PULSE_WIDTH_US);
+        return (pulseWidth >= SERVO_MIN_PULSE_WIDTH_US && pulseWidth <= SERVO_MAX_PULSE_WIDTH_US);
     }
 
     return (pulseWidth >= config->minPulseWidth && pulseWidth <= config->maxPulseWidth);
 }
 
-SERVO_StatusTypeDef SERVO_ValidateConfig(const SERVO_Config_t *config)
-{
+SERVO_StatusTypeDef SERVO_ValidateConfig(const SERVO_Config_t *config) {
     if (config == NULL) {
         return SERVO_INVALID_PARAM;
     }

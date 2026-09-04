@@ -22,8 +22,7 @@ extern "C" {
  * @param   data Byte to write
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_WriteByte(EEPROM_HandleTypeDef* handle,
-                                      uint16_t address, uint8_t data);
+EEPROM_StatusTypeDef EEPROM_WriteByte(EEPROM_HandleTypeDef *handle, uint16_t address, uint8_t data);
 
 /**
  * @brief   Write a byte range, splitting it across pages as needed
@@ -33,8 +32,8 @@ EEPROM_StatusTypeDef EEPROM_WriteByte(EEPROM_HandleTypeDef* handle,
  * @param   length Number of bytes to write
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_Write(EEPROM_HandleTypeDef* handle,
-                                  uint16_t address, const uint8_t* data, uint16_t length);
+EEPROM_StatusTypeDef EEPROM_Write(EEPROM_HandleTypeDef *handle, uint16_t address,
+                                  const uint8_t *data, uint16_t length);
 
 /**
  * @brief   Write within a single page and wait for the write cycle
@@ -45,8 +44,8 @@ EEPROM_StatusTypeDef EEPROM_Write(EEPROM_HandleTypeDef* handle,
  * @retval  EEPROM_StatusTypeDef EEPROM_INVALID_PARAM if the range would cross
  *          a page boundary, since the device wraps instead of advancing
  */
-EEPROM_StatusTypeDef EEPROM_WritePage(EEPROM_HandleTypeDef* handle,
-                                      uint16_t address, const uint8_t* data, uint8_t length);
+EEPROM_StatusTypeDef EEPROM_WritePage(EEPROM_HandleTypeDef *handle, uint16_t address,
+                                      const uint8_t *data, uint8_t length);
 
 /**
  * @brief   Write a 16-bit value big-endian
@@ -55,8 +54,8 @@ EEPROM_StatusTypeDef EEPROM_WritePage(EEPROM_HandleTypeDef* handle,
  * @param   data Value to write
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_WriteWord(EEPROM_HandleTypeDef* handle,
-                                      uint16_t address, uint16_t data);
+EEPROM_StatusTypeDef EEPROM_WriteWord(EEPROM_HandleTypeDef *handle, uint16_t address,
+                                      uint16_t data);
 
 /**
  * @brief   Write a 32-bit value big-endian
@@ -65,8 +64,8 @@ EEPROM_StatusTypeDef EEPROM_WriteWord(EEPROM_HandleTypeDef* handle,
  * @param   data Value to write
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_WriteDWord(EEPROM_HandleTypeDef* handle,
-                                       uint16_t address, uint32_t data);
+EEPROM_StatusTypeDef EEPROM_WriteDWord(EEPROM_HandleTypeDef *handle, uint16_t address,
+                                       uint32_t data);
 
 /**
  * @brief   Write a float in native byte order
@@ -75,8 +74,7 @@ EEPROM_StatusTypeDef EEPROM_WriteDWord(EEPROM_HandleTypeDef* handle,
  * @param   data Value to write
  * @retval  EEPROM_StatusTypeDef Operation status
  */
-EEPROM_StatusTypeDef EEPROM_WriteFloat(EEPROM_HandleTypeDef* handle,
-                                       uint16_t address, float data);
+EEPROM_StatusTypeDef EEPROM_WriteFloat(EEPROM_HandleTypeDef *handle, uint16_t address, float data);
 
 #ifdef __cplusplus
 }

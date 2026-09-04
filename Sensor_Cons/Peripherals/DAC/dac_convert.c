@@ -14,6 +14,11 @@
 
 #include "dac_convert.h"
 
+#include <math.h>
+
+/** Added before truncation so the conversion rounds to the nearest code */
+#define DAC_ROUND_HALF_LSB 0.5f
+
 /**
  * @brief Convert a DAC code to its nominal output voltage
  *
@@ -23,8 +28,7 @@
  * @param raw_value Code, clamped to DAC_MAX_VALUE_12BIT
  * @retval float Voltage in volts (0..DAC_REFERENCE_VOLTAGE)
  */
-float DAC_RawToVoltage(uint32_t raw_value)
-{
+float DAC_RawToVoltage(uint32_t raw_value) {
     if (raw_value > DAC_MAX_VALUE_12BIT) {
         raw_value = DAC_MAX_VALUE_12BIT;
     }
@@ -43,9 +47,8 @@ float DAC_RawToVoltage(uint32_t raw_value)
  * @param voltage Voltage in volts, clamped to the reference range
  * @retval uint32_t Code from 0 to DAC_MAX_VALUE_12BIT
  */
-uint32_t DAC_VoltageToRaw(float voltage)
-{
-    float code;
+uint32_t DAC_VoltageToRaw(float voltage) {
+    float code = NAN;
 
     if (voltage < 0.0f) {
         voltage = 0.0f;
@@ -55,7 +58,7 @@ uint32_t DAC_VoltageToRaw(float voltage)
     }
 
     /* Round rather than truncate; half a LSB of bias is otherwise added. */
-    code = ((voltage * (float)DAC_MAX_VALUE_12BIT) / DAC_REFERENCE_VOLTAGE) + 0.5f;
+    code = ((voltage * (float)DAC_MAX_VALUE_12BIT) / DAC_REFERENCE_VOLTAGE) + DAC_ROUND_HALF_LSB;
 
     return (uint32_t)code;
 }

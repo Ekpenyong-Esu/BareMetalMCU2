@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    servo_core.h
-  * @brief   Servo lifecycle and configuration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    servo_core.h
+ * @brief   Servo lifecycle and configuration
+ ******************************************************************************
+ */
 
 #ifndef SERVO_CORE_H
 #define SERVO_CORE_H
@@ -19,11 +19,8 @@ extern "C" {
  * @param   htim     Timer handle; its Instance is programmed for 50 Hz.
  * @param   channel  TIM_CHANNEL_1..4
  */
-SERVO_StatusTypeDef SERVO_Init(SERVO_Handle_t *hservo,
-                               TIM_HandleTypeDef *htim,
-                               uint32_t channel,
-                               GPIO_TypeDef *gpioPort,
-                               uint16_t gpioPin);
+SERVO_StatusTypeDef SERVO_Init(SERVO_Handle_t *hservo, TIM_HandleTypeDef *htim, uint32_t channel,
+                               GPIO_TypeDef *gpioPort, uint16_t gpioPin);
 
 SERVO_StatusTypeDef SERVO_DeInit(SERVO_Handle_t *hservo);
 

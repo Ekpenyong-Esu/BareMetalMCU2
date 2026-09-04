@@ -14,17 +14,14 @@ static void IR_ProcessReceivedData(IR_Handle_t *handle);
 
 /* Public functions ----------------------------------------------------------*/
 
-HAL_StatusTypeDef IR_StartReceive(IR_Handle_t *handle)
-{
+HAL_StatusTypeDef IR_StartReceive(IR_Handle_t *handle) {
     HAL_StatusTypeDef status = HAL_OK;
 
-    if (IR_ValidateHandle(handle) != HAL_OK)
-    {
+    if (IR_ValidateHandle(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
-    if (handle->state == IR_STATE_TRANSMITTING)
-    {
+    if (handle->state == IR_STATE_TRANSMITTING) {
         handle->errorCode = IR_ERROR_TX_BUSY;
         return HAL_ERROR;
     }
@@ -32,8 +29,7 @@ HAL_StatusTypeDef IR_StartReceive(IR_Handle_t *handle)
     IR_ResetReceiveBuffer(handle);
 
     status = HAL_TIM_IC_Start_IT(handle->htimCapture, handle->rxChannel);
-    if (status != HAL_OK)
-    {
+    if (status != HAL_OK) {
         handle->errorCode = IR_ERROR_TIMER;
         return status;
     }
@@ -43,10 +39,8 @@ HAL_StatusTypeDef IR_StartReceive(IR_Handle_t *handle)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef IR_StopReceive(IR_Handle_t *handle)
-{
-    if (IR_ValidateHandle(handle) != HAL_OK)
-    {
+HAL_StatusTypeDef IR_StopReceive(IR_Handle_t *handle) {
+    if (IR_ValidateHandle(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
@@ -57,15 +51,12 @@ HAL_StatusTypeDef IR_StopReceive(IR_Handle_t *handle)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef IR_GetFrame(IR_Handle_t *handle, IR_Frame_t *frame)
-{
-    if (IR_ValidateHandle(handle) != HAL_OK || frame == NULL)
-    {
+HAL_StatusTypeDef IR_GetFrame(IR_Handle_t *handle, IR_Frame_t *frame) {
+    if (IR_ValidateHandle(handle) != HAL_OK || frame == NULL) {
         return HAL_ERROR;
     }
 
-    if (!handle->rxFrame.valid)
-    {
+    if (!handle->rxFrame.valid) {
         return HAL_ERROR;
     }
 
@@ -75,27 +66,23 @@ HAL_StatusTypeDef IR_GetFrame(IR_Handle_t *handle, IR_Frame_t *frame)
     return HAL_OK;
 }
 
-void IR_ResetReceiveBuffer(IR_Handle_t *handle)
-{
+void IR_ResetReceiveBuffer(IR_Handle_t *handle) {
     handle->rxIndex = 0;
     handle->lastCaptureTime = 0;
     handle->rxHasReference = false;
     handle->rxFrame.valid = false;
 }
 
-void IR_InputCaptureCallback(IR_Handle_t *handle, uint32_t captureValue)
-{
-    uint32_t elapsedTicks;
+void IR_InputCaptureCallback(IR_Handle_t *handle, uint32_t captureValue) {
+    uint32_t elapsedTicks = 0;
 
-    if (handle == NULL || handle->state != IR_STATE_RECEIVING)
-    {
+    if (handle == NULL || handle->state != IR_STATE_RECEIVING) {
         return;
     }
 
     /* The first edge of a frame has nothing to be measured against; storing it
        would put a raw counter value where the decoders expect a duration. */
-    if (!handle->rxHasReference)
-    {
+    if (!handle->rxHasReference) {
         handle->lastCaptureTime = captureValue;
         handle->rxHasReference = true;
         return;
@@ -105,8 +92,7 @@ void IR_InputCaptureCallback(IR_Handle_t *handle, uint32_t captureValue)
        counter overflow, so no special case is needed. */
     elapsedTicks = captureValue - handle->lastCaptureTime;
 
-    if (handle->rxIndex >= IR_RX_BUFFER_SIZE)
-    {
+    if (handle->rxIndex >= IR_RX_BUFFER_SIZE) {
         handle->errorCode = IR_ERROR_BUFFER_OVERFLOW;
         IR_NotifyEvent(handle, IR_EVENT_ERROR_OVERFLOW, NULL);
         IR_ResetReceiveBuffer(handle);
@@ -117,21 +103,17 @@ void IR_InputCaptureCallback(IR_Handle_t *handle, uint32_t captureValue)
     handle->rxIndex++;
     handle->lastCaptureTime = captureValue;
 
-    if (IR_TicksToMicroseconds(elapsedTicks, handle->captureTickFreq) > IR_FRAME_GAP_US)
-    {
+    if (IR_TicksToMicroseconds(elapsedTicks, handle->captureTickFreq) > IR_FRAME_GAP_US) {
         IR_ProcessReceivedData(handle);
     }
 }
 
-void IR_TimerOverflowCallback(IR_Handle_t *handle)
-{
-    if (handle == NULL || handle->state != IR_STATE_RECEIVING)
-    {
+void IR_TimerOverflowCallback(IR_Handle_t *handle) {
+    if (handle == NULL || handle->state != IR_STATE_RECEIVING) {
         return;
     }
 
-    if (handle->rxIndex > 0U)
-    {
+    if (handle->rxIndex > 0U) {
         IR_ProcessReceivedData(handle);
         return;
     }
@@ -147,17 +129,14 @@ void IR_TimerOverflowCallback(IR_Handle_t *handle)
  * @param handle: Pointer to IR handle structure
  * @return void
  */
-static void IR_ProcessReceivedData(IR_Handle_t *handle)
-{
+static void IR_ProcessReceivedData(IR_Handle_t *handle) {
     handle->state = IR_STATE_PROCESSING;
 
-    if (IR_DecodeFrame(handle) == HAL_OK)
-    {
+    if (IR_DecodeFrame(handle) == HAL_OK) {
         handle->rxFrame.valid = true;
         IR_NotifyEvent(handle, IR_EVENT_FRAME_RECEIVED, &handle->rxFrame);
     }
-    else
-    {
+    else {
         handle->errorCode = IR_ERROR_PROTOCOL;
         IR_NotifyEvent(handle, IR_EVENT_ERROR_PROTOCOL, NULL);
     }

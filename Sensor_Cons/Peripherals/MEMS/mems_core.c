@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mems_core.c
-  * @brief   Lifecycle for the L3GD20 MEMS gyroscope driver
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mems_core.c
+ * @brief   Lifecycle for the L3GD20 MEMS gyroscope driver
+ ******************************************************************************
+ */
 
 #include "mems_core.h"
 #include "mems_hw.h"
@@ -12,21 +12,18 @@
 #include "mems_l3gd20.h"
 #include <string.h>
 
-#define MEMS_CS_SETTLE_MS               1U
-#define MEMS_RETRY_DELAY_MS             10U
+#define MEMS_CS_SETTLE_MS 1U
+#define MEMS_RETRY_DELAY_MS 10U
 
 static const uint8_t s_resetRegisters[][2] = {
-    { L3GD20_CTRL_REG1_ADDR, L3GD20_CTRL_REG1_RESET },
-    { L3GD20_CTRL_REG2_ADDR, L3GD20_CTRL_REG_RESET  },
-    { L3GD20_CTRL_REG3_ADDR, L3GD20_CTRL_REG_RESET  },
-    { L3GD20_CTRL_REG4_ADDR, L3GD20_CTRL_REG_RESET  },
-    { L3GD20_CTRL_REG5_ADDR, L3GD20_CTRL_REG_RESET  },
+    {L3GD20_CTRL_REG1_ADDR, L3GD20_CTRL_REG1_RESET}, {L3GD20_CTRL_REG2_ADDR, L3GD20_CTRL_REG_RESET},
+    {L3GD20_CTRL_REG3_ADDR, L3GD20_CTRL_REG_RESET},  {L3GD20_CTRL_REG4_ADDR, L3GD20_CTRL_REG_RESET},
+    {L3GD20_CTRL_REG5_ADDR, L3GD20_CTRL_REG_RESET},
 };
 
 #define MEMS_RESET_REGISTER_COUNT (sizeof(s_resetRegisters) / sizeof(s_resetRegisters[0]))
 
-static MEMS_StatusTypeDef MEMS_VerifyDevice(MEMS_HandleTypeDef *hmems)
-{
+static MEMS_StatusTypeDef MEMS_VerifyDevice(MEMS_HandleTypeDef *hmems) {
     uint8_t who_am_i = 0U;
 
     for (uint8_t retry = 0U; retry < MEMS_MAX_RETRIES; retry++) {
@@ -40,8 +37,7 @@ static MEMS_StatusTypeDef MEMS_VerifyDevice(MEMS_HandleTypeDef *hmems)
     return MEMS_DEVICE_NOT_FOUND;
 }
 
-MEMS_StatusTypeDef MEMS_GetDefaultConfig(MEMS_GyroConfigTypeDef *config)
-{
+MEMS_StatusTypeDef MEMS_GetDefaultConfig(MEMS_GyroConfigTypeDef *config) {
     if (config == NULL) {
         return MEMS_INVALID_PARAM;
     }
@@ -57,37 +53,49 @@ MEMS_StatusTypeDef MEMS_GetDefaultConfig(MEMS_GyroConfigTypeDef *config)
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const SPI_ConfigTypeDef *config)
-{
-    MEMS_StatusTypeDef status;
+/**
+ * @brief Bus settings the part requires, which is why they are not configurable.
+ * @note  Mode 0 and at most 10 MHz; PCLK/16 keeps the clock inside that on
+ *        every APB the part could sit on.
+ */
+static SPI_ConfigTypeDef MEMS_BusConfig(void) {
+    SPI_ConfigTypeDef config = SPI_ConfigDefault();
+
+    config.CLKPolarity = SPI_POLARITY_LOW;
+    config.CLKPhase = SPI_PHASE_1EDGE;
+    config.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+
+    return config;
+}
+
+MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const MEMS_Config_t *config) {
+    MEMS_StatusTypeDef status = MEMS_OK;
     MEMS_GyroConfigTypeDef default_config;
     SPI_ConfigTypeDef busConfig;
-    GPIO_TypeDef *csPort;
-    uint16_t csPin;
 
-    if (hmems == NULL) {
+    if (hmems == NULL || config == NULL || config->Bus == NULL || config->CS_Port == NULL ||
+        config->CS_Pin == 0U) {
         return MEMS_INVALID_PARAM;
     }
 
-    /* Keep any chip select the caller set with MEMS_SetCS() before init. */
-    csPort = hmems->CS_Port;
-    csPin = hmems->CS_Pin;
-
     memset(hmems, 0, sizeof(*hmems));
-    hmems->CS_Port = csPort;
-    hmems->CS_Pin = csPin;
-
-    busConfig = (config != NULL) ? *config : SPI_ConfigDefault();
-    if (SPI_DeviceInit(&hmems->device, &busConfig) != SPI_OK) {
-        return MEMS_COMMUNICATION_ERROR;
-    }
+    hmems->CS_Port = config->CS_Port;
+    hmems->CS_Pin = config->CS_Pin;
+    hmems->INT1_Port = config->INT1_Port;
+    hmems->INT1_Pin = config->INT1_Pin;
+    hmems->INT2_Port = config->INT2_Port;
+    hmems->INT2_Pin = config->INT2_Pin;
 
     status = MEMS_HW_InitGPIO(hmems);
     if (status != MEMS_OK) {
         return status;
     }
 
-    MEMS_CS_High(hmems);
+    busConfig = MEMS_BusConfig();
+    if (SPI_DeviceInit(&hmems->device, config->Bus, &busConfig) != SPI_OK) {
+        return MEMS_COMMUNICATION_ERROR;
+    }
+
     HAL_Delay(MEMS_CS_SETTLE_MS);
 
     status = MEMS_VerifyDevice(hmems);
@@ -108,8 +116,7 @@ MEMS_StatusTypeDef MEMS_Init(MEMS_HandleTypeDef *hmems, const SPI_ConfigTypeDef 
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_DeInit(MEMS_HandleTypeDef *hmems)
-{
+MEMS_StatusTypeDef MEMS_DeInit(MEMS_HandleTypeDef *hmems) {
     if (hmems == NULL) {
         return MEMS_INVALID_PARAM;
     }
@@ -122,9 +129,8 @@ MEMS_StatusTypeDef MEMS_DeInit(MEMS_HandleTypeDef *hmems)
     return MEMS_OK;
 }
 
-MEMS_StatusTypeDef MEMS_Reset(MEMS_HandleTypeDef *hmems)
-{
-    MEMS_StatusTypeDef status;
+MEMS_StatusTypeDef MEMS_Reset(MEMS_HandleTypeDef *hmems) {
+    MEMS_StatusTypeDef status = MEMS_OK;
 
     if (hmems == NULL) {
         return MEMS_INVALID_PARAM;

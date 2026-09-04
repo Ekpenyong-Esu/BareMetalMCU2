@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    flash_core.h
-  * @brief   Flash access control: lock state, completion and status reporting
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    flash_core.h
+ * @brief   Flash access control: lock state, completion and status reporting
+ ******************************************************************************
+ */
 
 #ifndef __FLASH_CORE_H__
 #define __FLASH_CORE_H__
@@ -47,7 +47,7 @@ FLASH_StatusTypeDef FLASH_WaitForOperation(uint32_t timeout);
  * @param   status Flash status code
  * @retval  const char* Status description string
  */
-const char* FLASH_GetStatusString(FLASH_StatusTypeDef status);
+const char *FLASH_GetStatusString(FLASH_StatusTypeDef status);
 
 /**
  * @brief   Convert HAL status to FLASH status

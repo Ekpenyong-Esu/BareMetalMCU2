@@ -28,8 +28,8 @@ HAL_StatusTypeDef FMC_Driver_NOR_Write(FMC_Driver_Handle_t *handle, uint32_t add
 /**
  * @brief Read data from NOR Flash
  */
-HAL_StatusTypeDef FMC_Driver_NOR_Read(FMC_Driver_Handle_t *handle, uint32_t address,
-                                      uint8_t *data, uint32_t size);
+HAL_StatusTypeDef FMC_Driver_NOR_Read(FMC_Driver_Handle_t *handle, uint32_t address, uint8_t *data,
+                                      uint32_t size);
 
 /**
  * @brief Erase the NOR Flash sector containing an address

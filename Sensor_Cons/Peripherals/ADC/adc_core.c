@@ -30,7 +30,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /** @brief Instance index to owning handle; the only file-scope state here */
-static ADC_HandleStruct* s_handles[ADC_INSTANCE_COUNT] = {0};
+static ADC_HandleStruct *s_handles[ADC_INSTANCE_COUNT] = {0};
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -42,8 +42,7 @@ static ADC_HandleStruct* s_handles[ADC_INSTANCE_COUNT] = {0};
  *
  * @param hadc Handle to register
  */
-static void ADC_Register(ADC_HandleStruct* hadc)
-{
+static void ADC_Register(ADC_HandleStruct *hadc) {
     uint32_t index = ADC_InstanceIndex(hadc->hal_handle.Instance);
     if (index < ADC_INSTANCE_COUNT) {
         s_handles[index] = hadc;
@@ -57,8 +56,7 @@ static void ADC_Register(ADC_HandleStruct* hadc)
  *
  * @param hadc Handle to unregister
  */
-static void ADC_Unregister(const ADC_HandleStruct* hadc)
-{
+static void ADC_Unregister(const ADC_HandleStruct *hadc) {
     uint32_t index = ADC_InstanceIndex(hadc->hal_handle.Instance);
     if (index < ADC_INSTANCE_COUNT && s_handles[index] == hadc) {
         s_handles[index] = NULL;
@@ -77,9 +75,8 @@ static void ADC_Unregister(const ADC_HandleStruct* hadc)
  * @param rank Rank in the conversion sequence (1-based)
  * @retval HAL_StatusTypeDef
  */
-static HAL_StatusTypeDef ADC_ApplyChannel(ADC_HandleStruct* hadc, uint32_t channel,
-                                          uint32_t sampling_time, uint32_t rank)
-{
+static HAL_StatusTypeDef ADC_ApplyChannel(ADC_HandleStruct *hadc, uint32_t channel,
+                                          uint32_t sampling_time, uint32_t rank) {
     HAL_StatusTypeDef status = ADC_ConfigureChannelGpio(channel);
     if (status != HAL_OK) {
         return status;
@@ -119,18 +116,18 @@ static HAL_StatusTypeDef ADC_ApplyChannel(ADC_HandleStruct* hadc, uint32_t chann
  * 9. Mark initialized
  *
  * @param hadc Handle to initialize (must be zeroed)
- * @param config Configuration (instance, channel, resolution, sampling_time, conv_mode, dma_enabled)
+ * @param config Configuration (instance, channel, resolution, sampling_time, conv_mode,
+ * dma_enabled)
  * @retval HAL_StatusTypeDef HAL_OK on success, HAL_ERROR on failure
  */
-HAL_StatusTypeDef ADC_Init(ADC_HandleStruct* hadc, const ADC_ConfigTypeDef* config)
-{
+HAL_StatusTypeDef ADC_Init(ADC_HandleStruct *hadc, const ADC_ConfigTypeDef *config) {
     if (hadc == NULL || config == NULL) {
         return HAL_ERROR;
     }
 
     log_debug("ADC: Initializing ADC");
 
-    ADC_TypeDef* instance = (config->instance != NULL) ? config->instance : ADC1;
+    ADC_TypeDef *instance = (config->instance != NULL) ? config->instance : ADC1;
     if (ADC_InstanceIndex(instance) >= ADC_INSTANCE_COUNT) {
         return HAL_ERROR;
     }
@@ -194,8 +191,7 @@ HAL_StatusTypeDef ADC_Init(ADC_HandleStruct* hadc, const ADC_ConfigTypeDef* conf
  * @param hadc Handle to release
  * @retval HAL_StatusTypeDef HAL_OK on success, HAL_ERROR on failure
  */
-HAL_StatusTypeDef ADC_DeInit(ADC_HandleStruct* hadc)
-{
+HAL_StatusTypeDef ADC_DeInit(ADC_HandleStruct *hadc) {
     HAL_StatusTypeDef status = ADC_CheckReady(hadc);
     if (status != HAL_OK) {
         return status;
@@ -230,9 +226,8 @@ HAL_StatusTypeDef ADC_DeInit(ADC_HandleStruct* hadc)
  * @param sampling_time Sampling time for that channel
  * @retval HAL_StatusTypeDef
  */
-HAL_StatusTypeDef ADC_ConfigChannel(ADC_HandleStruct* hadc, uint32_t channel,
-                                    uint32_t sampling_time)
-{
+HAL_StatusTypeDef ADC_ConfigChannel(ADC_HandleStruct *hadc, uint32_t channel,
+                                    uint32_t sampling_time) {
     HAL_StatusTypeDef status = ADC_CheckReady(hadc);
     if (status != HAL_OK) {
         return status;
@@ -255,11 +250,8 @@ HAL_StatusTypeDef ADC_ConfigChannel(ADC_HandleStruct* hadc, uint32_t channel,
  * @param num_channels Number of entries in both arrays
  * @retval HAL_StatusTypeDef
  */
-HAL_StatusTypeDef ADC_ConfigMultiChannel(ADC_HandleStruct* hadc,
-                                         const uint32_t* channels,
-                                         const uint32_t* sampling_times,
-                                         uint32_t num_channels)
-{
+HAL_StatusTypeDef ADC_ConfigMultiChannel(ADC_HandleStruct *hadc, const uint32_t *channels,
+                                         const uint32_t *sampling_times, uint32_t num_channels) {
     HAL_StatusTypeDef status = ADC_CheckReady(hadc);
     if (status != HAL_OK) {
         return status;
@@ -292,8 +284,7 @@ HAL_StatusTypeDef ADC_ConfigMultiChannel(ADC_HandleStruct* hadc,
  * @param resolution New resolution (ADC_RESOLUTION_12B, 10B, 8B, 6B)
  * @retval HAL_StatusTypeDef
  */
-HAL_StatusTypeDef ADC_SetResolution(ADC_HandleStruct* hadc, uint32_t resolution)
-{
+HAL_StatusTypeDef ADC_SetResolution(ADC_HandleStruct *hadc, uint32_t resolution) {
     HAL_StatusTypeDef status = ADC_CheckReady(hadc);
     if (status != HAL_OK) {
         return status;
@@ -315,9 +306,8 @@ HAL_StatusTypeDef ADC_SetResolution(ADC_HandleStruct* hadc, uint32_t resolution)
  * @param sampling_time New sampling time
  * @retval HAL_StatusTypeDef
  */
-HAL_StatusTypeDef ADC_SetSamplingTime(ADC_HandleStruct* hadc, uint32_t channel,
-                                      uint32_t sampling_time)
-{
+HAL_StatusTypeDef ADC_SetSamplingTime(ADC_HandleStruct *hadc, uint32_t channel,
+                                      uint32_t sampling_time) {
     return ADC_ConfigChannel(hadc, channel, sampling_time);
 }
 
@@ -330,8 +320,7 @@ HAL_StatusTypeDef ADC_SetSamplingTime(ADC_HandleStruct* hadc, uint32_t channel,
  * @param hadc ADC handle
  * @retval HAL_StatusTypeDef HAL_OK, HAL_BUSY or HAL_ERROR
  */
-HAL_StatusTypeDef ADC_GetStatus(const ADC_HandleStruct* hadc)
-{
+HAL_StatusTypeDef ADC_GetStatus(const ADC_HandleStruct *hadc) {
     HAL_StatusTypeDef status = ADC_CheckReady(hadc);
     if (status != HAL_OK) {
         return status;
@@ -346,8 +335,7 @@ HAL_StatusTypeDef ADC_GetStatus(const ADC_HandleStruct* hadc)
  * @param hadc ADC handle
  * @retval bool true when usable (initialized and not in error)
  */
-bool ADC_IsReady(const ADC_HandleStruct* hadc)
-{
+bool ADC_IsReady(const ADC_HandleStruct *hadc) {
     return ADC_CheckReady(hadc) == HAL_OK;
 }
 
@@ -359,8 +347,7 @@ bool ADC_IsReady(const ADC_HandleStruct* hadc)
  * @param hadc ADC handle
  * @retval bool true when the end-of-conversion flag is set
  */
-bool ADC_IsConversionComplete(const ADC_HandleStruct* hadc)
-{
+bool ADC_IsConversionComplete(const ADC_HandleStruct *hadc) {
     if (ADC_CheckReady(hadc) != HAL_OK) {
         return false;
     }
@@ -376,8 +363,7 @@ bool ADC_IsConversionComplete(const ADC_HandleStruct* hadc)
  *
  * @param hadc ADC handle
  */
-void ADC_ErrorHandler(ADC_HandleStruct* hadc)
-{
+void ADC_ErrorHandler(ADC_HandleStruct *hadc) {
     if (hadc != NULL) {
         hadc->initialized = false;
     }
@@ -392,8 +378,7 @@ void ADC_ErrorHandler(ADC_HandleStruct* hadc)
  * @param hal HAL ADC handle
  * @retval ADC_HandleStruct* Matching handle, or NULL if not found
  */
-ADC_HandleStruct* ADC_GetHandleFor(const ADC_HandleTypeDef* hal)
-{
+ADC_HandleStruct *ADC_GetHandleFor(const ADC_HandleTypeDef *hal) {
     if (hal == NULL) {
         return NULL;
     }
@@ -408,13 +393,17 @@ ADC_HandleStruct* ADC_GetHandleFor(const ADC_HandleTypeDef* hal)
  * @param status HAL status code
  * @retval const char* Status string
  */
-const char* ADC_GetStatusString(HAL_StatusTypeDef status)
-{
+const char *ADC_GetStatusString(HAL_StatusTypeDef status) {
     switch (status) {
-        case HAL_OK:      return "OK";
-        case HAL_ERROR:   return "ERROR";
-        case HAL_BUSY:    return "BUSY";
-        case HAL_TIMEOUT: return "TIMEOUT";
-        default:          return "UNKNOWN";
+        case HAL_OK:
+            return "OK";
+        case HAL_ERROR:
+            return "ERROR";
+        case HAL_BUSY:
+            return "BUSY";
+        case HAL_TIMEOUT:
+            return "TIMEOUT";
+        default:
+            return "UNKNOWN";
     }
 }

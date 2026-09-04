@@ -47,9 +47,7 @@ extern "C" {
  * @param  period    Auto-reload value (max count)
  * @retval HAL_OK on success, HAL_ERROR if arguments invalid or HAL init fails
  */
-HAL_StatusTypeDef TIM_OC_Init(TIM_HandleTypeDef *htim,
-                              TIM_TypeDef *instance,
-                              uint32_t prescaler,
+HAL_StatusTypeDef TIM_OC_Init(TIM_HandleTypeDef *htim, TIM_TypeDef *instance, uint32_t prescaler,
                               uint32_t period);
 
 /**
@@ -65,9 +63,7 @@ HAL_StatusTypeDef TIM_OC_Init(TIM_HandleTypeDef *htim,
  * @param  pulse   Compare value (CCR). When CNT == CCR, the output action occurs.
  * @retval HAL_OK on success, HAL_ERROR if htim is NULL or HAL config fails
  */
-HAL_StatusTypeDef TIM_OC_ConfigChannel(TIM_HandleTypeDef *htim,
-                                       uint32_t channel,
-                                       uint32_t pulse);
+HAL_StatusTypeDef TIM_OC_ConfigChannel(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t pulse);
 
 /**
  * @brief  Start output compare (polling mode)

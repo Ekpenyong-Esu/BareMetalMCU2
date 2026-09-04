@@ -16,12 +16,10 @@ static void IR_EmitPulse(IR_Handle_t *handle, const IR_Pulse_t *pulse);
 
 /* Public functions ----------------------------------------------------------*/
 
-HAL_StatusTypeDef IR_TransmitNEC(IR_Handle_t *handle, uint8_t address, uint8_t command)
-{
-    uint32_t data;
+HAL_StatusTypeDef IR_TransmitNEC(IR_Handle_t *handle, uint8_t address, uint8_t command) {
+    uint32_t data = 0;
 
-    if (IR_BeginTransmit(handle) != HAL_OK)
-    {
+    if (IR_BeginTransmit(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
@@ -29,14 +27,12 @@ HAL_StatusTypeDef IR_TransmitNEC(IR_Handle_t *handle, uint8_t address, uint8_t c
 
     /* Each complement must be truncated to 8 bits before it is widened: ~address
        promotes to int first and would otherwise set every higher bit. */
-    data = ((uint32_t)address << 24) |
-           ((uint32_t)(uint8_t)~address << 16) |
-           ((uint32_t)command << 8) |
-           (uint32_t)(uint8_t)~command;
+    data = ((uint32_t)address << IR_NEC_ADDRESS_SHIFT) |
+           ((uint32_t)(uint8_t)~address << IR_NEC_ADDRESS_INV_SHIFT) |
+           ((uint32_t)command << IR_NEC_COMMAND_SHIFT) | (uint32_t)(uint8_t)~command;
 
-    for (uint16_t i = 0; i < IR_NEC_DATA_BITS; i++)
-    {
-        const uint32_t mask = 1UL << (IR_NEC_DATA_BITS - 1U - i);   /* MSB first */
+    for (uint16_t i = 0; i < IR_NEC_DATA_BITS; i++) {
+        const uint32_t mask = 1UL << (IR_NEC_DATA_BITS - 1U - i); /* MSB first */
         const uint16_t space = ((data & mask) != 0U) ? IR_NEC_BIT_1_SPACE : IR_NEC_BIT_0_SPACE;
 
         IR_AddPulseToTxBuffer(handle, IR_NEC_BIT_MARK, space);
@@ -47,35 +43,30 @@ HAL_StatusTypeDef IR_TransmitNEC(IR_Handle_t *handle, uint8_t address, uint8_t c
     return IR_StartTransmission(handle);
 }
 
-HAL_StatusTypeDef IR_TransmitRC5(IR_Handle_t *handle, uint8_t address, uint8_t command)
-{
-    uint16_t data;
+HAL_StatusTypeDef IR_TransmitRC5(IR_Handle_t *handle, uint8_t address, uint8_t command) {
+    uint16_t data = 0;
 
-    if (IR_BeginTransmit(handle) != HAL_OK)
-    {
+    if (IR_BeginTransmit(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
-    if (address > IR_RC5_MAX_ADDRESS || command > IR_RC5_MAX_COMMAND)
-    {
+    if (address > IR_RC5_MAX_ADDRESS || command > IR_RC5_MAX_COMMAND) {
         handle->errorCode = IR_ERROR_INVALID_PARAM;
         return HAL_ERROR;
     }
 
-    data = (uint16_t)((IR_RC5_START_BITS << 12) | ((uint16_t)address << 6) | command);
+    data = (uint16_t)((IR_RC5_START_BITS << IR_RC5_START_SHIFT) |
+                      ((uint16_t)address << IR_RC5_ADDRESS_SHIFT) | command);
 
-    for (uint16_t i = 0; i < IR_RC5_DATA_BITS; i++)
-    {
+    for (uint16_t i = 0; i < IR_RC5_DATA_BITS; i++) {
         const uint16_t mask = (uint16_t)(1U << (IR_RC5_DATA_BITS - 1U - i));
 
-        if ((data & mask) != 0U)
-        {
+        if ((data & mask) != 0U) {
             /* Bit 1 is a space followed by a mark */
             IR_AddPulseToTxBuffer(handle, 0, IR_RC5_HALF_BIT);
             IR_AddPulseToTxBuffer(handle, IR_RC5_HALF_BIT, 0);
         }
-        else
-        {
+        else {
             /* Bit 0 is a mark followed by a space */
             IR_AddPulseToTxBuffer(handle, IR_RC5_HALF_BIT, 0);
             IR_AddPulseToTxBuffer(handle, 0, IR_RC5_HALF_BIT);
@@ -85,17 +76,14 @@ HAL_StatusTypeDef IR_TransmitRC5(IR_Handle_t *handle, uint8_t address, uint8_t c
     return IR_StartTransmission(handle);
 }
 
-HAL_StatusTypeDef IR_TransmitSIRC(IR_Handle_t *handle, uint8_t address, uint8_t command)
-{
-    uint16_t data;
+HAL_StatusTypeDef IR_TransmitSIRC(IR_Handle_t *handle, uint8_t address, uint8_t command) {
+    uint16_t data = 0;
 
-    if (IR_BeginTransmit(handle) != HAL_OK)
-    {
+    if (IR_BeginTransmit(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
-    if (address > IR_SIRC_MAX_ADDRESS || command > IR_SIRC_MAX_COMMAND)
-    {
+    if (address > IR_SIRC_MAX_ADDRESS || command > IR_SIRC_MAX_COMMAND) {
         handle->errorCode = IR_ERROR_INVALID_PARAM;
         return HAL_ERROR;
     }
@@ -104,9 +92,8 @@ HAL_StatusTypeDef IR_TransmitSIRC(IR_Handle_t *handle, uint8_t address, uint8_t 
 
     data = (uint16_t)(((uint16_t)address << 7) | command);
 
-    for (uint16_t i = 0; i < IR_SIRC_DATA_BITS; i++)
-    {
-        const uint16_t mask = (uint16_t)(1U << i);      /* LSB first */
+    for (uint16_t i = 0; i < IR_SIRC_DATA_BITS; i++) {
+        const uint16_t mask = (uint16_t)(1U << i); /* LSB first */
         const uint16_t space = ((data & mask) != 0U) ? IR_SIRC_BIT_1_SPACE : IR_SIRC_BIT_0_SPACE;
 
         IR_AddPulseToTxBuffer(handle, IR_SIRC_BIT_MARK, space);
@@ -115,27 +102,22 @@ HAL_StatusTypeDef IR_TransmitSIRC(IR_Handle_t *handle, uint8_t address, uint8_t 
     return IR_StartTransmission(handle);
 }
 
-HAL_StatusTypeDef IR_TransmitCustom(IR_Handle_t *handle, const IR_Pulse_t *pulses, uint16_t count)
-{
-    if (IR_BeginTransmit(handle) != HAL_OK)
-    {
+HAL_StatusTypeDef IR_TransmitCustom(IR_Handle_t *handle, const IR_Pulse_t *pulses, uint16_t count) {
+    if (IR_BeginTransmit(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
-    if (pulses == NULL || count == 0U)
-    {
+    if (pulses == NULL || count == 0U) {
         handle->errorCode = IR_ERROR_INVALID_PARAM;
         return HAL_ERROR;
     }
 
-    if (count > IR_TX_BUFFER_SIZE)
-    {
+    if (count > IR_TX_BUFFER_SIZE) {
         handle->errorCode = IR_ERROR_BUFFER_OVERFLOW;
         return HAL_ERROR;
     }
 
-    for (uint16_t i = 0; i < count; i++)
-    {
+    for (uint16_t i = 0; i < count; i++) {
         handle->txBuffer[i] = pulses[i];
     }
 
@@ -151,15 +133,12 @@ HAL_StatusTypeDef IR_TransmitCustom(IR_Handle_t *handle, const IR_Pulse_t *pulse
  * @param handle: Pointer to IR handle structure
  * @return HAL_StatusTypeDef: HAL status
  */
-static HAL_StatusTypeDef IR_BeginTransmit(IR_Handle_t *handle)
-{
-    if (IR_ValidateHandle(handle) != HAL_OK)
-    {
+static HAL_StatusTypeDef IR_BeginTransmit(IR_Handle_t *handle) {
+    if (IR_ValidateHandle(handle) != HAL_OK) {
         return HAL_ERROR;
     }
 
-    if (handle->state == IR_STATE_TRANSMITTING)
-    {
+    if (handle->state == IR_STATE_TRANSMITTING) {
         handle->errorCode = IR_ERROR_TX_BUSY;
         return HAL_ERROR;
     }
@@ -176,18 +155,15 @@ static HAL_StatusTypeDef IR_BeginTransmit(IR_Handle_t *handle)
  * @param handle: Pointer to IR handle structure
  * @return HAL_StatusTypeDef: HAL status
  */
-static HAL_StatusTypeDef IR_StartTransmission(IR_Handle_t *handle)
-{
-    if (handle->txCount == 0U)
-    {
+static HAL_StatusTypeDef IR_StartTransmission(IR_Handle_t *handle) {
+    if (handle->txCount == 0U) {
         handle->errorCode = IR_ERROR_BUFFER_OVERFLOW;
         return HAL_ERROR;
     }
 
     handle->state = IR_STATE_TRANSMITTING;
 
-    for (handle->txIndex = 0; handle->txIndex < handle->txCount; handle->txIndex++)
-    {
+    for (handle->txIndex = 0; handle->txIndex < handle->txCount; handle->txIndex++) {
         IR_EmitPulse(handle, &handle->txBuffer[handle->txIndex]);
     }
 
@@ -207,10 +183,8 @@ static HAL_StatusTypeDef IR_StartTransmission(IR_Handle_t *handle)
  * @param space: Space time in microseconds
  * @return void
  */
-static void IR_AddPulseToTxBuffer(IR_Handle_t *handle, uint16_t mark, uint16_t space)
-{
-    if (handle->txCount >= IR_TX_BUFFER_SIZE)
-    {
+static void IR_AddPulseToTxBuffer(IR_Handle_t *handle, uint16_t mark, uint16_t space) {
+    if (handle->txCount >= IR_TX_BUFFER_SIZE) {
         handle->errorCode = IR_ERROR_BUFFER_OVERFLOW;
         return;
     }
@@ -226,17 +200,14 @@ static void IR_AddPulseToTxBuffer(IR_Handle_t *handle, uint16_t mark, uint16_t s
  * @param pulse: Pulse to emit
  * @return void
  */
-static void IR_EmitPulse(IR_Handle_t *handle, const IR_Pulse_t *pulse)
-{
-    if (pulse->mark != 0U)
-    {
+static void IR_EmitPulse(IR_Handle_t *handle, const IR_Pulse_t *pulse) {
+    if (pulse->mark != 0U) {
         (void)HAL_TIM_PWM_Start(handle->htimCarrier, handle->txChannel);
         IR_DelayUs(pulse->mark);
         (void)HAL_TIM_PWM_Stop(handle->htimCarrier, handle->txChannel);
     }
 
-    if (pulse->space != 0U)
-    {
+    if (pulse->space != 0U) {
         IR_DelayUs(pulse->space);
     }
 }

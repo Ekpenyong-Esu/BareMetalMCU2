@@ -9,8 +9,7 @@
 #include "log.h"
 #include <string.h>
 
-static bool DMA_ResolveAlignment(uint32_t dataSize, uint32_t *memAlign, uint32_t *periphAlign)
-{
+static bool DMA_ResolveAlignment(uint32_t dataSize, uint32_t *memAlign, uint32_t *periphAlign) {
     switch (dataSize) {
         case DMA_DATA_SIZE_BYTE:
             *memAlign = DMA_MDATAALIGN_BYTE;
@@ -33,9 +32,8 @@ static bool DMA_ResolveAlignment(uint32_t dataSize, uint32_t *memAlign, uint32_t
  * @brief   Validate a requested configuration
  * @note    The HAL only asserts these values, and assertions are compiled out.
  */
-static bool DMA_ValidateConfig(const DMA_Config_t *config)
-{
-    IRQn_Type irqn;
+static bool DMA_ValidateConfig(const DMA_Config_t *config) {
+    IRQn_Type irqn = NonMaskableInt_IRQn; /* any value: the lookup below sets it */
 
     if (config == NULL) {
         return false;
@@ -124,10 +122,9 @@ static bool DMA_ValidateConfig(const DMA_Config_t *config)
     return true;
 }
 
-HAL_StatusTypeDef DMA_Init(DMA_Handle_t *handle, const DMA_Config_t *config)
-{
-    uint32_t memAlign;
-    uint32_t periphAlign;
+HAL_StatusTypeDef DMA_Init(DMA_Handle_t *handle, const DMA_Config_t *config) {
+    uint32_t memAlign = 0;
+    uint32_t periphAlign = 0;
 
     if (handle == NULL) {
         return HAL_ERROR;
@@ -188,8 +185,7 @@ HAL_StatusTypeDef DMA_Init(DMA_Handle_t *handle, const DMA_Config_t *config)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef DMA_DeInit(DMA_Handle_t *handle)
-{
+HAL_StatusTypeDef DMA_DeInit(DMA_Handle_t *handle) {
     if ((handle == NULL) || !handle->initialized) {
         return HAL_ERROR;
     }
@@ -206,7 +202,6 @@ HAL_StatusTypeDef DMA_DeInit(DMA_Handle_t *handle)
     return HAL_OK;
 }
 
-bool DMA_IsInitialized(const DMA_Handle_t *handle)
-{
+bool DMA_IsInitialized(const DMA_Handle_t *handle) {
     return ((handle != NULL) && handle->initialized);
 }

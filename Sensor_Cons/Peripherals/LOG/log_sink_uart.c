@@ -11,11 +11,12 @@ static void LogSinkUart_Write(const char *text, size_t length) {
     if (LogSinkUart_Link == NULL || length == 0u) {
         return;
     }
-    HAL_UART_Transmit(LogSinkUart_Link, (const uint8_t *)text, (uint16_t)length, LOG_UART_TIMEOUT_MS);
+    HAL_UART_Transmit(LogSinkUart_Link, (const uint8_t *)text, (uint16_t)length,
+                      LOG_UART_TIMEOUT_MS);
 }
 
 static const log_sink_t LogSinkUart = {
-    .name  = "uart",
+    .name = "uart",
     .write = LogSinkUart_Write,
 };
 

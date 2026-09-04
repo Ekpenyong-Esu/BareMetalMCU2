@@ -29,8 +29,7 @@ IWDG_StatusTypeDef IWDG_GetPrescalerDivider(uint32_t prescaler, uint32_t *divide
  * @note    A period lasts (reload + 1) ticks, since the counter resets as it
  *          underflows past zero.
  */
-IWDG_StatusTypeDef IWDG_CalculateTimeout(uint32_t prescaler, uint32_t reload,
-                                         uint32_t *timeout_ms);
+IWDG_StatusTypeDef IWDG_CalculateTimeout(uint32_t prescaler, uint32_t reload, uint32_t *timeout_ms);
 
 /**
  * @brief   Choose the prescaler and reload that cover a requested period
@@ -41,8 +40,8 @@ IWDG_StatusTypeDef IWDG_CalculateTimeout(uint32_t prescaler, uint32_t reload,
  * @note    Rounds up, so the resulting period is never shorter than requested;
  *          rounding down would make the watchdog fire early.
  */
-IWDG_StatusTypeDef IWDG_CalculatePrescalerReload(uint32_t timeout_ms,
-                                                 uint32_t *prescaler, uint32_t *reload);
+IWDG_StatusTypeDef IWDG_CalculatePrescalerReload(uint32_t timeout_ms, uint32_t *prescaler,
+                                                 uint32_t *reload);
 
 #ifdef __cplusplus
 }

@@ -12,13 +12,14 @@ This peripheral provides laser distance measurement using sensors like VL53L0X, 
 
 ## Dependencies
 
-- **I2C**: I2C peripheral for sensor communication
+- **I2C**: `../I2C` bus driver (`I2C_Bus_t` / `I2C_Device_t`)
 - **HAL**: STM32 HAL library
 
 ## Hardware Requirements
 
 - Laser distance sensor with I2C interface (VL53L0X, VL53L1X)
-- I2C bus connection
+- An `I2C_Bus_t` opened by the application on the peripheral and pins the
+  sensor is wired to; the driver never picks these itself
 - 2.8V-3.3V power supply for sensor
 
 ## Supported Sensors
@@ -34,11 +35,24 @@ This peripheral provides laser distance measurement using sensors like VL53L0X, 
 ### Initialization
 
 ```c
-LASER_DISTANCE_Handle_t hlaser;
-I2C_HandleTypeDef hi2c1;
+#include "i2c.h"
 
-LASER_DISTANCE_StatusTypeDef status = LASER_DISTANCE_Init(&hlaser, &hi2c1, LASER_DISTANCE_VL53L0X);
+I2C_Bus_t i2c1;                 /* owned by the application */
+LASER_DISTANCE_Handle_t hlaser;
+
+I2C_BusConfig_t busConfig = {
+    .instance = I2C1,
+    .sclPort = GPIOB, .sclPin = GPIO_PIN_6,
+    .sdaPort = GPIOB, .sdaPin = GPIO_PIN_7,
+    .alternate = 0,             /* derived from the instance */
+};
+I2C_BusInit(&i2c1, &busConfig);
+
+LASER_DISTANCE_StatusTypeDef status = LASER_DISTANCE_Init(&hlaser, &i2c1, LASER_DISTANCE_VL53L0X);
 ```
+
+The driver registers its own `I2C_Device_t` (kept in the handle) on the bus
+with the sensor's address, so several sensors or drivers can share one bus.
 
 ### Configuration
 
@@ -141,12 +155,12 @@ typedef struct {
 #include "laser_distance.h"
 
 LASER_DISTANCE_Handle_t hlaser;
-I2C_HandleTypeDef hi2c1;
+I2C_Bus_t i2c1;   /* opened with I2C_BusInit, see Initialization above */
 
 void LaserDistance_Example(void)
 {
-    // Initialize sensor
-    if (LASER_DISTANCE_Init(&hlaser, &hi2c1, LASER_DISTANCE_VL53L0X) == LASER_DISTANCE_OK) {
+    // Initialize sensor on the open bus
+    if (LASER_DISTANCE_Init(&hlaser, &i2c1, LASER_DISTANCE_VL53L0X) == LASER_DISTANCE_OK) {
         // Configure for long range
         LASER_DISTANCE_Config_t config = LASER_DISTANCE_GetDefaultConfig(LASER_DISTANCE_VL53L0X);
         LASER_DISTANCE_Config(&hlaser, &config);
@@ -171,11 +185,11 @@ void LaserDistance_Example(void)
 // Change to alternative address
 LASER_DISTANCE_ChangeAddress(&hlaser, 0x54);
 
-// Multiple sensors on same bus
+// Multiple sensors on same bus (each handle carries its own device record)
 LASER_DISTANCE_Handle_t hlaser1, hlaser2;
-LASER_DISTANCE_Init(&hlaser1, &hi2c1, LASER_DISTANCE_VL53L0X);  // Address 0x52
+LASER_DISTANCE_Init(&hlaser1, &i2c1, LASER_DISTANCE_VL53L0X);  // Address 0x52
 LASER_DISTANCE_ChangeAddress(&hlaser1, 0x54);                  // Change to 0x54
-LASER_DISTANCE_Init(&hlaser2, &hi2c1, LASER_DISTANCE_VL53L0X);  // Address 0x52
+LASER_DISTANCE_Init(&hlaser2, &i2c1, LASER_DISTANCE_VL53L0X);  // Address 0x52
 ```
 
 ## Error Handling
@@ -190,7 +204,7 @@ The driver returns status codes:
 
 ## Integration Notes
 
-1. Ensure I2C is properly configured before calling `LASER_DISTANCE_Init()`
+1. Open the `I2C_Bus_t` with `I2C_BusInit()` before calling `LASER_DISTANCE_Init()`
 2. VL53L0X requires specific initialization sequence
 3. Calibration improves accuracy significantly
 4. Long range mode reduces maximum distance but improves close range accuracy

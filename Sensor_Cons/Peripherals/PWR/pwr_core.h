@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    pwr_core.h
-  * @brief   PWR initialisation and configuration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    pwr_core.h
+ * @brief   PWR initialisation and configuration
+ ******************************************************************************
+ */
 
 #ifndef __PWR_CORE_H__
 #define __PWR_CORE_H__
@@ -24,7 +24,7 @@ extern "C" {
  * @param   config Pointer to configuration structure
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_Init(const PWR_ConfigTypeDef* config);
+PWR_StatusTypeDef PWR_Init(const PWR_ConfigTypeDef *config);
 
 /**
  * @brief   Initialize PWR module with default settings
@@ -37,7 +37,7 @@ PWR_StatusTypeDef PWR_InitDefault(void);
  * @param   config Pointer to configuration structure
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_GetDefaultConfig(PWR_ConfigTypeDef* config);
+PWR_StatusTypeDef PWR_GetDefaultConfig(PWR_ConfigTypeDef *config);
 
 #ifdef __cplusplus
 }

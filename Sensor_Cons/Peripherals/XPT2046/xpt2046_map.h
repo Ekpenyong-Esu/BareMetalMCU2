@@ -27,11 +27,11 @@ uint16_t XPT2046_ScaleAxis(uint16_t raw, uint16_t raw_min, uint16_t raw_max, uin
  * @details Reports the Z1/Z2 ratio, which rises with contact force. It is not a
  *          calibrated resistance: that needs the panel plate resistance, which
  *          this driver does not know.
- * @param   z1 Raw Z1 reading
- * @param   z2 Raw Z2 reading
+ * @param   rawZ1 Raw Z1 reading
+ * @param   rawZ2 Raw Z2 reading
  * @retval  uint16_t Pressure, 0..XPT2046_MAX_PRESSURE
  */
-uint16_t XPT2046_CalculatePressure(uint16_t z1, uint16_t z2);
+uint16_t XPT2046_CalculatePressure(uint16_t rawZ1, uint16_t rawZ2);
 
 /**
  * @brief   Convert a raw sample into display coordinates and pressure

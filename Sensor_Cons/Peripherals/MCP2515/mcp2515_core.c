@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mcp2515_core.c
-  * @brief   Lifecycle, mode and bit timing for the MCP2515
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mcp2515_core.c
+ * @brief   Lifecycle, mode and bit timing for the MCP2515
+ ******************************************************************************
+ */
 
 #include "mcp2515_core.h"
 #include "mcp2515_io.h"
@@ -14,15 +14,15 @@
 /* Private constants ---------------------------------------------------------*/
 
 #define MCP2515_MODE_TIMEOUT_MS 10U
-#define MCP2515_BRP_MAX         64U     /*!< BRP field is 6 bits, so 1..64 divisions */
+#define MCP2515_BRP_MAX 64U /*!< BRP field is 6 bits, so 1..64 divisions */
 
 /* Segment limits from the datasheet, in time quanta */
-#define MCP2515_PROP_MAX        8U
-#define MCP2515_PS1_MAX         8U
-#define MCP2515_PS2_MIN         2U
+#define MCP2515_PROP_MAX 8U
+#define MCP2515_PS1_MAX 8U
+#define MCP2515_PS2_MIN 2U
 
 /** Preferred bit lengths, longest first: more quanta place the sample point better. */
-static const uint8_t s_tqPerBitOptions[] = { 16U, 15U, 14U, 12U, 10U, 8U };
+static const uint8_t s_tqPerBitOptions[] = {16U, 15U, 14U, 12U, 10U, 8U};
 #define MCP2515_TQ_OPTION_COUNT (sizeof(s_tqPerBitOptions) / sizeof(s_tqPerBitOptions[0]))
 
 /* Private functions ---------------------------------------------------------*/
@@ -30,8 +30,7 @@ static const uint8_t s_tqPerBitOptions[] = { 16U, 15U, 14U, 12U, 10U, 8U };
 /**
  * @brief Configure the chip-select pin and idle it high.
  */
-static MCP2515_Status_t MCP2515_InitCsPin(const MCP2515_Config_t *config)
-{
+static MCP2515_Status_t MCP2515_InitCsPin(const MCP2515_Config_t *config) {
     GPIO_InitTypeDef gpio = {0};
 
     gpio.Pin = config->cs_pin;
@@ -52,8 +51,7 @@ static MCP2515_Status_t MCP2515_InitCsPin(const MCP2515_Config_t *config)
  * @brief Bus settings the part requires, which is why they are not configurable.
  * @note  Mode 0,0 and at most 10 MHz; PCLK2/16 keeps the clock inside that.
  */
-static SPI_ConfigTypeDef MCP2515_BusConfig(void)
-{
+static SPI_ConfigTypeDef MCP2515_BusConfig(void) {
     SPI_ConfigTypeDef config = SPI_ConfigDefault();
 
     config.CLKPolarity = SPI_POLARITY_LOW;
@@ -66,8 +64,7 @@ static SPI_ConfigTypeDef MCP2515_BusConfig(void)
 /* Exported functions --------------------------------------------------------*/
 
 MCP2515_Status_t MCP2515_SetBitRate(MCP2515_Handle_t *hmcp, uint32_t oscillator_hz,
-                                    uint32_t baud_rate)
-{
+                                    uint32_t baud_rate) {
     uint32_t divisor = 0U;
     uint32_t tqPerBit = 0U;
     uint32_t brp = 0U;
@@ -124,9 +121,7 @@ MCP2515_Status_t MCP2515_SetBitRate(MCP2515_Handle_t *hmcp, uint32_t oscillator_
 
     /* Register fields are the segment lengths minus one; SJW stays at 1 tq. */
     cnf1 = (uint8_t)brp;
-    cnf2 = (uint8_t)(0x80U                       /* BTLMODE: PS2 comes from CNF3 */
-                     | ((uint8_t)(ps1 - 1U) << 3)
-                     | (uint8_t)(prop - 1U));
+    cnf2 = (uint8_t)(MCP2515_CNF2_BTLMODE | ((uint8_t)(ps1 - 1U) << 3) | (uint8_t)(prop - 1U));
     cnf3 = (uint8_t)(ps2 - 1U);
 
     if (MCP2515_WriteRegister(hmcp, MCP2515_REG_CNF1, cnf1) != MCP2515_OK ||
@@ -138,13 +133,11 @@ MCP2515_Status_t MCP2515_SetBitRate(MCP2515_Handle_t *hmcp, uint32_t oscillator_
     return MCP2515_OK;
 }
 
-MCP2515_Status_t MCP2515_SetMode(MCP2515_Handle_t *hmcp, MCP2515_Mode_t mode)
-{
-    uint32_t start;
+MCP2515_Status_t MCP2515_SetMode(MCP2515_Handle_t *hmcp, MCP2515_Mode_t mode) {
+    uint32_t start = 0;
 
     MCP2515_Status_t status = MCP2515_ModifyRegister(hmcp, MCP2515_REG_CANCTRL,
-                                                     MCP2515_CANCTRL_REQOP_MASK,
-                                                     (uint8_t)mode);
+                                                     MCP2515_CANCTRL_REQOP_MASK, (uint8_t)mode);
     if (status != MCP2515_OK) {
         return status;
     }
@@ -168,12 +161,12 @@ MCP2515_Status_t MCP2515_SetMode(MCP2515_Handle_t *hmcp, MCP2515_Mode_t mode)
     return MCP2515_TIMEOUT;
 }
 
-MCP2515_Status_t MCP2515_Init(MCP2515_Handle_t *hmcp, const MCP2515_Config_t *config)
-{
+MCP2515_Status_t MCP2515_Init(MCP2515_Handle_t *hmcp, const MCP2515_Config_t *config) {
     SPI_ConfigTypeDef busConfig;
-    MCP2515_Status_t status;
+    MCP2515_Status_t status = MCP2515_OK;
 
-    if (hmcp == NULL || config == NULL || config->cs_port == NULL || config->cs_pin == 0U) {
+    if (hmcp == NULL || config == NULL || config->bus == NULL || config->cs_port == NULL ||
+        config->cs_pin == 0U) {
         return MCP2515_INVALID_PARAM;
     }
 
@@ -188,7 +181,7 @@ MCP2515_Status_t MCP2515_Init(MCP2515_Handle_t *hmcp, const MCP2515_Config_t *co
     }
 
     busConfig = MCP2515_BusConfig();
-    if (SPI_DeviceInit(&hmcp->device, &busConfig) != SPI_OK) {
+    if (SPI_DeviceInit(&hmcp->device, config->bus, &busConfig) != SPI_OK) {
         return MCP2515_ERROR;
     }
 
@@ -234,9 +227,8 @@ MCP2515_Status_t MCP2515_Init(MCP2515_Handle_t *hmcp, const MCP2515_Config_t *co
     return MCP2515_OK;
 }
 
-MCP2515_Status_t MCP2515_DeInit(MCP2515_Handle_t *hmcp)
-{
-    MCP2515_Status_t status;
+MCP2515_Status_t MCP2515_DeInit(MCP2515_Handle_t *hmcp) {
+    MCP2515_Status_t status = MCP2515_OK;
 
     if (hmcp == NULL) {
         return MCP2515_INVALID_PARAM;

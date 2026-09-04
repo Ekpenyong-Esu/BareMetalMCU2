@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ultrasonic_convert.h
-  * @brief   Echo width to distance conversion
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ultrasonic_convert.h
+ * @brief   Echo width to distance conversion
+ ******************************************************************************
+ */
 
 #ifndef ULTRASONIC_CONVERT_H
 #define ULTRASONIC_CONVERT_H

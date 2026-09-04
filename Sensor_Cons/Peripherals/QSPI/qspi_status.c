@@ -1,38 +1,36 @@
 /**
-  ******************************************************************************
-  * @file    qspi_status.c
-  * @brief   Status register polling and write-enable handling
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    qspi_status.c
+ * @brief   Status register polling and write-enable handling
+ ******************************************************************************
+ */
 
 #include "qspi_status.h"
 #include "qspi_flash.h"
 #include "qspi_hw.h"
 #include "qspi_io.h"
 
-#define QSPI_POLL_INTERVAL_MS   1U
+#define QSPI_POLL_INTERVAL_MS 1U
 
-QSPI_StatusTypeDef QSPI_GetStatus(QSPI_HandleStructTypeDef *hqspi, uint8_t *status)
-{
+QSPI_StatusTypeDef QSPI_GetStatus(QSPI_HandleStructTypeDef *hqspi, uint8_t *status) {
     QSPI_StatusTypeDef ready = QSPI_CheckReady(hqspi);
     if (ready != QSPI_OK || status == NULL) {
         return QSPI_INVALID_PARAM;
     }
 
-    QSPI_ChipSelect(true);
+    QSPI_ChipSelect(hqspi, true);
 
     QSPI_StatusTypeDef result = QSPI_SendCommand(hqspi, QSPI_CMD_READ_STATUS_REG);
     if (result == QSPI_OK) {
         result = QSPI_ReceiveData(hqspi, status, QSPI_STATUS_REG_SIZE);
     }
 
-    QSPI_ChipSelect(false);
+    QSPI_ChipSelect(hqspi, false);
 
     return result;
 }
 
-QSPI_StatusTypeDef QSPI_WaitForWriteEnd(QSPI_HandleStructTypeDef *hqspi)
-{
+QSPI_StatusTypeDef QSPI_WaitForWriteEnd(QSPI_HandleStructTypeDef *hqspi) {
     QSPI_StatusTypeDef ready = QSPI_CheckReady(hqspi);
     if (ready != QSPI_OK) {
         return ready;
@@ -57,8 +55,7 @@ QSPI_StatusTypeDef QSPI_WaitForWriteEnd(QSPI_HandleStructTypeDef *hqspi)
     return QSPI_TIMEOUT;
 }
 
-QSPI_StatusTypeDef QSPI_WaitForWriteEndWithin(QSPI_HandleStructTypeDef *hqspi, uint32_t timeout)
-{
+QSPI_StatusTypeDef QSPI_WaitForWriteEndWithin(QSPI_HandleStructTypeDef *hqspi, uint32_t timeout) {
     QSPI_StatusTypeDef ready = QSPI_CheckReady(hqspi);
     if (ready != QSPI_OK) {
         return ready;
@@ -73,8 +70,7 @@ QSPI_StatusTypeDef QSPI_WaitForWriteEndWithin(QSPI_HandleStructTypeDef *hqspi, u
     return status;
 }
 
-QSPI_StatusTypeDef QSPI_WriteEnable(QSPI_HandleStructTypeDef *hqspi)
-{
+QSPI_StatusTypeDef QSPI_WriteEnable(QSPI_HandleStructTypeDef *hqspi) {
     QSPI_StatusTypeDef ready = QSPI_CheckReady(hqspi);
     if (ready != QSPI_OK) {
         return ready;
@@ -100,8 +96,7 @@ QSPI_StatusTypeDef QSPI_WriteEnable(QSPI_HandleStructTypeDef *hqspi)
     return QSPI_ERROR;
 }
 
-QSPI_StatusTypeDef QSPI_WriteDisable(QSPI_HandleStructTypeDef *hqspi)
-{
+QSPI_StatusTypeDef QSPI_WriteDisable(QSPI_HandleStructTypeDef *hqspi) {
     QSPI_StatusTypeDef ready = QSPI_CheckReady(hqspi);
     if (ready != QSPI_OK) {
         return ready;

@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ultrasonic.h
-  * @brief   Ultrasonic distance sensor driver - public aggregator
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ultrasonic.h
+ * @brief   Ultrasonic distance sensor driver - public aggregator
+ ******************************************************************************
+ */
 
 #ifndef ULTRASONIC_H
 #define ULTRASONIC_H

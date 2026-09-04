@@ -12,13 +12,11 @@
 
 /* Public functions ----------------------------------------------------------*/
 
-RTC_StatusTypeDef RTC_SetTime(const RTC_Time_t* sTime)
-{
+RTC_StatusTypeDef RTC_SetTime(const RTC_Time_t *sTime) {
     RTC_TimeTypeDef hal_time = {0};
     RTC_HandleTypeDef *handle = NULL;
 
-    if (sTime == NULL)
-    {
+    if (sTime == NULL) {
         return RTC_STATUS_ERROR;
     }
 
@@ -30,27 +28,23 @@ RTC_StatusTypeDef RTC_SetTime(const RTC_Time_t* sTime)
     hal_time.StoreOperation = sTime->StoreOperation;
 
     handle = RTC_GetHandle();
-    if (HAL_RTC_SetTime(handle, &hal_time, RTC_FORMAT_BIN) != HAL_OK)
-    {
+    if (HAL_RTC_SetTime(handle, &hal_time, RTC_FORMAT_BIN) != HAL_OK) {
         return RTC_STATUS_ERROR;
     }
 
     return RTC_STATUS_OK;
 }
 
-RTC_StatusTypeDef RTC_GetTime(RTC_Time_t* sTime)
-{
+RTC_StatusTypeDef RTC_GetTime(RTC_Time_t *sTime) {
     RTC_TimeTypeDef hal_time = {0};
     RTC_HandleTypeDef *handle = NULL;
 
-    if (sTime == NULL)
-    {
+    if (sTime == NULL) {
         return RTC_STATUS_ERROR;
     }
 
     handle = RTC_GetHandle();
-    if (HAL_RTC_GetTime(handle, &hal_time, RTC_FORMAT_BIN) != HAL_OK)
-    {
+    if (HAL_RTC_GetTime(handle, &hal_time, RTC_FORMAT_BIN) != HAL_OK) {
         return RTC_STATUS_ERROR;
     }
 
@@ -64,13 +58,11 @@ RTC_StatusTypeDef RTC_GetTime(RTC_Time_t* sTime)
     return RTC_STATUS_OK;
 }
 
-RTC_StatusTypeDef RTC_SetDate(const RTC_Date_t* sDate)
-{
+RTC_StatusTypeDef RTC_SetDate(const RTC_Date_t *sDate) {
     RTC_DateTypeDef hal_date = {0};
     RTC_HandleTypeDef *handle = NULL;
 
-    if (sDate == NULL)
-    {
+    if (sDate == NULL) {
         return RTC_STATUS_ERROR;
     }
 
@@ -80,27 +72,23 @@ RTC_StatusTypeDef RTC_SetDate(const RTC_Date_t* sDate)
     hal_date.Year = sDate->Year;
 
     handle = RTC_GetHandle();
-    if (HAL_RTC_SetDate(handle, &hal_date, RTC_FORMAT_BIN) != HAL_OK)
-    {
+    if (HAL_RTC_SetDate(handle, &hal_date, RTC_FORMAT_BIN) != HAL_OK) {
         return RTC_STATUS_ERROR;
     }
 
     return RTC_STATUS_OK;
 }
 
-RTC_StatusTypeDef RTC_GetDate(RTC_Date_t* sDate)
-{
+RTC_StatusTypeDef RTC_GetDate(RTC_Date_t *sDate) {
     RTC_DateTypeDef hal_date = {0};
     RTC_HandleTypeDef *handle = NULL;
 
-    if (sDate == NULL)
-    {
+    if (sDate == NULL) {
         return RTC_STATUS_ERROR;
     }
 
     handle = RTC_GetHandle();
-    if (HAL_RTC_GetDate(handle, &hal_date, RTC_FORMAT_BIN) != HAL_OK)
-    {
+    if (HAL_RTC_GetDate(handle, &hal_date, RTC_FORMAT_BIN) != HAL_OK) {
         return RTC_STATUS_ERROR;
     }
 

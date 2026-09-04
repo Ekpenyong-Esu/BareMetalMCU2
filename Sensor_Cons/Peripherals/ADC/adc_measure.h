@@ -52,7 +52,7 @@ uint32_t ADC_GetMaxValue(uint32_t resolution);
  * @param   raw_value Raw ADC value (0..max_value)
  * @retval  float Voltage in Volts
  */
-float ADC_RawToVoltage(const ADC_HandleStruct* hadc, uint32_t raw_value);
+float ADC_RawToVoltage(const ADC_HandleStruct *hadc, uint32_t raw_value);
 
 /**
  * @brief   Convert volts to a raw count
@@ -64,7 +64,7 @@ float ADC_RawToVoltage(const ADC_HandleStruct* hadc, uint32_t raw_value);
  * @param   voltage Voltage in Volts
  * @retval  uint32_t Raw ADC value (clamped to max_value)
  */
-uint32_t ADC_VoltageToRaw(const ADC_HandleStruct* hadc, float voltage);
+uint32_t ADC_VoltageToRaw(const ADC_HandleStruct *hadc, float voltage);
 
 /**
  * @brief   Measure the real supply through VREFINT and scale against it from now on
@@ -79,7 +79,7 @@ uint32_t ADC_VoltageToRaw(const ADC_HandleStruct* hadc, float voltage);
  * @param   hadc ADC handle (must be initialized, VREFINT channel accessible)
  * @retval  HAL_StatusTypeDef HAL_OK when hadc->vdda was updated, HAL_ERROR on failure
  */
-HAL_StatusTypeDef ADC_CalibrateVdda(ADC_HandleStruct* hadc);
+HAL_StatusTypeDef ADC_CalibrateVdda(ADC_HandleStruct *hadc);
 
 /**
  * @brief   Read a channel and return volts
@@ -90,7 +90,7 @@ HAL_StatusTypeDef ADC_CalibrateVdda(ADC_HandleStruct* hadc);
  * @param   channel Channel to read
  * @retval  float Voltage in Volts, or -1.0f on error
  */
-float ADC_ReadChannelVoltage(ADC_HandleStruct* hadc, uint32_t channel);
+float ADC_ReadChannelVoltage(ADC_HandleStruct *hadc, uint32_t channel);
 
 /**
  * @brief   Read the on-die temperature sensor
@@ -103,7 +103,7 @@ float ADC_ReadChannelVoltage(ADC_HandleStruct* hadc, uint32_t channel);
  * @param   hadc ADC handle
  * @retval  float Temperature in Celsius, or -273.15f (absolute zero) on error
  */
-float ADC_ReadTemperature(ADC_HandleStruct* hadc);
+float ADC_ReadTemperature(ADC_HandleStruct *hadc);
 
 /**
  * @brief   Read the internal voltage reference
@@ -113,7 +113,7 @@ float ADC_ReadTemperature(ADC_HandleStruct* hadc);
  * @param   hadc ADC handle
  * @retval  float Voltage in Volts (should be ~1.21V), or -1.0f on error
  */
-float ADC_ReadVrefInt(ADC_HandleStruct* hadc);
+float ADC_ReadVrefInt(ADC_HandleStruct *hadc);
 
 /**
  * @brief   Read the battery pin through its internal divider
@@ -124,7 +124,7 @@ float ADC_ReadVrefInt(ADC_HandleStruct* hadc);
  * @param   hadc ADC handle
  * @retval  float Voltage in Volts, or -1.0f on error
  */
-float ADC_ReadVbat(ADC_HandleStruct* hadc);
+float ADC_ReadVbat(ADC_HandleStruct *hadc);
 
 #ifdef __cplusplus
 }

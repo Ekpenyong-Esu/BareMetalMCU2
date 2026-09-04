@@ -1,11 +1,12 @@
 /**
-  ******************************************************************************
-  * @file    audio_i2s.h
-  * @brief   I2S transport backend for the audio subsystem
-  * @details Exposes nothing but its operations table; every function that
-  *          implements the table is private to audio_i2s.c.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    audio_i2s.h
+ * @brief   I2S transport backend for the audio subsystem
+ * @details Exposes nothing but its operations table; every function that
+ *          implements the table is private to audio_i2s.c. The instance and
+ *          pins are read from the handle's config.
+ ******************************************************************************
+ */
 
 #ifndef AUDIO_I2S_H
 #define AUDIO_I2S_H

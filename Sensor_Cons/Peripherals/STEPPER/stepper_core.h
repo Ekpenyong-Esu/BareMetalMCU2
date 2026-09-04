@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    stepper_core.h
-  * @brief   Stepper motor lifecycle and configuration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    stepper_core.h
+ * @brief   Stepper motor lifecycle and configuration
+ ******************************************************************************
+ */
 
 #ifndef STEPPER_CORE_H
 #define STEPPER_CORE_H
@@ -20,8 +20,7 @@ extern "C" {
  *          this driver reprograms it as a free-running 1 MHz counter.
  * @retval  STEPPER_INVALID_PARAM if any argument or coil port is NULL.
  */
-STEPPER_StatusTypeDef STEPPER_Init(STEPPER_Handle_t *hstep,
-                                   TIM_HandleTypeDef *htim,
+STEPPER_StatusTypeDef STEPPER_Init(STEPPER_Handle_t *hstep, TIM_HandleTypeDef *htim,
                                    const STEPPER_Pins_t *pins);
 
 /**

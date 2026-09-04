@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    accel_data.h
-  * @brief   Acceleration sample acquisition
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    accel_data.h
+ * @brief   Acceleration sample acquisition
+ ******************************************************************************
+ */
 
 #ifndef ACCEL_DATA_H
 #define ACCEL_DATA_H
@@ -17,12 +17,13 @@ extern "C" {
 /**
  * @brief Read one sample as raw 14-bit counts.
  */
-ACCEL_StatusTypeDef ACCEL_ReadRawData(int16_t *xAxis, int16_t *yAxis, int16_t *zAxis);
+ACCEL_StatusTypeDef ACCEL_ReadRawData(ACCEL_Handle_t *haccel, int16_t *xAxis, int16_t *yAxis,
+                                      int16_t *zAxis);
 
 /**
- * @brief Read one sample as raw counts and g, scaled by the cached range.
+ * @brief Read one sample as raw counts and g, scaled by the handle's cached range.
  */
-ACCEL_StatusTypeDef ACCEL_ReadData(ACCEL_DataTypeDef *data);
+ACCEL_StatusTypeDef ACCEL_ReadData(ACCEL_Handle_t *haccel, ACCEL_DataTypeDef *data);
 
 #ifdef __cplusplus
 }

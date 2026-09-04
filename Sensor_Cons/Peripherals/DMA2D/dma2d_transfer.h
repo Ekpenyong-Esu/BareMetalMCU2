@@ -22,8 +22,8 @@
  * @param height Transfer height in pixels (1 to DMA2D_MAX_HEIGHT)
  * @return HAL_OK on completion, HAL_BUSY, or HAL_ERROR/HAL_TIMEOUT on failure
  */
-HAL_StatusTypeDef DMA2D_StartTransfer(const uint32_t *pSrc, uint32_t *pDst,
-                                      uint32_t width, uint32_t height);
+HAL_StatusTypeDef DMA2D_StartTransfer(const uint32_t *pSrc, uint32_t *pDst, uint32_t width,
+                                      uint32_t height);
 
 /**
  * @brief Fill an area with a solid colour and wait for it (polling)
@@ -33,8 +33,7 @@ HAL_StatusTypeDef DMA2D_StartTransfer(const uint32_t *pSrc, uint32_t *pDst,
  * @param height Fill height in pixels
  * @return HAL_OK on completion, HAL_BUSY, or HAL_ERROR/HAL_TIMEOUT on failure
  */
-HAL_StatusTypeDef DMA2D_StartFill(uint32_t color, uint32_t *pDst,
-                                  uint32_t width, uint32_t height);
+HAL_StatusTypeDef DMA2D_StartFill(uint32_t color, uint32_t *pDst, uint32_t width, uint32_t height);
 
 /**
  * @brief Blend two ARGB8888 buffers and wait for it (polling)
@@ -45,8 +44,8 @@ HAL_StatusTypeDef DMA2D_StartFill(uint32_t color, uint32_t *pDst,
  * @param height Blend height in pixels
  * @return HAL_OK on completion, HAL_BUSY, or HAL_ERROR/HAL_TIMEOUT on failure
  */
-HAL_StatusTypeDef DMA2D_StartBlending(const uint32_t *pSrc1, const uint32_t *pSrc2,
-                                      uint32_t *pDst, uint32_t width, uint32_t height);
+HAL_StatusTypeDef DMA2D_StartBlending(const uint32_t *pSrc1, const uint32_t *pSrc2, uint32_t *pDst,
+                                      uint32_t width, uint32_t height);
 
 /**
  * @brief Start a transfer in the configured mode and return immediately
@@ -56,8 +55,8 @@ HAL_StatusTypeDef DMA2D_StartBlending(const uint32_t *pSrc1, const uint32_t *pSr
  * @param height Transfer height in pixels
  * @return HAL_OK when the transfer was started, HAL_BUSY or HAL_ERROR otherwise
  */
-HAL_StatusTypeDef DMA2D_StartTransfer_IT(const uint32_t *pSrc, uint32_t *pDst,
-                                         uint32_t width, uint32_t height);
+HAL_StatusTypeDef DMA2D_StartTransfer_IT(const uint32_t *pSrc, uint32_t *pDst, uint32_t width,
+                                         uint32_t height);
 
 /**
  * @brief Start a solid colour fill and return immediately
@@ -67,8 +66,8 @@ HAL_StatusTypeDef DMA2D_StartTransfer_IT(const uint32_t *pSrc, uint32_t *pDst,
  * @param height Fill height in pixels
  * @return HAL_OK when the fill was started, HAL_BUSY or HAL_ERROR otherwise
  */
-HAL_StatusTypeDef DMA2D_StartFill_IT(uint32_t color, uint32_t *pDst,
-                                     uint32_t width, uint32_t height);
+HAL_StatusTypeDef DMA2D_StartFill_IT(uint32_t color, uint32_t *pDst, uint32_t width,
+                                     uint32_t height);
 
 /**
  * @brief Start a blend of two ARGB8888 buffers and return immediately

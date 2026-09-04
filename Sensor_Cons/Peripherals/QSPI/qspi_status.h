@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    qspi_status.h
-  * @brief   Status register polling and write-enable handling
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    qspi_status.h
+ * @brief   Status register polling and write-enable handling
+ ******************************************************************************
+ */
 
 #ifndef QSPI_STATUS_H
 #define QSPI_STATUS_H

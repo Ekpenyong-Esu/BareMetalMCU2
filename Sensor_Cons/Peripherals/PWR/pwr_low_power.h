@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    pwr_low_power.h
-  * @brief   Low power orchestration built on the sleep/stop/standby modules
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    pwr_low_power.h
+ * @brief   Low power orchestration built on the sleep/stop/standby modules
+ ******************************************************************************
+ */
 
 #ifndef __PWR_LOW_POWER_H__
 #define __PWR_LOW_POWER_H__
@@ -23,7 +23,7 @@ extern "C" {
  * @param   config Pointer to low power configuration
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_EnterLowPowerMode(const PWR_LowPowerConfigTypeDef* config);
+PWR_StatusTypeDef PWR_EnterLowPowerMode(const PWR_LowPowerConfigTypeDef *config);
 
 /**
  * @brief   Enter light low power mode (Sleep)
@@ -31,7 +31,8 @@ PWR_StatusTypeDef PWR_EnterLowPowerMode(const PWR_LowPowerConfigTypeDef* config)
  * @param   keepPeripherals Keep critical peripherals active
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_EnterLightLowPower(PWR_WakeupSourceTypeDef wakeupSources, bool keepPeripherals);
+PWR_StatusTypeDef PWR_EnterLightLowPower(PWR_WakeupSourceTypeDef wakeupSources,
+                                         bool keepPeripherals);
 
 /**
  * @brief   Enter deep low power mode (Stop)
@@ -39,7 +40,8 @@ PWR_StatusTypeDef PWR_EnterLightLowPower(PWR_WakeupSourceTypeDef wakeupSources, 
  * @param   keepPeripherals Keep critical peripherals active
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_EnterDeepLowPower(PWR_WakeupSourceTypeDef wakeupSources, bool keepPeripherals);
+PWR_StatusTypeDef PWR_EnterDeepLowPower(PWR_WakeupSourceTypeDef wakeupSources,
+                                        bool keepPeripherals);
 
 /**
  * @brief   Enter standby low power mode
@@ -58,7 +60,8 @@ PWR_StatusTypeDef PWR_EnterStandbyLowPower(PWR_WakeupSourceTypeDef wakeupSources
  * @param   wakeupSources Wakeup sources to configure
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_AutoLowPowerMode(uint32_t wakeupTimeMs, bool keepPeripherals, PWR_WakeupSourceTypeDef wakeupSources);
+PWR_StatusTypeDef PWR_AutoLowPowerMode(uint32_t wakeupTimeMs, bool keepPeripherals,
+                                       PWR_WakeupSourceTypeDef wakeupSources);
 
 /**
  * @brief   Configure wakeup sources for low power modes
@@ -74,7 +77,7 @@ PWR_StatusTypeDef PWR_ConfigureWakeupSources(PWR_WakeupSourceTypeDef sources);
  * @param   config Pointer to configuration structure
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_GetDefaultLowPowerConfig(PWR_LowPowerConfigTypeDef* config);
+PWR_StatusTypeDef PWR_GetDefaultLowPowerConfig(PWR_LowPowerConfigTypeDef *config);
 
 /**
  * @brief   Optimize system for low power consumption
@@ -102,7 +105,8 @@ PWR_StatusTypeDef PWR_RestoreFromLowPower(void);
  * @param   wakeupSource Pointer to store the configured sources (optional)
  * @retval  PWR_StatusTypeDef Operation status
  */
-PWR_StatusTypeDef PWR_GetLowPowerStatus(PWR_LowPowerModeTypeDef* mode, PWR_WakeupSourceTypeDef* wakeupSource);
+PWR_StatusTypeDef PWR_GetLowPowerStatus(PWR_LowPowerModeTypeDef *mode,
+                                        PWR_WakeupSourceTypeDef *wakeupSource);
 
 /**
  * @brief   Configure advanced low power settings

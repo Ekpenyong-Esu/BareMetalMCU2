@@ -1,17 +1,16 @@
 /**
-  ******************************************************************************
-  * @file    servo_control.c
-  * @brief   Servo positioning commands
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    servo_control.c
+ * @brief   Servo positioning commands
+ ******************************************************************************
+ */
 
 #include "servo_control.h"
 #include "servo_convert.h"
 #include "servo_pwm.h"
 #include "stm32f4xx_hal.h"
 
-SERVO_StatusTypeDef SERVO_SetAngle(SERVO_Handle_t *hservo, uint16_t angle)
-{
+SERVO_StatusTypeDef SERVO_SetAngle(SERVO_Handle_t *hservo, uint16_t angle) {
     SERVO_CHECK_HANDLE(hservo);
 
     if (!SERVO_IsValidAngle(angle, &hservo->config)) {
@@ -29,8 +28,7 @@ SERVO_StatusTypeDef SERVO_SetAngle(SERVO_Handle_t *hservo, uint16_t angle)
     return status;
 }
 
-SERVO_StatusTypeDef SERVO_SetPulseWidth(SERVO_Handle_t *hservo, uint16_t pulseWidth)
-{
+SERVO_StatusTypeDef SERVO_SetPulseWidth(SERVO_Handle_t *hservo, uint16_t pulseWidth) {
     SERVO_CHECK_HANDLE(hservo);
 
     if (!SERVO_IsValidPulseWidth(pulseWidth, &hservo->config)) {
@@ -47,46 +45,40 @@ SERVO_StatusTypeDef SERVO_SetPulseWidth(SERVO_Handle_t *hservo, uint16_t pulseWi
     return status;
 }
 
-uint16_t SERVO_GetAngle(const SERVO_Handle_t *hservo)
-{
+uint16_t SERVO_GetAngle(const SERVO_Handle_t *hservo) {
     return (hservo != NULL) ? hservo->currentAngle : 0U;
 }
 
-uint16_t SERVO_GetPulseWidth(const SERVO_Handle_t *hservo)
-{
+uint16_t SERVO_GetPulseWidth(const SERVO_Handle_t *hservo) {
     return (hservo != NULL) ? hservo->currentPulse : 0U;
 }
 
-SERVO_StatusTypeDef SERVO_MoveToMin(SERVO_Handle_t *hservo)
-{
+SERVO_StatusTypeDef SERVO_MoveToMin(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 
     return SERVO_SetAngle(hservo, hservo->config.minAngle);
 }
 
-SERVO_StatusTypeDef SERVO_MoveToMax(SERVO_Handle_t *hservo)
-{
+SERVO_StatusTypeDef SERVO_MoveToMax(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 
     return SERVO_SetAngle(hservo, hservo->config.maxAngle);
 }
 
-SERVO_StatusTypeDef SERVO_MoveToCenter(SERVO_Handle_t *hservo)
-{
+SERVO_StatusTypeDef SERVO_MoveToCenter(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 
-    uint16_t center = (uint16_t)(((uint32_t)hservo->config.minAngle +
-                                  hservo->config.maxAngle) / 2U);
+    uint16_t center =
+        (uint16_t)(((uint32_t)hservo->config.minAngle + hservo->config.maxAngle) / 2U);
 
     return SERVO_SetAngle(hservo, center);
 }
 
-SERVO_StatusTypeDef SERVO_Sweep(SERVO_Handle_t *hservo, uint16_t speed)
-{
-    SERVO_StatusTypeDef status;
-    uint16_t minAngle;
-    uint16_t maxAngle;
-    uint16_t angle;
+SERVO_StatusTypeDef SERVO_Sweep(SERVO_Handle_t *hservo, uint16_t speed) {
+    SERVO_StatusTypeDef status = SERVO_OK;
+    uint16_t minAngle = 0;
+    uint16_t maxAngle = 0;
+    uint16_t angle = 0;
 
     SERVO_CHECK_HANDLE(hservo);
 
@@ -103,7 +95,7 @@ SERVO_StatusTypeDef SERVO_Sweep(SERVO_Handle_t *hservo, uint16_t speed)
 
     /* Counting down with an unsigned loop variable cannot use `angle >= minAngle`:
        at minAngle == 0 the decrement wraps to 65535 and the loop never ends. */
-    for (angle = maxAngle; ; angle--) {
+    for (angle = maxAngle;; angle--) {
         status = SERVO_SetAngle(hservo, angle);
         if (status != SERVO_OK) {
             return status;

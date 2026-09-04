@@ -22,8 +22,7 @@ extern "C" {
  * @param   showDp Also light the decimal point
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_SetDigit(SegDisplayHandle_t* handle, uint8_t position,
-                         uint8_t value, bool showDp);
+SegStatus_t Seg_SetDigit(SegDisplayHandle_t *handle, uint8_t position, uint8_t value, bool showDp);
 
 /**
  * @brief   Write a raw segment pattern at one position
@@ -32,17 +31,16 @@ SegStatus_t Seg_SetDigit(SegDisplayHandle_t* handle, uint8_t position,
  * @param   pattern Raw pattern (bits 0-6 = A-G, bit 7 = DP)
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_SetPattern(SegDisplayHandle_t* handle, uint8_t position,
-                           uint8_t pattern);
+SegStatus_t Seg_SetPattern(SegDisplayHandle_t *handle, uint8_t position, uint8_t pattern);
 
 /**
  * @brief   Write a character at one position
  * @param   handle Display handle
  * @param   position Digit position
- * @param   ch Character to display
+ * @param   character Character to display
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_SetChar(SegDisplayHandle_t* handle, uint8_t position, char ch);
+SegStatus_t Seg_SetChar(SegDisplayHandle_t *handle, uint8_t position, char character);
 
 /**
  * @brief   Display a signed integer, right aligned
@@ -50,7 +48,7 @@ SegStatus_t Seg_SetChar(SegDisplayHandle_t* handle, uint8_t position, char ch);
  * @param   value Value to display
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_DisplayInt(SegDisplayHandle_t* handle, int32_t value);
+SegStatus_t Seg_DisplayInt(SegDisplayHandle_t *handle, int32_t value);
 
 /**
  * @brief   Display a float with a fixed number of decimals
@@ -59,8 +57,7 @@ SegStatus_t Seg_DisplayInt(SegDisplayHandle_t* handle, int32_t value);
  * @param   decimals Number of decimal places
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_DisplayFloat(SegDisplayHandle_t* handle, float value,
-                             uint8_t decimals);
+SegStatus_t Seg_DisplayFloat(SegDisplayHandle_t *handle, float value, uint8_t decimals);
 
 /**
  * @brief   Display an unsigned value in hexadecimal, right aligned
@@ -68,7 +65,7 @@ SegStatus_t Seg_DisplayFloat(SegDisplayHandle_t* handle, float value,
  * @param   value Value to display
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_DisplayHex(SegDisplayHandle_t* handle, uint32_t value);
+SegStatus_t Seg_DisplayHex(SegDisplayHandle_t *handle, uint32_t value);
 
 /**
  * @brief   Display a string, left aligned
@@ -76,14 +73,14 @@ SegStatus_t Seg_DisplayHex(SegDisplayHandle_t* handle, uint32_t value);
  * @param   str String to display; '.' attaches to the previous digit
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_DisplayString(SegDisplayHandle_t* handle, const char* str);
+SegStatus_t Seg_DisplayString(SegDisplayHandle_t *handle, const char *str);
 
 /**
  * @brief   Light every segment on every digit
  * @param   handle Display handle
  * @retval  SegStatus_t Operation status
  */
-SegStatus_t Seg_Test(SegDisplayHandle_t* handle);
+SegStatus_t Seg_Test(SegDisplayHandle_t *handle);
 
 #ifdef __cplusplus
 }

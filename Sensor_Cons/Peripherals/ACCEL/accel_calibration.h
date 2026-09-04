@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    accel_calibration.h
-  * @brief   Offset calibration for the MMA8452Q
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    accel_calibration.h
+ * @brief   Offset calibration for the MMA8452Q
+ ******************************************************************************
+ */
 
 #ifndef ACCEL_CALIBRATION_H
 #define ACCEL_CALIBRATION_H
@@ -19,10 +19,12 @@ extern "C" {
  * @note  Assumes the board is level and stationary, and that the device is in
  *        the +/-4g range: Z is trimmed towards 8192 counts (1 g).
  */
-ACCEL_StatusTypeDef ACCEL_Calibrate(void);
+ACCEL_StatusTypeDef ACCEL_Calibrate(ACCEL_Handle_t *haccel);
 
-ACCEL_StatusTypeDef ACCEL_SetOffset(int8_t xOffset, int8_t yOffset, int8_t zOffset);
-ACCEL_StatusTypeDef ACCEL_GetOffset(int8_t *xOffset, int8_t *yOffset, int8_t *zOffset);
+ACCEL_StatusTypeDef ACCEL_SetOffset(ACCEL_Handle_t *haccel, int8_t xOffset, int8_t yOffset,
+                                    int8_t zOffset);
+ACCEL_StatusTypeDef ACCEL_GetOffset(ACCEL_Handle_t *haccel, int8_t *xOffset, int8_t *yOffset,
+                                    int8_t *zOffset);
 
 #ifdef __cplusplus
 }

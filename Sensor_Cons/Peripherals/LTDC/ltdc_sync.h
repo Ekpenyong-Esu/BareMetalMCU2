@@ -12,7 +12,7 @@ extern "C" {
 
 #include "ltdc_types.h"
 
-#define LTDC_RELOAD_TIMEOUT_MS      5000    /*!< Default wait for a reload event */
+#define LTDC_RELOAD_TIMEOUT_MS 5000 /*!< Default wait for a reload event */
 
 /**
  * @brief Request a shadow register reload

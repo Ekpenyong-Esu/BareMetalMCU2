@@ -6,8 +6,8 @@
  ******************************************************************************
  */
 
-#ifndef __RTC_CALENDAR_H
-#define __RTC_CALENDAR_H
+#ifndef RTC_CALENDAR_H
+#define RTC_CALENDAR_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,7 +23,7 @@ extern "C" {
  * @param  sTime: Pointer to Time structure
  * @retval RTC_StatusTypeDef: Status of the operation
  */
-RTC_StatusTypeDef RTC_SetTime(const RTC_Time_t* sTime);
+RTC_StatusTypeDef RTC_SetTime(const RTC_Time_t *sTime);
 
 /**
  * @brief  Get the RTC current time
@@ -32,24 +32,24 @@ RTC_StatusTypeDef RTC_SetTime(const RTC_Time_t* sTime);
  * @param  sTime: Pointer to Time structure
  * @retval RTC_StatusTypeDef: Status of the operation
  */
-RTC_StatusTypeDef RTC_GetTime(RTC_Time_t* sTime);
+RTC_StatusTypeDef RTC_GetTime(RTC_Time_t *sTime);
 
 /**
  * @brief  Set the RTC current date
  * @param  sDate: Pointer to date structure
  * @retval RTC_StatusTypeDef: Status of the operation
  */
-RTC_StatusTypeDef RTC_SetDate(const RTC_Date_t* sDate);
+RTC_StatusTypeDef RTC_SetDate(const RTC_Date_t *sDate);
 
 /**
  * @brief  Get the RTC current date
  * @param  sDate: Pointer to Date structure
  * @retval RTC_StatusTypeDef: Status of the operation
  */
-RTC_StatusTypeDef RTC_GetDate(RTC_Date_t* sDate);
+RTC_StatusTypeDef RTC_GetDate(RTC_Date_t *sDate);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __RTC_CALENDAR_H */
+#endif /* RTC_CALENDAR_H */

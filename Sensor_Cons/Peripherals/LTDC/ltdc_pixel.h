@@ -45,7 +45,8 @@ void LTDC_WritePixel(uint8_t *fbBase, uint32_t index, uint32_t color, LTDC_Pixel
  * @param color      Colour in the layer's own format
  * @param format     Pixel format of the framebuffer
  */
-void LTDC_FillPixels(uint8_t *fbBase, uint32_t pixelCount, uint32_t color, LTDC_PixelFormat_t format);
+void LTDC_FillPixels(uint8_t *fbBase, uint32_t pixelCount, uint32_t color,
+                     LTDC_PixelFormat_t format);
 
 /**
  * @brief Convert a colour between two pixel formats
@@ -54,7 +55,8 @@ void LTDC_FillPixels(uint8_t *fbBase, uint32_t pixelCount, uint32_t color, LTDC_
  * @param toFormat Target pixel format
  * @return uint32_t Converted color
  */
-uint32_t LTDC_ConvertColor(uint32_t color, LTDC_PixelFormat_t fromFormat, LTDC_PixelFormat_t toFormat);
+uint32_t LTDC_ConvertColor(uint32_t color, LTDC_PixelFormat_t fromFormat,
+                           LTDC_PixelFormat_t toFormat);
 
 /**
  * @brief Convert RGB888 to RGB565

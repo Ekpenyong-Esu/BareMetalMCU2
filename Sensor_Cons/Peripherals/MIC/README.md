@@ -38,25 +38,33 @@ This driver provides comprehensive support for the MP45DT02 digital MEMS microph
 
 ## Hardware Configuration
 
-### Pin Connections
-| Pin | Function | STM32F429 Pin | Description |
-|-----|----------|---------------|-------------|
-| CLK | I2S Clock | PC10 (I2S3_CK) | Master clock output |
-| DATA | PDM Data | PC3 (I2S3ext_SD) | PDM data input |
+The driver does not know the board. The application names the I2S block, the
+two pins and the DMA stream in `MIC_ConfigTypeDef` and passes it to
+`MIC_Init()`. On the STM32F429 Discovery the MP45DT02 is wired as:
 
-### Peripheral Usage
-- **I2S3**: Audio interface for clock generation
-- **DMA1 Stream 0**: Data transfer automation
-- **GPIO**: Pin configuration for I2S signals
+| Signal | Pin  | Config field                | Notes                              |
+|--------|------|-----------------------------|------------------------------------|
+| CLK    | PB10 | `clkPort` / `clkPin`        | I2S2_CK, AF5                       |
+| DATA   | PC3  | `dataPort` / `dataPin`      | I2S2_SD, AF5                       |
+| I2S    | SPI2 | `i2sInstance`               | I2S3/SPI3 belongs to the codec     |
+| DMA    | DMA1 Stream 3, channel 0 | `dmaStream` / `dmaChannel` | the only stream mapped to SPI2_RX |
+
+`alternate` may stay 0: the driver derives AF5 for SPI2 and AF6 for SPI3.
+Interrupt vectors are routed by the application, passing the source that
+fired: `MIC_DMA_IRQHandler(DMA1_Stream3)` and `MIC_I2S_IRQHandler(SPI2)`.
+Enabling those NVIC lines is also the application's job.
 
 ## API Reference
 
 ### Initialization Functions
 ```c
-MIC_StatusTypeDef MIC_Init(MIC_HandleTypeDef *hmic, I2S_HandleTypeDef *hi2s, DMA_HandleTypeDef *hdma);
+MIC_StatusTypeDef MIC_Init(MIC_HandleTypeDef *hmic, I2S_HandleTypeDef *hi2s,
+                           DMA_HandleTypeDef *hdma, const MIC_ConfigTypeDef *config);
 MIC_StatusTypeDef MIC_DeInit(MIC_HandleTypeDef *hmic);
-MIC_StatusTypeDef MIC_Configure(MIC_HandleTypeDef *hmic, MIC_ConfigTypeDef *config);
+MIC_StatusTypeDef MIC_Configure(MIC_HandleTypeDef *hmic, const MIC_ConfigTypeDef *config);
+MIC_StatusTypeDef MIC_GetDefaultConfig(MIC_ConfigTypeDef *config);
 ```
+`MIC_Configure()` only applies the audio fields; the wiring is fixed at `MIC_Init()`.
 
 ### Recording Control
 ```c
@@ -101,12 +109,21 @@ float MIC_CalculatePeak(int16_t *buffer, uint32_t length);
 #include "mic.h"
 
 MIC_HandleTypeDef hmic;
-I2S_HandleTypeDef hi2s3;
-DMA_HandleTypeDef hdma_spi3_rx;
+I2S_HandleTypeDef hi2s2;
+DMA_HandleTypeDef hdma_spi2_rx;
 int16_t audio_buffer[512];
 
+// Wiring is the application's decision
+MIC_ConfigTypeDef config;
+MIC_GetDefaultConfig(&config);
+config.i2sInstance = SPI2;
+config.clkPort  = GPIOB;  config.clkPin  = GPIO_PIN_10;
+config.dataPort = GPIOC;  config.dataPin = GPIO_PIN_3;
+config.dmaStream = DMA1_Stream3;
+config.dmaChannel = DMA_CHANNEL_0;
+
 // Initialize microphone
-MIC_Init(&hmic, &hi2s3, &hdma_spi3_rx);
+MIC_Init(&hmic, &hi2s2, &hdma_spi2_rx, &config);
 
 // Start recording
 MIC_StartRecording(&hmic);

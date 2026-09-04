@@ -11,8 +11,8 @@
 /* Private types -------------------------------------------------------------*/
 
 typedef struct {
-    ADC_TypeDef* instance;      /*!< ADC peripheral */
-    DMA_Stream_TypeDef* stream; /*!< Stream wired to that ADC on DMA2 */
+    ADC_TypeDef *instance;      /*!< ADC peripheral */
+    DMA_Stream_TypeDef *stream; /*!< Stream wired to that ADC on DMA2 */
     uint32_t dmaChannel;        /*!< Request channel on that stream */
 } ADC_InstanceMapEntry_t;
 
@@ -20,15 +20,14 @@ typedef struct {
 
 /** @brief Per-instance DMA routing, fixed by the STM32F429 request map */
 static const ADC_InstanceMapEntry_t adc_instance_map[ADC_INSTANCE_COUNT] = {
-    { ADC1, DMA2_Stream0, DMA_CHANNEL_0 },
-    { ADC2, DMA2_Stream2, DMA_CHANNEL_1 },
-    { ADC3, DMA2_Stream1, DMA_CHANNEL_2 },
+    {ADC1, DMA2_Stream0, DMA_CHANNEL_0},
+    {ADC2, DMA2_Stream2, DMA_CHANNEL_1},
+    {ADC3, DMA2_Stream1, DMA_CHANNEL_2},
 };
 
 /* Private functions ---------------------------------------------------------*/
 
-static const ADC_InstanceMapEntry_t* ADC_FindInstance(const ADC_TypeDef* instance)
-{
+static const ADC_InstanceMapEntry_t *ADC_FindInstance(const ADC_TypeDef *instance) {
     for (uint32_t i = 0; i < ADC_INSTANCE_COUNT; i++) {
         if (adc_instance_map[i].instance == instance) {
             return &adc_instance_map[i];
@@ -39,8 +38,7 @@ static const ADC_InstanceMapEntry_t* ADC_FindInstance(const ADC_TypeDef* instanc
 
 /* Exported functions --------------------------------------------------------*/
 
-uint32_t ADC_InstanceIndex(const ADC_TypeDef* instance)
-{
+uint32_t ADC_InstanceIndex(const ADC_TypeDef *instance) {
     for (uint32_t i = 0; i < ADC_INSTANCE_COUNT; i++) {
         if (adc_instance_map[i].instance == instance) {
             return i;
@@ -49,15 +47,17 @@ uint32_t ADC_InstanceIndex(const ADC_TypeDef* instance)
     return ADC_INSTANCE_COUNT;
 }
 
-HAL_StatusTypeDef ADC_EnableInstanceClock(const ADC_TypeDef* instance)
-{
+HAL_StatusTypeDef ADC_EnableInstanceClock(const ADC_TypeDef *instance) {
     if (instance == ADC1) {
         __HAL_RCC_ADC1_CLK_ENABLE();
-    } else if (instance == ADC2) {
+    }
+    else if (instance == ADC2) {
         __HAL_RCC_ADC2_CLK_ENABLE();
-    } else if (instance == ADC3) {
+    }
+    else if (instance == ADC3) {
         __HAL_RCC_ADC3_CLK_ENABLE();
-    } else {
+    }
+    else {
         return HAL_ERROR;
     }
 
@@ -65,13 +65,12 @@ HAL_StatusTypeDef ADC_EnableInstanceClock(const ADC_TypeDef* instance)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef ADC_ConfigureDma(ADC_HandleStruct* hadc)
-{
+HAL_StatusTypeDef ADC_ConfigureDma(ADC_HandleStruct *hadc) {
     if (hadc == NULL) {
         return HAL_ERROR;
     }
 
-    const ADC_InstanceMapEntry_t* entry = ADC_FindInstance(hadc->hal_handle.Instance);
+    const ADC_InstanceMapEntry_t *entry = ADC_FindInstance(hadc->hal_handle.Instance);
     if (entry == NULL) {
         return HAL_ERROR;
     }
@@ -99,8 +98,7 @@ HAL_StatusTypeDef ADC_ConfigureDma(ADC_HandleStruct* hadc)
     return HAL_OK;
 }
 
-uint32_t ADC_ValidateResolution(uint32_t resolution)
-{
+uint32_t ADC_ValidateResolution(uint32_t resolution) {
     switch (resolution) {
         case ADC_RESOLUTION_12B:
         case ADC_RESOLUTION_10B:
@@ -112,8 +110,7 @@ uint32_t ADC_ValidateResolution(uint32_t resolution)
     }
 }
 
-uint32_t ADC_ValidateSamplingTime(uint32_t sampling_time)
-{
+uint32_t ADC_ValidateSamplingTime(uint32_t sampling_time) {
     switch (sampling_time) {
         case ADC_SAMPLETIME_3CYCLES:
         case ADC_SAMPLETIME_15CYCLES:

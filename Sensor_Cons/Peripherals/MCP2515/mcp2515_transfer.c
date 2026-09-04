@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mcp2515_transfer.c
-  * @brief   Frame transmission and reception for the MCP2515
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mcp2515_transfer.c
+ * @brief   Frame transmission and reception for the MCP2515
+ ******************************************************************************
+ */
 
 #include "mcp2515_transfer.h"
 #include "mcp2515_io.h"
@@ -22,15 +22,17 @@
 /* Private functions ---------------------------------------------------------*/
 
 /** @brief Lay the id, the remote flag and the length out in the buffer registers */
-static void MCP2515_EncodeHeader(const MCP2515_Frame_t *frame, uint8_t *header)
-{
+static void MCP2515_EncodeHeader(const MCP2515_Frame_t *frame, uint8_t *header) {
     if (frame->extended) {
-        header[0] = (uint8_t)(frame->id >> 21);
-        header[1] = (uint8_t)(((frame->id >> 13) & 0xE0U) | MCP2515_SIDL_EXIDE |
-                              ((frame->id >> 16) & 0x03U));
-        header[2] = (uint8_t)(frame->id >> 8);
+        header[0] = (uint8_t)(frame->id >> MCP2515_EXT_ID_SIDH_SHIFT);
+        header[1] =
+            (uint8_t)(((frame->id >> MCP2515_EXT_ID_SIDL_HIGH_SHIFT) &
+                       MCP2515_EXT_ID_SIDL_HIGH_MASK) |
+                      MCP2515_SIDL_EXIDE | ((frame->id >> MCP2515_EXT_ID_SIDL_LOW_SHIFT) & 0x03U));
+        header[2] = (uint8_t)(frame->id >> MCP2515_EXT_ID_EID8_SHIFT);
         header[3] = (uint8_t)frame->id;
-    } else {
+    }
+    else {
         header[0] = (uint8_t)(frame->id >> 3);
         header[1] = (uint8_t)((frame->id & 0x07U) << 5);
         header[2] = 0U;
@@ -44,19 +46,19 @@ static void MCP2515_EncodeHeader(const MCP2515_Frame_t *frame, uint8_t *header)
 }
 
 /** @brief Rebuild the id, the remote flag and the length from the buffer registers */
-static void MCP2515_DecodeHeader(const uint8_t *header, MCP2515_Frame_t *frame)
-{
+static void MCP2515_DecodeHeader(const uint8_t *header, MCP2515_Frame_t *frame) {
     frame->extended = ((header[1] & MCP2515_SIDL_IDE) != 0U);
 
     if (frame->extended) {
-        frame->id = ((uint32_t)header[0] << 21) |
-                    (((uint32_t)header[1] & 0xE0U) << 13) |
-                    (((uint32_t)header[1] & 0x03U) << 16) |
-                    ((uint32_t)header[2] << 8) |
-                    (uint32_t)header[3];
+        frame->id = ((uint32_t)header[0] << MCP2515_EXT_ID_SIDH_SHIFT) |
+                    (((uint32_t)header[1] & MCP2515_EXT_ID_SIDL_HIGH_MASK)
+                     << MCP2515_EXT_ID_SIDL_HIGH_SHIFT) |
+                    (((uint32_t)header[1] & 0x03U) << MCP2515_EXT_ID_SIDL_LOW_SHIFT) |
+                    ((uint32_t)header[2] << MCP2515_EXT_ID_EID8_SHIFT) | (uint32_t)header[3];
         /* Extended frames carry the remote flag in the length register. */
         frame->remote = ((header[4] & MCP2515_DLC_RTR) != 0U);
-    } else {
+    }
+    else {
         frame->id = ((uint32_t)header[0] << 3) | ((uint32_t)header[1] >> 5);
         /* Standard frames carry it beside the id instead. */
         frame->remote = ((header[1] & MCP2515_SIDL_SRR) != 0U);
@@ -70,10 +72,9 @@ static void MCP2515_DecodeHeader(const uint8_t *header, MCP2515_Frame_t *frame)
 
 /** @brief Read one receive buffer and release it back to the controller */
 static MCP2515_Status_t MCP2515_ReadRxBuffer(MCP2515_Handle_t *hmcp, uint8_t baseReg,
-                                             uint8_t interruptFlag, MCP2515_Frame_t *frame)
-{
+                                             uint8_t interruptFlag, MCP2515_Frame_t *frame) {
     uint8_t header[MCP2515_FRAME_HEADER_LENGTH] = {0};
-    MCP2515_Status_t status;
+    MCP2515_Status_t status = MCP2515_OK;
 
     status = MCP2515_ReadRegisters(hmcp, baseReg, header, sizeof(header));
     if (status != MCP2515_OK) {
@@ -97,12 +98,11 @@ static MCP2515_Status_t MCP2515_ReadRxBuffer(MCP2515_Handle_t *hmcp, uint8_t bas
 
 /* Exported functions --------------------------------------------------------*/
 
-MCP2515_Status_t MCP2515_Transmit(MCP2515_Handle_t *hmcp, const MCP2515_Frame_t *frame)
-{
+MCP2515_Status_t MCP2515_Transmit(MCP2515_Handle_t *hmcp, const MCP2515_Frame_t *frame) {
     uint8_t payload[MCP2515_FRAME_HEADER_LENGTH + MCP2515_MAX_DATA_LENGTH] = {0};
     uint8_t control = 0U;
-    uint8_t length;
-    MCP2515_Status_t status;
+    uint8_t length = 0;
+    MCP2515_Status_t status = MCP2515_OK;
 
     if (hmcp == NULL || frame == NULL) {
         return MCP2515_INVALID_PARAM;
@@ -141,10 +141,9 @@ MCP2515_Status_t MCP2515_Transmit(MCP2515_Handle_t *hmcp, const MCP2515_Frame_t 
     return MCP2515_Command(hmcp, MCP2515_CMD_RTS_TXB0);
 }
 
-MCP2515_Status_t MCP2515_Receive(MCP2515_Handle_t *hmcp, MCP2515_Frame_t *frame)
-{
+MCP2515_Status_t MCP2515_Receive(MCP2515_Handle_t *hmcp, MCP2515_Frame_t *frame) {
     uint8_t flags = 0U;
-    MCP2515_Status_t status;
+    MCP2515_Status_t status = MCP2515_OK;
 
     if (hmcp == NULL || frame == NULL) {
         return MCP2515_INVALID_PARAM;
@@ -161,20 +160,17 @@ MCP2515_Status_t MCP2515_Receive(MCP2515_Handle_t *hmcp, MCP2515_Frame_t *frame)
     /* Buffer 0 first: buffer 1 only fills once 0 has overflowed, so it holds
        the newer frame. */
     if ((flags & MCP2515_CANINTF_RX0IF) != 0U) {
-        return MCP2515_ReadRxBuffer(hmcp, MCP2515_REG_RXB0SIDH,
-                                    MCP2515_CANINTF_RX0IF, frame);
+        return MCP2515_ReadRxBuffer(hmcp, MCP2515_REG_RXB0SIDH, MCP2515_CANINTF_RX0IF, frame);
     }
 
     if ((flags & MCP2515_CANINTF_RX1IF) != 0U) {
-        return MCP2515_ReadRxBuffer(hmcp, MCP2515_REG_RXB1SIDH,
-                                    MCP2515_CANINTF_RX1IF, frame);
+        return MCP2515_ReadRxBuffer(hmcp, MCP2515_REG_RXB1SIDH, MCP2515_CANINTF_RX1IF, frame);
     }
 
     return MCP2515_NO_MESSAGE;
 }
 
-bool MCP2515_IsMessagePending(MCP2515_Handle_t *hmcp)
-{
+bool MCP2515_IsMessagePending(MCP2515_Handle_t *hmcp) {
     uint8_t flags = 0U;
 
     if (hmcp == NULL || !hmcp->initialized) {

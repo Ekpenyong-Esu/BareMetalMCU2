@@ -7,11 +7,8 @@
 
 /* ========================== Input Capture ========================== */
 
-HAL_StatusTypeDef TIM_IC_Init(TIM_HandleTypeDef *htim,
-                              TIM_TypeDef *instance,
-                              uint32_t prescaler,
-                              uint32_t period)
-{
+HAL_StatusTypeDef TIM_IC_Init(TIM_HandleTypeDef *htim, TIM_TypeDef *instance, uint32_t prescaler,
+                              uint32_t period) {
     if (htim == NULL || instance == NULL) {
         return HAL_ERROR;
     }
@@ -26,10 +23,8 @@ HAL_StatusTypeDef TIM_IC_Init(TIM_HandleTypeDef *htim,
     return HAL_TIM_IC_Init(htim);
 }
 
-HAL_StatusTypeDef TIM_IC_ConfigChannel(TIM_HandleTypeDef *htim,
-                                       uint32_t channel,
-                                       uint32_t polarity)
-{
+HAL_StatusTypeDef TIM_IC_ConfigChannel(TIM_HandleTypeDef *htim, uint32_t channel,
+                                       uint32_t polarity) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
@@ -43,40 +38,35 @@ HAL_StatusTypeDef TIM_IC_ConfigChannel(TIM_HandleTypeDef *htim,
     return HAL_TIM_IC_ConfigChannel(htim, &sConfigIC, channel);
 }
 
-HAL_StatusTypeDef TIM_IC_Start(TIM_HandleTypeDef *htim, uint32_t channel)
-{
+HAL_StatusTypeDef TIM_IC_Start(TIM_HandleTypeDef *htim, uint32_t channel) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_IC_Start(htim, channel);
 }
 
-HAL_StatusTypeDef TIM_IC_Start_IT(TIM_HandleTypeDef *htim, uint32_t channel)
-{
+HAL_StatusTypeDef TIM_IC_Start_IT(TIM_HandleTypeDef *htim, uint32_t channel) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_IC_Start_IT(htim, channel);
 }
 
-HAL_StatusTypeDef TIM_IC_Stop(TIM_HandleTypeDef *htim, uint32_t channel)
-{
+HAL_StatusTypeDef TIM_IC_Stop(TIM_HandleTypeDef *htim, uint32_t channel) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_IC_Stop(htim, channel);
 }
 
-HAL_StatusTypeDef TIM_IC_Stop_IT(TIM_HandleTypeDef *htim, uint32_t channel)
-{
+HAL_StatusTypeDef TIM_IC_Stop_IT(TIM_HandleTypeDef *htim, uint32_t channel) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_IC_Stop_IT(htim, channel);
 }
 
-uint32_t TIM_IC_GetCapture(TIM_HandleTypeDef *htim, uint32_t channel)
-{
+uint32_t TIM_IC_GetCapture(TIM_HandleTypeDef *htim, uint32_t channel) {
     if (htim == NULL) {
         return 0U;
     }

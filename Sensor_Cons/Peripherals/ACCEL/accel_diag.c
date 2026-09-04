@@ -1,62 +1,54 @@
 /**
-  ******************************************************************************
-  * @file    accel_diag.c
-  * @brief   Self-test and status reporting for the MMA8452Q
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    accel_diag.c
+ * @brief   Self-test and status reporting for the MMA8452Q
+ ******************************************************************************
+ */
 
 #include "accel_diag.h"
 #include "accel_data.h"
 #include "accel_io.h"
 #include "accel_mma8452q.h"
-#include "spi.h"
 #include <math.h>
 #include <stddef.h>
 
-#define ACCEL_SELF_TEST_SETTLE_MS   50U
+#define ACCEL_SELF_TEST_SETTLE_MS 50U
 #define ACCEL_SELF_TEST_MIN_DELTA_G 0.5f
 
 static const char *const s_statusNames[] = {
-    [ACCEL_OK]            = "ACCEL_OK",
-    [ACCEL_ERROR]         = "ACCEL_ERROR",
-    [ACCEL_BUSY]          = "ACCEL_BUSY",
-    [ACCEL_TIMEOUT]       = "ACCEL_TIMEOUT",
+    [ACCEL_OK] = "ACCEL_OK",
+    [ACCEL_ERROR] = "ACCEL_ERROR",
+    [ACCEL_BUSY] = "ACCEL_BUSY",
+    [ACCEL_TIMEOUT] = "ACCEL_TIMEOUT",
     [ACCEL_INVALID_PARAM] = "ACCEL_INVALID_PARAM",
-    [ACCEL_NOT_READY]     = "ACCEL_NOT_READY",
+    [ACCEL_NOT_READY] = "ACCEL_NOT_READY",
 };
 
-ACCEL_StatusTypeDef ACCEL_SelfTest(void)
-{
+ACCEL_StatusTypeDef ACCEL_SelfTest(ACCEL_Handle_t *haccel) {
     ACCEL_DataTypeDef before;
     ACCEL_DataTypeDef after;
 
-    ACCEL_StatusTypeDef status = ACCEL_ReadData(&before);
-    if (status != ACCEL_OK)
-    {
+    ACCEL_StatusTypeDef status = ACCEL_ReadData(haccel, &before);
+    if (status != ACCEL_OK) {
         return status;
     }
 
-    status = ACCEL_UpdateRegister(ACCEL_REG_CTRL_REG2,
-                                  ACCEL_CTRL_REG2_SELF_TEST,
+    status = ACCEL_UpdateRegister(haccel, ACCEL_REG_CTRL_REG2, ACCEL_CTRL_REG2_SELF_TEST,
                                   ACCEL_CTRL_REG2_SELF_TEST);
-    if (status != ACCEL_OK)
-    {
+    if (status != ACCEL_OK) {
         return status;
     }
 
     HAL_Delay(ACCEL_SELF_TEST_SETTLE_MS);
 
-    status = ACCEL_ReadData(&after);
+    status = ACCEL_ReadData(haccel, &after);
 
-    ACCEL_StatusTypeDef clearStatus = ACCEL_UpdateRegister(ACCEL_REG_CTRL_REG2,
-                                                           ACCEL_CTRL_REG2_SELF_TEST,
-                                                           0x00U);
-    if (status != ACCEL_OK)
-    {
+    ACCEL_StatusTypeDef clearStatus =
+        ACCEL_UpdateRegister(haccel, ACCEL_REG_CTRL_REG2, ACCEL_CTRL_REG2_SELF_TEST, 0x00U);
+    if (status != ACCEL_OK) {
         return status;
     }
-    if (clearStatus != ACCEL_OK)
-    {
+    if (clearStatus != ACCEL_OK) {
         return clearStatus;
     }
 
@@ -68,10 +60,8 @@ ACCEL_StatusTypeDef ACCEL_SelfTest(void)
     return moved ? ACCEL_OK : ACCEL_ERROR;
 }
 
-const char *ACCEL_GetStatusString(ACCEL_StatusTypeDef status)
-{
-    if ((size_t)status >= (sizeof(s_statusNames) / sizeof(s_statusNames[0])))
-    {
+const char *ACCEL_GetStatusString(ACCEL_StatusTypeDef status) {
+    if ((size_t)status >= (sizeof(s_statusNames) / sizeof(s_statusNames[0]))) {
         return "UNKNOWN_STATUS";
     }
 

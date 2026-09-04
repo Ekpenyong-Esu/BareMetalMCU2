@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    stepper_sequence.h
-  * @brief   Coil excitation tables for the supported stepping modes
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    stepper_sequence.h
+ * @brief   Coil excitation tables for the supported stepping modes
+ ******************************************************************************
+ */
 
 #ifndef STEPPER_SEQUENCE_H
 #define STEPPER_SEQUENCE_H

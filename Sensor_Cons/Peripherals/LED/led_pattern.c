@@ -8,9 +8,7 @@
 
 /* Exported functions --------------------------------------------------------*/
 
-bool LedPattern_Init(LedPattern_t* pattern, const LedPatternFrame_t* frames,
-                     uint32_t frameCount)
-{
+bool LedPattern_Init(LedPattern_t *pattern, const LedPatternFrame_t *frames, uint32_t frameCount) {
     if (pattern == NULL || frames == NULL || frameCount == 0u) {
         return false;
     }
@@ -22,8 +20,7 @@ bool LedPattern_Init(LedPattern_t* pattern, const LedPatternFrame_t* frames,
     return true;
 }
 
-void LedPattern_Start(LedPattern_t* pattern, uint32_t nowMs)
-{
+void LedPattern_Start(LedPattern_t *pattern, uint32_t nowMs) {
     if (pattern == NULL) {
         return;
     }
@@ -32,8 +29,7 @@ void LedPattern_Start(LedPattern_t* pattern, uint32_t nowMs)
     pattern->frameStartMs = nowMs;
 }
 
-void LedPattern_Update(LedPattern_t* pattern, uint32_t nowMs)
-{
+void LedPattern_Update(LedPattern_t *pattern, uint32_t nowMs) {
     if (pattern == NULL) {
         return;
     }
@@ -46,8 +42,7 @@ void LedPattern_Update(LedPattern_t* pattern, uint32_t nowMs)
     }
 }
 
-LedState_t LedPattern_GetState(const LedPattern_t* pattern)
-{
+LedState_t LedPattern_GetState(const LedPattern_t *pattern) {
     if (pattern == NULL) {
         return LED_OFF;
     }
@@ -55,8 +50,7 @@ LedState_t LedPattern_GetState(const LedPattern_t* pattern)
     return pattern->frames[pattern->currentFrame].state;
 }
 
-uint32_t LedPattern_GetElapsedMs(const LedPattern_t* pattern, uint32_t nowMs)
-{
+uint32_t LedPattern_GetElapsedMs(const LedPattern_t *pattern, uint32_t nowMs) {
     if (pattern == NULL) {
         return 0u;
     }

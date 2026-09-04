@@ -37,10 +37,10 @@ const log_sink_t *log_get_sink(void);
 void log_logf(log_level_t level, const char *file, int line, const char *format, ...);
 
 // Convenience macros that automatically pass __FILE__ and __LINE__
-#define log_debug(format, ...)   log_logf(LOG_LEVEL_DEBUG,   __FILE__, __LINE__, format, ##__VA_ARGS__)
-#define log_info(format, ...)    log_logf(LOG_LEVEL_INFO,    __FILE__, __LINE__, format, ##__VA_ARGS__)
-#define log_warning(format, ...) log_logf(LOG_LEVEL_WARNING, __FILE__, __LINE__, format, ##__VA_ARGS__)
-#define log_error(format, ...)   log_logf(LOG_LEVEL_ERROR,   __FILE__, __LINE__, format, ##__VA_ARGS__)
+#define log_debug(...) log_logf(LOG_LEVEL_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
+#define log_info(...) log_logf(LOG_LEVEL_INFO, __FILE__, __LINE__, __VA_ARGS__)
+#define log_warning(...) log_logf(LOG_LEVEL_WARNING, __FILE__, __LINE__, __VA_ARGS__)
+#define log_error(...) log_logf(LOG_LEVEL_ERROR, __FILE__, __LINE__, __VA_ARGS__)
 
 #ifdef __cplusplus
 }

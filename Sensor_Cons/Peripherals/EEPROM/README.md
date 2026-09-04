@@ -31,14 +31,10 @@ A comprehensive I2C EEPROM driver supporting M24LR64, M24Cxx series, and AT24Cxx
 
 ## Hardware Configuration
 
-### STM32F429 Discovery Board (M24LR64)
-
-The board includes an M24LR64 EEPROM connected via I2C3:
-
-| Signal | Pin | Description |
-|--------|-----|-------------|
-| SCL | PC0 | I2C3 Clock |
-| SDA | PC1 | I2C3 Data |
+The driver does not choose an I2C peripheral or pins. The application opens an
+`I2C_Bus_t` (see `../I2C`) on whatever peripheral and pins the chip is wired
+to, then hands that bus to `EEPROM_Init*`. The driver registers its own
+`I2C_Device_t` on the bus; several chips (or several drivers) can share one bus.
 
 ### I2C Address
 
@@ -51,7 +47,9 @@ The board includes an M24LR64 EEPROM connected via I2C3:
 
 ```c
 #include "eeprom.h"
+#include "i2c.h"
 
+I2C_Bus_t i2c3;            /* owned by the application */
 EEPROM_HandleTypeDef eeprom;
 
 int main(void)
@@ -59,8 +57,19 @@ int main(void)
     HAL_Init();
     SystemClock_Config();
 
-    /* Initialize EEPROM (uses default M24LR64 configuration) */
-    if (EEPROM_Init(&eeprom) != EEPROM_OK) {
+    /* Open the bus the chip is wired to: I2C3 on PA8 (SCL) / PC9 (SDA) */
+    I2C_BusConfig_t busConfig = {
+        .instance = I2C3,
+        .sclPort = GPIOA, .sclPin = GPIO_PIN_8,
+        .sdaPort = GPIOC, .sdaPin = GPIO_PIN_9,
+        .alternate = 0,    /* derived from the instance */
+    };
+    if (I2C_BusInit(&i2c3, &busConfig) != I2C_OK) {
+        Error_Handler();
+    }
+
+    /* Initialize EEPROM on that bus (uses default M24LR64 configuration) */
+    if (EEPROM_Init(&eeprom, &i2c3) != EEPROM_OK) {
         /* Handle error */
         Error_Handler();
     }
@@ -84,8 +93,8 @@ int main(void)
 ```c
 EEPROM_HandleTypeDef eeprom;
 
-/* Initialize for AT24C256 */
-EEPROM_InitType(&eeprom, EEPROM_TYPE_AT24C256);
+/* Initialize for AT24C256 on an already-open bus */
+EEPROM_InitType(&eeprom, &i2c3, EEPROM_TYPE_AT24C256);
 ```
 
 ### 3. Custom Configuration
@@ -100,18 +109,20 @@ EEPROM_ConfigTypeDef config = {
     .addressSize = 2,
 };
 
-EEPROM_InitCustom(&eeprom, &config);
+EEPROM_InitCustom(&eeprom, &i2c3, &config);
 ```
 
 ## API Reference
 
 ### Initialization
 
+Every `Init` takes the caller-owned, already-open `I2C_Bus_t *`.
+
 | Function | Description |
 |----------|-------------|
-| `EEPROM_Init()` | Initialize with default M24LR64 config |
-| `EEPROM_InitType()` | Initialize with specific EEPROM type |
-| `EEPROM_InitCustom()` | Initialize with custom configuration |
+| `EEPROM_Init(h, bus)` | Initialize with default M24LR64 config |
+| `EEPROM_InitType(h, bus, type)` | Initialize with specific EEPROM type |
+| `EEPROM_InitCustom(h, bus, config)` | Initialize with custom configuration |
 | `EEPROM_DeInit()` | Deinitialize EEPROM |
 
 ### Read Functions
@@ -229,7 +240,7 @@ Multi-byte values (word, dword, float) are stored in big-endian format for porta
 
 | Issue | Solution |
 |-------|----------|
-| Init fails | Check I2C connections and pull-ups |
+| Init fails | Check the bus was opened with `I2C_BusInit` first, then connections and pull-ups |
 | Read returns wrong data | Verify address and EEPROM type |
 | Write fails | Check write protection and wait for ready |
 | Timeout errors | Increase timeout or check I2C bus |

@@ -7,8 +7,7 @@
 #include "keypad_core.h"
 #include "keypad_scan.h"
 
-char Keypad_GetKeyRaw(KeypadHandle_t *handle)
-{
+char Keypad_GetKeyRaw(KeypadHandle_t *handle) {
     uint8_t row = 0U;
     uint8_t col = 0U;
 
@@ -23,8 +22,7 @@ char Keypad_GetKeyRaw(KeypadHandle_t *handle)
     return handle->keyMap[row][col];
 }
 
-char Keypad_GetKey(KeypadHandle_t *handle)
-{
+char Keypad_GetKey(KeypadHandle_t *handle) {
     char key = KEYPAD_NO_KEY;
     uint32_t now = 0U;
 
@@ -47,7 +45,8 @@ char Keypad_GetKey(KeypadHandle_t *handle)
         if (key == KEYPAD_NO_KEY) {
             /* A stable release re-arms the next press */
             handle->lastKey = KEYPAD_NO_KEY;
-        } else if (key != handle->lastKey) {
+        }
+        else if (key != handle->lastKey) {
             handle->lastKey = key;
             return key;
         }
@@ -56,8 +55,7 @@ char Keypad_GetKey(KeypadHandle_t *handle)
     return KEYPAD_NO_KEY;
 }
 
-bool Keypad_IsKeyPressed(KeypadHandle_t *handle)
-{
+bool Keypad_IsKeyPressed(KeypadHandle_t *handle) {
     uint8_t row = 0U;
     uint8_t col = 0U;
 
@@ -68,8 +66,7 @@ bool Keypad_IsKeyPressed(KeypadHandle_t *handle)
     return Keypad_Scan_Matrix(&handle->config, &row, &col);
 }
 
-bool Keypad_GetKeyPosition(KeypadHandle_t *handle, uint8_t *row, uint8_t *col)
-{
+bool Keypad_GetKeyPosition(KeypadHandle_t *handle, uint8_t *row, uint8_t *col) {
     if (!Keypad_IsInitialized(handle) || row == NULL || col == NULL) {
         return false;
     }
@@ -77,9 +74,8 @@ bool Keypad_GetKeyPosition(KeypadHandle_t *handle, uint8_t *row, uint8_t *col)
     return Keypad_Scan_Matrix(&handle->config, row, col);
 }
 
-char Keypad_WaitForKey(KeypadHandle_t *handle, uint32_t timeoutMs)
-{
-    uint32_t start;
+char Keypad_WaitForKey(KeypadHandle_t *handle, uint32_t timeoutMs) {
+    uint32_t start = 0;
     char key = KEYPAD_NO_KEY;
 
     if (!Keypad_IsInitialized(handle)) {
@@ -108,8 +104,7 @@ char Keypad_WaitForKey(KeypadHandle_t *handle, uint32_t timeoutMs)
     return key;
 }
 
-char Keypad_GetLastKey(const KeypadHandle_t *handle)
-{
+char Keypad_GetLastKey(const KeypadHandle_t *handle) {
     if (!Keypad_IsInitialized(handle)) {
         return KEYPAD_NO_KEY;
     }
@@ -117,8 +112,7 @@ char Keypad_GetLastKey(const KeypadHandle_t *handle)
     return handle->lastKey;
 }
 
-void Keypad_ClearLastKey(KeypadHandle_t *handle)
-{
+void Keypad_ClearLastKey(KeypadHandle_t *handle) {
     if (Keypad_IsInitialized(handle)) {
         handle->lastKey = KEYPAD_NO_KEY;
         handle->currentKey = KEYPAD_NO_KEY;

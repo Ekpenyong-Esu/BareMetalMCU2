@@ -8,22 +8,20 @@
 
 /* The column pull-ups are weak, so a released row needs a few RC time constants
    before the line reads high again. */
-#define KEYPAD_SETTLE_US        10U
-#define KEYPAD_CYCLES_PER_LOOP  4U
-#define KEYPAD_HZ_PER_MHZ       1000000U
+#define KEYPAD_SETTLE_US 10U
+#define KEYPAD_CYCLES_PER_LOOP 4U
+#define KEYPAD_HZ_PER_MHZ 1000000U
 
-static void Keypad_Scan_Settle(void)
-{
-    volatile uint32_t count = (KEYPAD_SETTLE_US * (SystemCoreClock / KEYPAD_HZ_PER_MHZ)) /
-                              KEYPAD_CYCLES_PER_LOOP;
+static void Keypad_Scan_Settle(void) {
+    volatile uint32_t count =
+        (KEYPAD_SETTLE_US * (SystemCoreClock / KEYPAD_HZ_PER_MHZ)) / KEYPAD_CYCLES_PER_LOOP;
 
     while (count-- > 0U) {
         __NOP();
     }
 }
 
-bool Keypad_Scan_GpioInit(const KeypadConfig_t *config)
-{
+bool Keypad_Scan_GpioInit(const KeypadConfig_t *config) {
     GPIO_InitTypeDef gpioInit = {0};
 
     /* Open drain: an idle row is high impedance, so two keys pressed in the same
@@ -52,8 +50,7 @@ bool Keypad_Scan_GpioInit(const KeypadConfig_t *config)
     return true;
 }
 
-void Keypad_Scan_GpioDeInit(const KeypadConfig_t *config)
-{
+void Keypad_Scan_GpioDeInit(const KeypadConfig_t *config) {
     GPIO_InitTypeDef gpioInit = {0};
 
     for (uint8_t i = 0U; i < KEYPAD_ROWS; i++) {
@@ -74,30 +71,29 @@ void Keypad_Scan_GpioDeInit(const KeypadConfig_t *config)
     }
 }
 
-static void Keypad_Scan_ReleaseRows(const KeypadConfig_t *config)
-{
+static void Keypad_Scan_ReleaseRows(const KeypadConfig_t *config) {
     for (uint8_t i = 0U; i < KEYPAD_ROWS; i++) {
         HAL_GPIO_WritePin(config->rows[i].port, config->rows[i].pin, GPIO_PIN_SET);
     }
 }
 
-bool Keypad_Scan_Matrix(const KeypadConfig_t *config, uint8_t *row, uint8_t *col)
-{
+bool Keypad_Scan_Matrix(const KeypadConfig_t *config, uint8_t *row, uint8_t *col) {
     bool found = false;
 
     if (config == NULL || row == NULL || col == NULL) {
         return false;
     }
 
-    for (uint8_t r = 0U; r < KEYPAD_ROWS && !found; r++) {
+    for (uint8_t rowIdx = 0U; rowIdx < KEYPAD_ROWS && !found; rowIdx++) {
         Keypad_Scan_ReleaseRows(config);
-        HAL_GPIO_WritePin(config->rows[r].port, config->rows[r].pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(config->rows[rowIdx].port, config->rows[rowIdx].pin, GPIO_PIN_RESET);
         Keypad_Scan_Settle();
 
-        for (uint8_t c = 0U; c < KEYPAD_COLS; c++) {
-            if (HAL_GPIO_ReadPin(config->cols[c].port, config->cols[c].pin) == GPIO_PIN_RESET) {
-                *row = r;
-                *col = c;
+        for (uint8_t colIdx = 0U; colIdx < KEYPAD_COLS; colIdx++) {
+            if (HAL_GPIO_ReadPin(config->cols[colIdx].port, config->cols[colIdx].pin) ==
+                GPIO_PIN_RESET) {
+                *row = rowIdx;
+                *col = colIdx;
                 found = true;
                 break;
             }

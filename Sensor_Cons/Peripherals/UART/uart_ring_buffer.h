@@ -34,9 +34,9 @@ extern "C" {
 
 typedef struct {
     uint8_t buffer[RING_BUFFER_SIZE];
-    volatile uint32_t head;   /*!< Write index (producer) */
-    volatile uint32_t tail;   /*!< Read index (consumer) */
-    volatile uint32_t count;  /*!< Bytes currently in buffer */
+    volatile uint32_t head;  /*!< Write index (producer) */
+    volatile uint32_t tail;  /*!< Read index (consumer) */
+    volatile uint32_t count; /*!< Bytes currently in buffer */
 } RingBuffer_t;
 
 /**

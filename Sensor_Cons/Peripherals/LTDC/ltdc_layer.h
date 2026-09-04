@@ -12,7 +12,7 @@ extern "C" {
 
 #include "ltdc_types.h"
 
-#define LTDC_MAX_ALPHA              255     /*!< Fully opaque layer alpha */
+#define LTDC_MAX_ALPHA 255 /*!< Fully opaque layer alpha */
 
 /**
  * @brief Apply a full layer configuration
@@ -21,7 +21,8 @@ extern "C" {
  * @param config Layer configuration; RGB888 is rejected
  * @return HAL_StatusTypeDef HAL status
  */
-HAL_StatusTypeDef LTDC_ConfigureLayer(LTDC_Driver_t *driver, uint8_t layer, LTDC_LayerConfig_t *config);
+HAL_StatusTypeDef LTDC_ConfigureLayer(LTDC_Driver_t *driver, uint8_t layer,
+                                      LTDC_LayerConfig_t *config);
 
 /**
  * @brief Enable a layer and reload at the next VSYNC
@@ -60,21 +61,23 @@ HAL_StatusTypeDef LTDC_SetLayerAlpha(LTDC_Driver_t *driver, uint8_t layer, uint8
  * @brief Move a layer window, keeping its size, and reload at the next VSYNC
  * @param driver Driver record
  * @param layer Layer number
- * @param x New left position
- * @param y New top position
+ * @param posX New left position
+ * @param posY New top position
  * @return HAL_StatusTypeDef HAL status
  */
-HAL_StatusTypeDef LTDC_SetLayerPosition(LTDC_Driver_t *driver, uint8_t layer, uint16_t x, uint16_t y);
+HAL_StatusTypeDef LTDC_SetLayerPosition(LTDC_Driver_t *driver, uint8_t layer, uint16_t posX,
+                                        uint16_t posY);
 
 /**
  * @brief Move a layer window without requesting a reload
  * @param driver Driver record
- * @param x New left position
- * @param y New top position
+ * @param posX New left position
+ * @param posY New top position
  * @param layer Layer number
  * @return HAL_StatusTypeDef HAL status
  */
-HAL_StatusTypeDef LTDC_SetWindowPosition_NoReload(LTDC_Driver_t *driver, uint16_t x, uint16_t y, uint8_t layer);
+HAL_StatusTypeDef LTDC_SetWindowPosition_NoReload(LTDC_Driver_t *driver, uint16_t posX,
+                                                  uint16_t posY, uint8_t layer);
 
 /**
  * @brief Set both position and size of a layer window

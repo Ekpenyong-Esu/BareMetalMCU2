@@ -12,16 +12,14 @@ static bool s_initialized = false;
 /**
  * @brief Discard one word so a stale or suspect sample is not handed out
  */
-static void RNG_FlushWord(void)
-{
-    uint32_t discarded;
+static void RNG_FlushWord(void) {
+    uint32_t discarded = 0;
 
     (void)HAL_RNG_GenerateRandomNumber(&s_hrng, &discarded);
     (void)discarded;
 }
 
-RNG_StatusTypeDef RNG_Init(void)
-{
+RNG_StatusTypeDef RNG_Init(void) {
     log_debug("RNG: Initializing Random Number Generator");
 
     if (s_initialized) {
@@ -40,7 +38,7 @@ RNG_StatusTypeDef RNG_Init(void)
     s_initialized = true;
 
     RNG_StatusTypeDef status = RNG_GetErrorStatus();
-    
+
     if (status != RNG_OK) {
         const char *statusStr = RNG_GetStatusString(status);
         log_error("RNG: %s at startup", statusStr);
@@ -53,8 +51,7 @@ RNG_StatusTypeDef RNG_Init(void)
     return RNG_OK;
 }
 
-RNG_StatusTypeDef RNG_DeInit(void)
-{
+RNG_StatusTypeDef RNG_DeInit(void) {
     if (!s_initialized) {
         return RNG_OK;
     }
@@ -67,18 +64,15 @@ RNG_StatusTypeDef RNG_DeInit(void)
     return (halStatus == HAL_OK) ? RNG_OK : RNG_ERROR;
 }
 
-bool RNG_IsInitialized(void)
-{
+bool RNG_IsInitialized(void) {
     return s_initialized;
 }
 
-RNG_HandleTypeDef *RNG_GetHandle(void)
-{
+RNG_HandleTypeDef *RNG_GetHandle(void) {
     return s_initialized ? &s_hrng : NULL;
 }
 
-bool RNG_IsReady(void)
-{
+bool RNG_IsReady(void) {
     /* Reading SR before HAL_RNG_Init would dereference a NULL Instance. */
     if (!s_initialized) {
         return false;
@@ -87,8 +81,7 @@ bool RNG_IsReady(void)
     return (__HAL_RNG_GET_FLAG(&s_hrng, RNG_FLAG_DRDY) != 0U);
 }
 
-RNG_StatusTypeDef RNG_GetErrorStatus(void)
-{
+RNG_StatusTypeDef RNG_GetErrorStatus(void) {
     if (!s_initialized) {
         return RNG_NOT_READY;
     }
@@ -106,15 +99,13 @@ RNG_StatusTypeDef RNG_GetErrorStatus(void)
     return RNG_OK;
 }
 
-bool RNG_HasError(void)
-{
+bool RNG_HasError(void) {
     RNG_StatusTypeDef status = RNG_GetErrorStatus();
 
     return (status == RNG_SEED_ERROR) || (status == RNG_CLOCK_ERROR);
 }
 
-RNG_StatusTypeDef RNG_ClearErrors(void)
-{
+RNG_StatusTypeDef RNG_ClearErrors(void) {
     if (!s_initialized) {
         return RNG_NOT_READY;
     }
@@ -132,16 +123,23 @@ RNG_StatusTypeDef RNG_ClearErrors(void)
     return RNG_GetErrorStatus();
 }
 
-const char *RNG_GetStatusString(RNG_StatusTypeDef status)
-{
+const char *RNG_GetStatusString(RNG_StatusTypeDef status) {
     switch (status) {
-        case RNG_OK:          return "RNG_OK";
-        case RNG_ERROR:       return "RNG_ERROR";
-        case RNG_TIMEOUT:     return "RNG_TIMEOUT";
-        case RNG_CLOCK_ERROR: return "RNG_CLOCK_ERROR";
-        case RNG_SEED_ERROR:  return "RNG_SEED_ERROR";
-        case RNG_BUSY:        return "RNG_BUSY";
-        case RNG_NOT_READY:   return "RNG_NOT_READY";
-        default:              return "UNKNOWN_STATUS";
+        case RNG_OK:
+            return "RNG_OK";
+        case RNG_ERROR:
+            return "RNG_ERROR";
+        case RNG_TIMEOUT:
+            return "RNG_TIMEOUT";
+        case RNG_CLOCK_ERROR:
+            return "RNG_CLOCK_ERROR";
+        case RNG_SEED_ERROR:
+            return "RNG_SEED_ERROR";
+        case RNG_BUSY:
+            return "RNG_BUSY";
+        case RNG_NOT_READY:
+            return "RNG_NOT_READY";
+        default:
+            return "UNKNOWN_STATUS";
     }
 }

@@ -1,10 +1,10 @@
 /**
-  ******************************************************************************
-  * @file    stepper_timing.h
-  * @brief   Microsecond time base backed by the caller's timer
-  * @note    Internal to the driver; not part of stepper.h.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    stepper_timing.h
+ * @brief   Microsecond time base backed by the caller's timer
+ * @note    Internal to the driver; not part of stepper.h.
+ ******************************************************************************
+ */
 
 #ifndef STEPPER_TIMING_H
 #define STEPPER_TIMING_H

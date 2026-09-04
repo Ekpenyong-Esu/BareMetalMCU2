@@ -2,13 +2,16 @@
  * @file servo_console.h
  * @brief Says over the serial port what the servo sweep is doing
  *
- * Reporting only. It formats nothing about the board and decides nothing
- * about the motion: callers hand it the words, it puts them on the wire.
- * Delete this module and the servo still sweeps.
+ * Reporting only. It decides nothing about the board and nothing about the
+ * motion: the application tells it which port to open and hands it the
+ * words, it puts them on the wire. Delete this module and the servo still
+ * sweeps.
  */
 
 #ifndef SERVO_CONSOLE_H
 #define SERVO_CONSOLE_H
+
+#include "stm32f4xx.h"
 
 #include <stdint.h>
 
@@ -16,8 +19,12 @@
 extern "C" {
 #endif
 
-/** Open the serial port used for reporting. Later calls go quiet if it fails. */
-void ServoConsole_Init(void);
+/**
+ * @brief Open the serial port used for reporting at the project default
+ *        baud rate. Later calls go quiet if it fails.
+ * @param instance  Which USART to talk on, e.g. USART1
+ */
+void ServoConsole_Init(USART_TypeDef *instance);
 
 /** Announce that the sweep has started and which output drives the servo. */
 void ServoConsole_ReportReady(const char *outputDescription);

@@ -51,7 +51,7 @@ extern "C" {
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not ready,
  *          HAL_BUSY if another conversion is ongoing
  */
-HAL_StatusTypeDef ADC_StartConversion(ADC_HandleStruct* hadc);
+HAL_StatusTypeDef ADC_StartConversion(ADC_HandleStruct *hadc);
 
 /**
  * @brief   Block until the current conversion finishes
@@ -64,7 +64,7 @@ HAL_StatusTypeDef ADC_StartConversion(ADC_HandleStruct* hadc);
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_TIMEOUT on timeout,
  *          HAL_ERROR if not ready
  */
-HAL_StatusTypeDef ADC_PollForConversion(ADC_HandleStruct* hadc, uint32_t timeout_ms);
+HAL_StatusTypeDef ADC_PollForConversion(ADC_HandleStruct *hadc, uint32_t timeout_ms);
 
 /**
  * @brief   Read the latest conversion result
@@ -76,7 +76,7 @@ HAL_StatusTypeDef ADC_PollForConversion(ADC_HandleStruct* hadc, uint32_t timeout
  * @param   value Destination for the raw value (0..max for current resolution)
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not ready
  */
-HAL_StatusTypeDef ADC_GetValue(ADC_HandleStruct* hadc, uint32_t* value);
+HAL_StatusTypeDef ADC_GetValue(ADC_HandleStruct *hadc, uint32_t *value);
 
 /**
  * @brief   Configure, convert and read one channel (convenience function)
@@ -89,8 +89,7 @@ HAL_StatusTypeDef ADC_GetValue(ADC_HandleStruct* hadc, uint32_t* value);
  * @param   value Destination for the raw value
  * @retval  HAL_StatusTypeDef Status of the operation
  */
-HAL_StatusTypeDef ADC_ReadChannel(ADC_HandleStruct* hadc, uint32_t channel,
-                                  uint32_t* value);
+HAL_StatusTypeDef ADC_ReadChannel(ADC_HandleStruct *hadc, uint32_t channel, uint32_t *value);
 
 /* Continuous ----------------------------------------------------------------*/
 
@@ -104,7 +103,7 @@ HAL_StatusTypeDef ADC_ReadChannel(ADC_HandleStruct* hadc, uint32_t channel,
  * @param   hadc ADC handle (must be initialized, channel configured)
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not ready
  */
-HAL_StatusTypeDef ADC_StartContinuousConversion(ADC_HandleStruct* hadc);
+HAL_StatusTypeDef ADC_StartContinuousConversion(ADC_HandleStruct *hadc);
 
 /**
  * @brief   Stop free-running continuous conversions
@@ -114,7 +113,7 @@ HAL_StatusTypeDef ADC_StartContinuousConversion(ADC_HandleStruct* hadc);
  * @param   hadc ADC handle
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not ready
  */
-HAL_StatusTypeDef ADC_StopContinuousConversion(ADC_HandleStruct* hadc);
+HAL_StatusTypeDef ADC_StopContinuousConversion(ADC_HandleStruct *hadc);
 
 /* DMA -----------------------------------------------------------------------*/
 
@@ -131,7 +130,7 @@ HAL_StatusTypeDef ADC_StopContinuousConversion(ADC_HandleStruct* hadc);
  * @param   length Number of conversions to transfer
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not ready or DMA not configured
  */
-HAL_StatusTypeDef ADC_StartDMA(ADC_HandleStruct* hadc, uint32_t* buffer, uint32_t length);
+HAL_StatusTypeDef ADC_StartDMA(ADC_HandleStruct *hadc, uint32_t *buffer, uint32_t length);
 
 /**
  * @brief   Stop a DMA stream
@@ -141,7 +140,7 @@ HAL_StatusTypeDef ADC_StartDMA(ADC_HandleStruct* hadc, uint32_t* buffer, uint32_
  * @param   hadc ADC handle
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not ready
  */
-HAL_StatusTypeDef ADC_StopDMA(ADC_HandleStruct* hadc);
+HAL_StatusTypeDef ADC_StopDMA(ADC_HandleStruct *hadc);
 
 /**
  * @brief   Convert a scan sequence into a buffer and wait for it
@@ -155,7 +154,7 @@ HAL_StatusTypeDef ADC_StopDMA(ADC_HandleStruct* hadc);
  * @param   num_channels Number of channels in the sequence
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not ready
  */
-HAL_StatusTypeDef ADC_ReadMultiChannel(ADC_HandleStruct* hadc, uint32_t* values,
+HAL_StatusTypeDef ADC_ReadMultiChannel(ADC_HandleStruct *hadc, uint32_t *values,
                                        uint32_t num_channels);
 
 /* Interrupt -----------------------------------------------------------------*/
@@ -170,7 +169,7 @@ HAL_StatusTypeDef ADC_ReadMultiChannel(ADC_HandleStruct* hadc, uint32_t* values,
  * @param   hadc ADC handle (must be initialized)
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not ready
  */
-HAL_StatusTypeDef ADC_Start_IT(ADC_HandleStruct* hadc);
+HAL_StatusTypeDef ADC_Start_IT(ADC_HandleStruct *hadc);
 
 /**
  * @brief   Stop an interrupt-driven conversion
@@ -180,7 +179,7 @@ HAL_StatusTypeDef ADC_Start_IT(ADC_HandleStruct* hadc);
  * @param   hadc ADC handle
  * @retval  HAL_StatusTypeDef HAL_OK on success, HAL_ERROR if not ready
  */
-HAL_StatusTypeDef ADC_Stop_IT(ADC_HandleStruct* hadc);
+HAL_StatusTypeDef ADC_Stop_IT(ADC_HandleStruct *hadc);
 
 /**
  * @brief   Configure a channel then start an interrupt-driven conversion
@@ -191,7 +190,7 @@ HAL_StatusTypeDef ADC_Stop_IT(ADC_HandleStruct* hadc);
  * @param   channel Channel to read
  * @retval  HAL_StatusTypeDef Status of the operation
  */
-HAL_StatusTypeDef ADC_ReadChannel_IT(ADC_HandleStruct* hadc, uint32_t channel);
+HAL_StatusTypeDef ADC_ReadChannel_IT(ADC_HandleStruct *hadc, uint32_t channel);
 
 /**
  * @brief   Register the conversion complete callback
@@ -202,8 +201,8 @@ HAL_StatusTypeDef ADC_ReadChannel_IT(ADC_HandleStruct* hadc, uint32_t channel);
  * @param   hadc ADC handle
  * @param   callback Function pointer, or NULL to clear
  */
-void ADC_RegisterConvCompleteCallback(ADC_HandleStruct* hadc,
-                                      void (*callback)(ADC_HandleStruct*, uint32_t));
+void ADC_RegisterConvCompleteCallback(ADC_HandleStruct *hadc,
+                                      void (*callback)(ADC_HandleStruct *, uint32_t));
 
 /**
  * @brief   Register the error callback
@@ -214,8 +213,7 @@ void ADC_RegisterConvCompleteCallback(ADC_HandleStruct* hadc,
  * @param   hadc ADC handle
  * @param   callback Function pointer, or NULL to clear
  */
-void ADC_RegisterErrorCallback(ADC_HandleStruct* hadc,
-                               void (*callback)(ADC_HandleStruct*));
+void ADC_RegisterErrorCallback(ADC_HandleStruct *hadc, void (*callback)(ADC_HandleStruct *));
 
 #ifdef __cplusplus
 }

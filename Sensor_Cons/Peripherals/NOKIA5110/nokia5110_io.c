@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    nokia5110_io.c
-  * @brief   SPI and control-line transport for the Nokia 5110 LCD
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    nokia5110_io.c
+ * @brief   SPI and control-line transport for the Nokia 5110 LCD
+ ******************************************************************************
+ */
 
 #include "nokia5110_io.h"
 #include "spi.h"
@@ -11,32 +11,35 @@
 #include "log.h"
 #include "stm32f4xx_hal.h"
 
-/* Control lines */
-#define NOKIA5110_RST_PIN        GPIO_PIN_1    /* PB1 - Reset */
-#define NOKIA5110_RST_PORT       GPIOB
-#define NOKIA5110_CE_PIN         GPIO_PIN_0    /* PB0 - Chip Enable */
-#define NOKIA5110_CE_PORT        GPIOB
-#define NOKIA5110_DC_PIN         GPIO_PIN_2    /* PB2 - Data/Command */
-#define NOKIA5110_DC_PORT        GPIOB
+#define NOKIA5110_SPI_TIMEOUT 1000U /* SPI timeout in ms */
+#define NOKIA5110_RESET_LOW_MS 10U
+#define NOKIA5110_RESET_HIGH_MS 10U /* Settle before the first command */
 
-#define NOKIA5110_SPI_TIMEOUT    1000U         /* SPI timeout in ms */
-#define NOKIA5110_RESET_LOW_MS   10U
-#define NOKIA5110_RESET_HIGH_MS  10U           /* Settle before the first command */
+static NOKIA5110_StatusTypeDef NOKIA5110_IO_PinInit(GPIO_TypeDef *port, uint16_t pin,
+                                                    uint32_t speed) {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-/* This panel's slot on the shared bus. */
-static SPI_Device_t s_device;
+    /* GPIO driver enables the port clock */
+    GPIO_InitStruct.Pin = pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = speed;
 
-static NOKIA5110_StatusTypeDef NOKIA5110_IO_Transmit(const uint8_t *data, uint16_t size,
-                                                     GPIO_PinState dcState)
-{
+    return (GPIO_Driver_Pin_Init(port, &GPIO_InitStruct) == HAL_OK) ? NOKIA5110_OK
+                                                                    : NOKIA5110_ERROR;
+}
+
+static NOKIA5110_StatusTypeDef NOKIA5110_IO_Transmit(NOKIA5110_Handle_t *hnok, const uint8_t *data,
+                                                     uint16_t size, GPIO_PinState dcState) {
+    const NOKIA5110_Config_t *config = &hnok->Config;
     SPI_StatusTypeDef status = SPI_OK;
 
-    HAL_GPIO_WritePin(NOKIA5110_DC_PORT, NOKIA5110_DC_PIN, dcState);
-    HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_RESET);
+    GPIO_Driver_WritePin(config->DcPort, config->DcPin, dcState);
+    GPIO_Driver_WritePin(config->CePort, config->CePin, GPIO_PIN_RESET);
 
-    status = SPI_Transmit(&s_device, (uint8_t *)(uintptr_t)data, size, NOKIA5110_SPI_TIMEOUT);
+    status = SPI_Transmit(&hnok->Device, (uint8_t *)(uintptr_t)data, size, NOKIA5110_SPI_TIMEOUT);
 
-    HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_SET);
+    GPIO_Driver_WritePin(config->CePort, config->CePin, GPIO_PIN_SET);
 
     if (status == SPI_TIMEOUT) {
         return NOKIA5110_TIMEOUT;
@@ -45,30 +48,46 @@ static NOKIA5110_StatusTypeDef NOKIA5110_IO_Transmit(const uint8_t *data, uint16
     return (status == SPI_OK) ? NOKIA5110_OK : NOKIA5110_ERROR;
 }
 
-NOKIA5110_StatusTypeDef NOKIA5110_IO_Init(void)
-{
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
+NOKIA5110_StatusTypeDef NOKIA5110_IO_Init(NOKIA5110_Handle_t *hnok) {
+    const NOKIA5110_Config_t *config = NULL;
+    NOKIA5110_StatusTypeDef status = NOKIA5110_OK;
 
-    /* GPIO driver enables the port clock */
-    GPIO_InitStruct.Pin = NOKIA5110_RST_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_Driver_Pin_Init(NOKIA5110_RST_PORT, &GPIO_InitStruct);
+    if (hnok == NULL) {
+        return NOKIA5110_INVALID_PARAM;
+    }
 
-    GPIO_InitStruct.Pin = NOKIA5110_CE_PIN;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIO_Driver_Pin_Init(NOKIA5110_CE_PORT, &GPIO_InitStruct);
+    config = &hnok->Config;
+    if (config->Bus == NULL || config->CePort == NULL || config->DcPort == NULL) {
+        return NOKIA5110_INVALID_PARAM;
+    }
 
-    GPIO_InitStruct.Pin = NOKIA5110_DC_PIN;
-    GPIO_Driver_Pin_Init(NOKIA5110_DC_PORT, &GPIO_InitStruct);
+    if (config->RstPort != NULL) {
+        status = NOKIA5110_IO_PinInit(config->RstPort, config->RstPin, GPIO_SPEED_FREQ_LOW);
+        if (status != NOKIA5110_OK) {
+            log_error("NOKIA5110: reset pin init failed");
+            return status;
+        }
+        GPIO_Driver_WritePin(config->RstPort, config->RstPin, GPIO_PIN_SET);
+    }
 
-    HAL_GPIO_WritePin(NOKIA5110_RST_PORT, NOKIA5110_RST_PIN, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(NOKIA5110_DC_PORT, NOKIA5110_DC_PIN, GPIO_PIN_RESET);
+    status = NOKIA5110_IO_PinInit(config->CePort, config->CePin, GPIO_SPEED_FREQ_HIGH);
+    if (status != NOKIA5110_OK) {
+        log_error("NOKIA5110: chip-enable pin init failed");
+        return status;
+    }
+
+    status = NOKIA5110_IO_PinInit(config->DcPort, config->DcPin, GPIO_SPEED_FREQ_HIGH);
+    if (status != NOKIA5110_OK) {
+        log_error("NOKIA5110: data/command pin init failed");
+        return status;
+    }
+
+    /* Idle deselected before the device is registered, so no stray edge is latched. */
+    GPIO_Driver_WritePin(config->CePort, config->CePin, GPIO_PIN_SET);
+    GPIO_Driver_WritePin(config->DcPort, config->DcPin, GPIO_PIN_RESET);
 
     const SPI_ConfigTypeDef spiConfig = SPI_ConfigDefault();
-    if (SPI_DeviceInit(&s_device, &spiConfig) != SPI_OK) {
+    if (SPI_DeviceInit(&hnok->Device, config->Bus, &spiConfig) != SPI_OK) {
         log_error("NOKIA5110: SPI device registration failed");
         return NOKIA5110_ERROR;
     }
@@ -76,31 +95,39 @@ NOKIA5110_StatusTypeDef NOKIA5110_IO_Init(void)
     return NOKIA5110_OK;
 }
 
-void NOKIA5110_IO_DeInit(void)
-{
-    HAL_GPIO_DeInit(NOKIA5110_RST_PORT, NOKIA5110_RST_PIN);
-    HAL_GPIO_DeInit(NOKIA5110_CE_PORT, NOKIA5110_CE_PIN);
-    HAL_GPIO_DeInit(NOKIA5110_DC_PORT, NOKIA5110_DC_PIN);
+void NOKIA5110_IO_DeInit(NOKIA5110_Handle_t *hnok) {
+    const NOKIA5110_Config_t *config = &hnok->Config;
+
+    if (config->RstPort != NULL) {
+        (void)GPIO_Driver_Pin_DeInit(config->RstPort, config->RstPin);
+    }
+    (void)GPIO_Driver_Pin_DeInit(config->CePort, config->CePin);
+    (void)GPIO_Driver_Pin_DeInit(config->DcPort, config->DcPin);
 }
 
-void NOKIA5110_IO_Reset(void)
-{
-    HAL_GPIO_WritePin(NOKIA5110_RST_PORT, NOKIA5110_RST_PIN, GPIO_PIN_RESET);
+void NOKIA5110_IO_Reset(NOKIA5110_Handle_t *hnok) {
+    const NOKIA5110_Config_t *config = &hnok->Config;
+
+    /* Without a wired RST the board's own power-on reset has to do this. */
+    if (config->RstPort == NULL) {
+        return;
+    }
+
+    GPIO_Driver_WritePin(config->RstPort, config->RstPin, GPIO_PIN_RESET);
     HAL_Delay(NOKIA5110_RESET_LOW_MS);
-    HAL_GPIO_WritePin(NOKIA5110_RST_PORT, NOKIA5110_RST_PIN, GPIO_PIN_SET);
+    GPIO_Driver_WritePin(config->RstPort, config->RstPin, GPIO_PIN_SET);
     HAL_Delay(NOKIA5110_RESET_HIGH_MS);
 }
 
-NOKIA5110_StatusTypeDef NOKIA5110_IO_WriteCommand(uint8_t cmd)
-{
-    return NOKIA5110_IO_Transmit(&cmd, 1U, GPIO_PIN_RESET);
+NOKIA5110_StatusTypeDef NOKIA5110_IO_WriteCommand(NOKIA5110_Handle_t *hnok, uint8_t cmd) {
+    return NOKIA5110_IO_Transmit(hnok, &cmd, 1U, GPIO_PIN_RESET);
 }
 
-NOKIA5110_StatusTypeDef NOKIA5110_IO_WriteData(const uint8_t *data, uint16_t size)
-{
+NOKIA5110_StatusTypeDef NOKIA5110_IO_WriteData(NOKIA5110_Handle_t *hnok, const uint8_t *data,
+                                               uint16_t size) {
     if (data == NULL || size == 0U) {
         return NOKIA5110_INVALID_PARAM;
     }
 
-    return NOKIA5110_IO_Transmit(data, size, GPIO_PIN_SET);
+    return NOKIA5110_IO_Transmit(hnok, data, size, GPIO_PIN_SET);
 }

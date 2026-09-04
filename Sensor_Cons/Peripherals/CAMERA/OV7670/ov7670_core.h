@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ov7670_core.h
-  * @brief   Lifecycle for the OV7670 camera driver
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ov7670_core.h
+ * @brief   Lifecycle for the OV7670 camera driver
+ ******************************************************************************
+ */
 
 #ifndef OV7670_CORE_H
 #define OV7670_CORE_H
@@ -16,13 +16,14 @@ extern "C" {
 
 /**
  * @brief Detect the sensor, reset it and apply the default configuration.
- * @param busConfig SCCB bus settings to use, or NULL for I2C_ConfigDefault().
- * @note  DCMI stays owned by the application; the SCCB port is registered here
- *        so a slower device sharing I2C3 cannot impose its clock on the camera.
+ * @param hdcmi DCMI handle the application has already initialised.
+ * @param bus   Open I2C bus the SCCB port is wired to.
+ * @note  DCMI and the bus stay owned by the application; the SCCB port is
+ *        registered here with its own clock so a slower device sharing the
+ *        bus cannot impose its speed on the camera.
  */
-OV7670_StatusTypeDef OV7670_Init(OV7670_Handle_t *hov7670,
-                                 DCMI_HandleTypeDef *hdcmi,
-                                 const I2C_ConfigTypeDef *busConfig);
+OV7670_StatusTypeDef OV7670_Init(OV7670_Handle_t *hov7670, DCMI_HandleTypeDef *hdcmi,
+                                 I2C_Bus_t *bus);
 
 OV7670_StatusTypeDef OV7670_DeInit(OV7670_Handle_t *hov7670);
 

@@ -1,36 +1,34 @@
 /**
-  ******************************************************************************
-  * @file    ov7670_control.c
-  * @brief   Runtime image controls
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ov7670_control.c
+ * @brief   Runtime image controls
+ ******************************************************************************
+ */
 
 #include "ov7670_control.h"
 #include "ov7670_modes.h"
 #include "ov7670_io.h"
 #include "ov7670_regs.h"
 
-#define OV7670_BRIGHTNESS_NEUTRAL       128
-#define OV7670_LEVEL_TO_REG_DIVISOR     4U      /**< 0-255 control range to the 0-63 register range */
+#define OV7670_BRIGHTNESS_NEUTRAL 128
+#define OV7670_LEVEL_TO_REG_DIVISOR 4U /**< 0-255 control range to the 0-63 register range */
 
 static const uint8_t s_testPatternBits[] = {
     [OV7670_TEST_PATTERN_NONE] = 0x00U,
-    [OV7670_TEST_PATTERN_1]    = OV7670_XSC_TEST_PATTERN_1,
-    [OV7670_TEST_PATTERN_2]    = OV7670_XSC_TEST_PATTERN_2,
+    [OV7670_TEST_PATTERN_1] = OV7670_XSC_TEST_PATTERN_1,
+    [OV7670_TEST_PATTERN_2] = OV7670_XSC_TEST_PATTERN_2,
     [OV7670_TEST_PATTERN_BARS] = OV7670_XSC_TEST_PATTERN_BARS,
 };
 
 #define OV7670_TEST_PATTERN_COUNT (sizeof(s_testPatternBits) / sizeof(s_testPatternBits[0]))
 
-static OV7670_StatusTypeDef OV7670_SetFlagBit(OV7670_Handle_t *hov7670, uint8_t reg,
-                                              uint8_t bit, bool enable)
-{
+static OV7670_StatusTypeDef OV7670_SetFlagBit(OV7670_Handle_t *hov7670, uint8_t reg, uint8_t bit,
+                                              bool enable) {
     return OV7670_UpdateReg(hov7670, reg, bit, enable ? bit : 0U);
 }
 
 OV7670_StatusTypeDef OV7670_SetResolution(OV7670_Handle_t *hov7670,
-                                          OV7670_ResolutionTypeDef resolution)
-{
+                                          OV7670_ResolutionTypeDef resolution) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
 
     if (status != OV7670_OK) {
@@ -45,8 +43,7 @@ OV7670_StatusTypeDef OV7670_SetResolution(OV7670_Handle_t *hov7670,
     return status;
 }
 
-OV7670_StatusTypeDef OV7670_SetFormat(OV7670_Handle_t *hov7670, OV7670_FormatTypeDef format)
-{
+OV7670_StatusTypeDef OV7670_SetFormat(OV7670_Handle_t *hov7670, OV7670_FormatTypeDef format) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
 
     if (status != OV7670_OK) {
@@ -61,10 +58,9 @@ OV7670_StatusTypeDef OV7670_SetFormat(OV7670_Handle_t *hov7670, OV7670_FormatTyp
     return status;
 }
 
-OV7670_StatusTypeDef OV7670_SetBrightness(OV7670_Handle_t *hov7670, uint8_t brightness)
-{
+OV7670_StatusTypeDef OV7670_SetBrightness(OV7670_Handle_t *hov7670, uint8_t brightness) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
-    int8_t signed_level;
+    int8_t signed_level = 0;
 
     if (status != OV7670_OK) {
         return status;
@@ -81,8 +77,7 @@ OV7670_StatusTypeDef OV7670_SetBrightness(OV7670_Handle_t *hov7670, uint8_t brig
     return status;
 }
 
-OV7670_StatusTypeDef OV7670_SetContrast(OV7670_Handle_t *hov7670, uint8_t contrast)
-{
+OV7670_StatusTypeDef OV7670_SetContrast(OV7670_Handle_t *hov7670, uint8_t contrast) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
 
     if (status != OV7670_OK) {
@@ -98,10 +93,9 @@ OV7670_StatusTypeDef OV7670_SetContrast(OV7670_Handle_t *hov7670, uint8_t contra
     return status;
 }
 
-OV7670_StatusTypeDef OV7670_SetSaturation(OV7670_Handle_t *hov7670, uint8_t saturation)
-{
+OV7670_StatusTypeDef OV7670_SetSaturation(OV7670_Handle_t *hov7670, uint8_t saturation) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
-    uint8_t level;
+    uint8_t level = 0;
 
     if (status != OV7670_OK) {
         return status;
@@ -123,8 +117,7 @@ OV7670_StatusTypeDef OV7670_SetSaturation(OV7670_Handle_t *hov7670, uint8_t satu
     return status;
 }
 
-OV7670_StatusTypeDef OV7670_SetFlipHorizontal(OV7670_Handle_t *hov7670, bool enable)
-{
+OV7670_StatusTypeDef OV7670_SetFlipHorizontal(OV7670_Handle_t *hov7670, bool enable) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
 
     if (status != OV7670_OK) {
@@ -139,8 +132,7 @@ OV7670_StatusTypeDef OV7670_SetFlipHorizontal(OV7670_Handle_t *hov7670, bool ena
     return status;
 }
 
-OV7670_StatusTypeDef OV7670_SetFlipVertical(OV7670_Handle_t *hov7670, bool enable)
-{
+OV7670_StatusTypeDef OV7670_SetFlipVertical(OV7670_Handle_t *hov7670, bool enable) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
 
     if (status != OV7670_OK) {
@@ -155,8 +147,7 @@ OV7670_StatusTypeDef OV7670_SetFlipVertical(OV7670_Handle_t *hov7670, bool enabl
     return status;
 }
 
-OV7670_StatusTypeDef OV7670_SetNightMode(OV7670_Handle_t *hov7670, bool enable)
-{
+OV7670_StatusTypeDef OV7670_SetNightMode(OV7670_Handle_t *hov7670, bool enable) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
 
     if (status != OV7670_OK) {
@@ -171,8 +162,7 @@ OV7670_StatusTypeDef OV7670_SetNightMode(OV7670_Handle_t *hov7670, bool enable)
     return status;
 }
 
-OV7670_StatusTypeDef OV7670_SetTestPattern(OV7670_Handle_t *hov7670, uint8_t pattern)
-{
+OV7670_StatusTypeDef OV7670_SetTestPattern(OV7670_Handle_t *hov7670, uint8_t pattern) {
     OV7670_StatusTypeDef status = OV7670_CheckReady(hov7670);
 
     if (status != OV7670_OK) {
@@ -182,8 +172,8 @@ OV7670_StatusTypeDef OV7670_SetTestPattern(OV7670_Handle_t *hov7670, uint8_t pat
         return OV7670_INVALID_PARAM;
     }
 
-    status = OV7670_UpdateReg(hov7670, OV7670_REG_SCALING_XSC,
-                              OV7670_XSC_TEST_PATTERN_MASK, s_testPatternBits[pattern]);
+    status = OV7670_UpdateReg(hov7670, OV7670_REG_SCALING_XSC, OV7670_XSC_TEST_PATTERN_MASK,
+                              s_testPatternBits[pattern]);
     if (status == OV7670_OK) {
         hov7670->config.test_pattern = pattern;
     }

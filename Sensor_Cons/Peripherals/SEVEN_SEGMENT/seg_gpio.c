@@ -13,8 +13,7 @@
 
 /* Private functions ---------------------------------------------------------*/
 
-static void Seg_GpioConfigurePin(const SegGpioPin_t* pin)
-{
+static void Seg_GpioConfigurePin(const SegGpioPin_t *pin) {
     if (pin->port == NULL) {
         return;
     }
@@ -27,27 +26,25 @@ static void Seg_GpioConfigurePin(const SegGpioPin_t* pin)
     GPIO_Driver_Pin_Init(pin->port, &init);
 }
 
-static void Seg_GpioWriteSegments(SegDisplayHandle_t* handle, uint8_t pattern)
-{
-    const SegGpioConfig_t* cfg = &handle->config.config.gpio;
+static void Seg_GpioWriteSegments(SegDisplayHandle_t *handle, uint8_t pattern) {
+    const SegGpioConfig_t *cfg = &handle->config.config.gpio;
     bool invert = (cfg->polarity == SEG_COMMON_ANODE);
 
-    for (uint8_t i = 0; i < SEG_COUNT; i++) {
+    for (uint8_t i = 0; i < (uint8_t)SEG_COUNT; i++) {
         if (cfg->segments[i].port == NULL) {
             continue;
         }
-        bool on = ((pattern >> i) & 0x01U) != 0U;
+        bool segmentOn = ((pattern >> i) & 0x01U) != 0U;
         if (invert) {
-            on = !on;
+            segmentOn = !segmentOn;
         }
         HAL_GPIO_WritePin(cfg->segments[i].port, cfg->segments[i].pin,
-                          on ? GPIO_PIN_SET : GPIO_PIN_RESET);
+                          segmentOn ? GPIO_PIN_SET : GPIO_PIN_RESET);
     }
 }
 
-static void Seg_GpioDeselectAll(SegDisplayHandle_t* handle)
-{
-    const SegGpioConfig_t* cfg = &handle->config.config.gpio;
+static void Seg_GpioDeselectAll(SegDisplayHandle_t *handle) {
+    const SegGpioConfig_t *cfg = &handle->config.config.gpio;
     if (cfg->digits == NULL) {
         return;
     }
@@ -60,9 +57,8 @@ static void Seg_GpioDeselectAll(SegDisplayHandle_t* handle)
     }
 }
 
-static void Seg_GpioSelectDigit(SegDisplayHandle_t* handle, uint8_t digit)
-{
-    const SegGpioConfig_t* cfg = &handle->config.config.gpio;
+static void Seg_GpioSelectDigit(SegDisplayHandle_t *handle, uint8_t digit) {
+    const SegGpioConfig_t *cfg = &handle->config.config.gpio;
     if (cfg->digits == NULL || digit >= cfg->digitCount) {
         return;
     }
@@ -73,16 +69,15 @@ static void Seg_GpioSelectDigit(SegDisplayHandle_t* handle, uint8_t digit)
 
 /* Backend operations --------------------------------------------------------*/
 
-static SegStatus_t Seg_GpioInit(SegDisplayHandle_t* handle)
-{
-    const SegGpioConfig_t* cfg = &handle->config.config.gpio;
+static SegStatus_t Seg_GpioInit(SegDisplayHandle_t *handle) {
+    const SegGpioConfig_t *cfg = &handle->config.config.gpio;
 
     if (cfg->digits == NULL) {
         return SEG_INVALID_PARAM;
     }
 
     /* The GPIO driver enables the port clock for each pin it configures */
-    for (uint8_t i = 0; i < SEG_COUNT; i++) {
+    for (uint8_t i = 0; i < (uint8_t)SEG_COUNT; i++) {
         Seg_GpioConfigurePin(&cfg->segments[i]);
     }
     for (uint8_t i = 0; i < cfg->digitCount; i++) {
@@ -95,23 +90,19 @@ static SegStatus_t Seg_GpioInit(SegDisplayHandle_t* handle)
     return SEG_OK;
 }
 
-static void Seg_GpioEnable(SegDisplayHandle_t* handle)
-{
-    (void)handle;   /* Output resumes on the next multiplex step */
+static void Seg_GpioEnable(SegDisplayHandle_t *handle) {
+    (void)handle; /* Output resumes on the next multiplex step */
 }
 
-static void Seg_GpioDisable(SegDisplayHandle_t* handle)
-{
+static void Seg_GpioDisable(SegDisplayHandle_t *handle) {
     Seg_GpioDeselectAll(handle);
 }
 
-static void Seg_GpioCommit(SegDisplayHandle_t* handle)
-{
-    (void)handle;   /* Buffer is sampled by the multiplex step, nothing to push */
+static void Seg_GpioCommit(SegDisplayHandle_t *handle) {
+    (void)handle; /* Buffer is sampled by the multiplex step, nothing to push */
 }
 
-static void Seg_GpioMultiplexStep(SegDisplayHandle_t* handle)
-{
+static void Seg_GpioMultiplexStep(SegDisplayHandle_t *handle) {
     Seg_GpioDeselectAll(handle);
     Seg_GpioWriteSegments(handle, handle->displayBuffer[handle->currentDigit]);
     Seg_GpioSelectDigit(handle, handle->currentDigit);
@@ -123,9 +114,9 @@ static void Seg_GpioMultiplexStep(SegDisplayHandle_t* handle)
 }
 
 const SegDriverOps_t SegGpioOps = {
-    .init          = Seg_GpioInit,
-    .enable        = Seg_GpioEnable,
-    .disable       = Seg_GpioDisable,
-    .commit        = Seg_GpioCommit,
+    .init = Seg_GpioInit,
+    .enable = Seg_GpioEnable,
+    .disable = Seg_GpioDisable,
+    .commit = Seg_GpioCommit,
     .multiplexStep = Seg_GpioMultiplexStep,
 };

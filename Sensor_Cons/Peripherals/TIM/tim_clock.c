@@ -15,33 +15,73 @@
 
 #include "tim_clock.h"
 
-bool TIM_Clock_Enable(const TIM_TypeDef *instance)
-{
+bool TIM_Clock_Enable(const TIM_TypeDef *instance) {
     /* Enable the appropriate RCC clock enable bit for each timer.
      * Uses HAL macros which expand to register writes. */
-    if (instance == TIM1)  { __HAL_RCC_TIM1_CLK_ENABLE();  return true; }
-    if (instance == TIM2)  { __HAL_RCC_TIM2_CLK_ENABLE();  return true; }
-    if (instance == TIM3)  { __HAL_RCC_TIM3_CLK_ENABLE();  return true; }
-    if (instance == TIM4)  { __HAL_RCC_TIM4_CLK_ENABLE();  return true; }
-    if (instance == TIM5)  { __HAL_RCC_TIM5_CLK_ENABLE();  return true; }
-    if (instance == TIM6)  { __HAL_RCC_TIM6_CLK_ENABLE();  return true; }
-    if (instance == TIM7)  { __HAL_RCC_TIM7_CLK_ENABLE();  return true; }
-    if (instance == TIM8)  { __HAL_RCC_TIM8_CLK_ENABLE();  return true; }
-    if (instance == TIM9)  { __HAL_RCC_TIM9_CLK_ENABLE();  return true; }
-    if (instance == TIM10) { __HAL_RCC_TIM10_CLK_ENABLE(); return true; }
-    if (instance == TIM11) { __HAL_RCC_TIM11_CLK_ENABLE(); return true; }
-    if (instance == TIM12) { __HAL_RCC_TIM12_CLK_ENABLE(); return true; }
-    if (instance == TIM13) { __HAL_RCC_TIM13_CLK_ENABLE(); return true; }
-    if (instance == TIM14) { __HAL_RCC_TIM14_CLK_ENABLE(); return true; }
+    if (instance == TIM1) {
+        __HAL_RCC_TIM1_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM2) {
+        __HAL_RCC_TIM2_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM3) {
+        __HAL_RCC_TIM3_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM4) {
+        __HAL_RCC_TIM4_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM5) {
+        __HAL_RCC_TIM5_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM6) {
+        __HAL_RCC_TIM6_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM7) {
+        __HAL_RCC_TIM7_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM8) {
+        __HAL_RCC_TIM8_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM9) {
+        __HAL_RCC_TIM9_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM10) {
+        __HAL_RCC_TIM10_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM11) {
+        __HAL_RCC_TIM11_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM12) {
+        __HAL_RCC_TIM12_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM13) {
+        __HAL_RCC_TIM13_CLK_ENABLE();
+        return true;
+    }
+    if (instance == TIM14) {
+        __HAL_RCC_TIM14_CLK_ENABLE();
+        return true;
+    }
 
-    return false;  /* Unknown timer instance */
+    return false; /* Unknown timer instance */
 }
 
-uint32_t TIM_Clock_GetHz(const TIM_TypeDef *instance)
-{
+uint32_t TIM_Clock_GetHz(const TIM_TypeDef *instance) {
     /* Determine which APB bus the timer is on */
     bool onApb2 = ((instance == TIM1) || (instance == TIM8) || (instance == TIM9) ||
-                  (instance == TIM10) || (instance == TIM11)) != 0;
+                   (instance == TIM10) || (instance == TIM11)) != 0;
 
     /* Get the APB bus clock frequency from HAL */
     uint32_t pclkHz = onApb2 ? HAL_RCC_GetPCLK2Freq() : HAL_RCC_GetPCLK1Freq();
@@ -58,8 +98,7 @@ uint32_t TIM_Clock_GetHz(const TIM_TypeDef *instance)
     return ((ppre & 0x4u) != 0u) ? (pclkHz * 2u) : pclkHz;
 }
 
-bool TIM_Clock_HasOutputChannels(const TIM_TypeDef *instance)
-{
+bool TIM_Clock_HasOutputChannels(const TIM_TypeDef *instance) {
     /* TIM6 and TIM7 are basic timers (16-bit, no output channels).
      * All other timers have at least one output compare channel. */
     return ((instance != NULL) && (instance != TIM6) && (instance != TIM7)) != 0;

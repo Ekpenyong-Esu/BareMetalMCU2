@@ -14,9 +14,10 @@ extern "C" {
 
 /**
  * @brief   Initialize the XPT2046 touch controller
- * @note    The SPI bus itself is shared and must already be initialized; this
- *          driver only owns the chip select and PENIRQ pins.
+ * @note    The bus is opened by the application with SPI_BusInit and may be
+ *          shared; this driver only owns the chip select and PENIRQ pins.
  * @param   hxpt     Handle to initialize
+ * @param   bus      Bus the controller is wired to, already open
  * @param   cs_port  Chip select port
  * @param   cs_pin   Chip select pin
  * @param   irq_port PENIRQ port
@@ -25,9 +26,8 @@ extern "C" {
  * @param   height   Display height used for coordinate mapping
  * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_Init(XPT2046_Handle_t *hxpt,
-                                   GPIO_TypeDef *cs_port, uint16_t cs_pin,
-                                   GPIO_TypeDef *irq_port, uint16_t irq_pin,
+XPT2046_StatusTypeDef XPT2046_Init(XPT2046_Handle_t *hxpt, SPI_Bus_t *bus, GPIO_TypeDef *cs_port,
+                                   uint16_t cs_pin, GPIO_TypeDef *irq_port, uint16_t irq_pin,
                                    uint16_t width, uint16_t height);
 
 /**
@@ -48,9 +48,9 @@ XPT2046_StatusTypeDef XPT2046_DeInit(XPT2046_Handle_t *hxpt);
  * @param   raw_y_max Raw Y read at the bottom edge
  * @retval  XPT2046_StatusTypeDef Operation status
  */
-XPT2046_StatusTypeDef XPT2046_SetCalibration(XPT2046_Handle_t *hxpt,
-                                             uint16_t raw_x_min, uint16_t raw_x_max,
-                                             uint16_t raw_y_min, uint16_t raw_y_max);
+XPT2046_StatusTypeDef XPT2046_SetCalibration(XPT2046_Handle_t *hxpt, uint16_t raw_x_min,
+                                             uint16_t raw_x_max, uint16_t raw_y_min,
+                                             uint16_t raw_y_max);
 
 /**
  * @brief   Mirror either axis to match how the panel is mounted

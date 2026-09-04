@@ -67,25 +67,23 @@ int main(void) {
     HAL_Init();
     SystemClock_Config();
     
-    // Initialize LTDC hardware
-    LTDC_HW_Init();
-    
-    // Initialize LTDC driver
+    // The application owns the HAL handle; pins and clocks come from HAL_LTDC_MspInit()
+    static LTDC_HandleTypeDef hltdc;
     LTDC_Driver_t ltdcDriver;
     LTDC_Driver_Init(&ltdcDriver, &hltdc);
     
-    // Configure display
-    LTDC_DisplayConfig_t displayConfig = {
-        .width = LTDC_DISPLAY_WIDTH,
-        .height = LTDC_DISPLAY_HEIGHT,
-        .backgroundColor = LTDC_COLOR_BLACK,
-        .hsyncActiveLow = true,
-        .vsyncActiveLow = true,
-        .dataEnableActiveLow = false,
-        .pixelClockInverted = true
-    };
+    // Configure display: start from the on-board ILI9341 timings and override
+    // whatever differs (width/height, porches, polarities are all fields)
+    LTDC_DisplayConfig_t displayConfig = LTDC_PanelDefaultsILI9341();
+    displayConfig.backgroundColor = LTDC_COLOR_BLACK;
     
     LTDC_ConfigureDisplay(&ltdcDriver, &displayConfig);
+    
+    // Or do display + layer 0 in one call with a framebuffer the application chose:
+    // LTDC_PanelConfig_t panel = { .framebufferAddress = LAYER0_FRAMEBUFFER,
+    //                              .pixelFormat = LTDC_PIXEL_FORMAT_RGB565_ENUM,
+    //                              .display = LTDC_PanelDefaultsILI9341() };
+    // LTDC_PanelInit(&ltdcDriver, &panel);
     
     // Allocate and configure framebuffer
     uint32_t framebuffer = LAYER0_FRAMEBUFFER;
@@ -94,10 +92,10 @@ int main(void) {
         .framebufferAddress = framebuffer,
         .windowX0 = 0,
         .windowY0 = 0,
-        .windowX1 = LTDC_DISPLAY_WIDTH,
-        .windowY1 = LTDC_DISPLAY_HEIGHT,
-        .imageWidth = LTDC_DISPLAY_WIDTH,
-        .imageHeight = LTDC_DISPLAY_HEIGHT,
+        .windowX1 = LTDC_ILI9341_WIDTH - 1,     // inclusive
+        .windowY1 = LTDC_ILI9341_HEIGHT - 1,
+        .imageWidth = LTDC_ILI9341_WIDTH,
+        .imageHeight = LTDC_ILI9341_HEIGHT,
         .pixelFormat = LTDC_PIXEL_FORMAT_RGB565_ENUM,
         .alpha = 255,
         .alpha0 = 0,
@@ -288,8 +286,9 @@ typedef enum {
 ```c
 HAL_StatusTypeDef LTDC_Driver_Init(LTDC_Driver_t *driver, LTDC_HandleTypeDef *hltdc);
 HAL_StatusTypeDef LTDC_Driver_DeInit(LTDC_Driver_t *driver);
-HAL_StatusTypeDef LTDC_ConfigureDisplay(LTDC_Driver_t *driver, LTDC_DisplayConfig_t *config);
-HAL_StatusTypeDef LTDC_HW_Init(void);
+HAL_StatusTypeDef LTDC_ConfigureDisplay(LTDC_Driver_t *driver, const LTDC_DisplayConfig_t *config);
+LTDC_DisplayConfig_t LTDC_PanelDefaultsILI9341(void);
+HAL_StatusTypeDef LTDC_PanelInit(LTDC_Driver_t *driver, const LTDC_PanelConfig_t *panel);
 ```
 
 #### Layer Management

@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    crc_sw.h
-  * @brief   Software CRC implementation
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    crc_sw.h
+ * @brief   Software CRC implementation
+ ******************************************************************************
+ */
 
 #ifndef CRC_SW_H
 #define CRC_SW_H
@@ -21,15 +21,15 @@ extern "C" {
  * @return The raw running CRC. Pass it to CRC_SoftwareFinalize() when done.
  * @note   Returns @p seed unchanged if @p config or @p data is NULL.
  */
-uint32_t CRC_SoftwareUpdate(const CRC_Config *config, uint32_t seed,
-                            const uint8_t *data, uint32_t size);
+uint32_t CRC_SoftwareUpdate(const CRC_Config *config, uint32_t seed, const uint8_t *data,
+                            uint32_t size);
 
 /**
  * @brief  Word-wide counterpart of CRC_SoftwareUpdate().
  * @param  size Number of 32-bit words, not bytes.
  */
-uint32_t CRC_SoftwareUpdate32(const CRC_Config *config, uint32_t seed,
-                              const uint32_t *data, uint32_t size);
+uint32_t CRC_SoftwareUpdate32(const CRC_Config *config, uint32_t seed, const uint32_t *data,
+                              uint32_t size);
 
 /**
  * @brief  Apply the output reflection to a running CRC.

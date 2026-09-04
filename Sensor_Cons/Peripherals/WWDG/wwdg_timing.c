@@ -5,19 +5,26 @@
 
 #include "wwdg_timing.h"
 
-#define WWDG_HZ_PER_MHZ     1000000U
+#define WWDG_HZ_PER_MHZ 1000000U
 
-WWDG_StatusTypeDef WWDG_GetPrescalerDivider(uint32_t prescaler, uint32_t *divider)
-{
+WWDG_StatusTypeDef WWDG_GetPrescalerDivider(uint32_t prescaler, uint32_t *divider) {
     if (divider == NULL) {
         return WWDG_INVALID_PARAM;
     }
 
     switch (prescaler) {
-        case WWDG_PRESCALER_1: *divider = 1U; break;
-        case WWDG_PRESCALER_2: *divider = 2U; break;
-        case WWDG_PRESCALER_4: *divider = 4U; break;
-        case WWDG_PRESCALER_8: *divider = 8U; break;
+        case WWDG_PRESCALER_1:
+            *divider = 1U;
+            break;
+        case WWDG_PRESCALER_2:
+            *divider = 2U;
+            break;
+        case WWDG_PRESCALER_4:
+            *divider = 4U;
+            break;
+        case WWDG_PRESCALER_8:
+            *divider = 8U;
+            break;
         default:
             return WWDG_INVALID_PARAM;
     }
@@ -26,14 +33,13 @@ WWDG_StatusTypeDef WWDG_GetPrescalerDivider(uint32_t prescaler, uint32_t *divide
 }
 
 WWDG_StatusTypeDef WWDG_CalculateTimeout(uint32_t prescaler, uint32_t counter, uint32_t window,
-                                         uint32_t *minTimeout, uint32_t *maxTimeout)
-{
-    WWDG_StatusTypeDef status;
-    uint32_t divider;
-    uint32_t pclk1Mhz;
+                                         uint32_t *minTimeout, uint32_t *maxTimeout) {
+    WWDG_StatusTypeDef status = WWDG_OK;
+    uint32_t divider = 0;
+    uint32_t pclk1Mhz = 0;
 
-    if (counter < WWDG_COUNTER_MIN || counter > WWDG_COUNTER_MAX ||
-        window < WWDG_WINDOW_MIN || window > counter) {
+    if (counter < WWDG_COUNTER_MIN || counter > WWDG_COUNTER_MAX || window < WWDG_WINDOW_MIN ||
+        window > counter) {
         return WWDG_INVALID_PARAM;
     }
 

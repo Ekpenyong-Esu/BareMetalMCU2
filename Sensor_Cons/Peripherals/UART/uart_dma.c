@@ -12,8 +12,7 @@
 
 /* Spins until the TX callback raises txComplete; self-contained, so this mode
    never depends on the driver's other files. */
-static UART_Status_t WaitForFlag(volatile bool *flag, uint32_t timeout)
-{
+static UART_Status_t WaitForFlag(const volatile bool *flag, uint32_t timeout) {
     uint32_t startTick = HAL_GetTick();
 
     while (!*flag) {
@@ -26,8 +25,8 @@ static UART_Status_t WaitForFlag(volatile bool *flag, uint32_t timeout)
 }
 
 /* Reception lands in the ring; this drains a complete packet out of it. */
-static UART_Status_t WaitForRingData(UART_Handle_t *handle, uint8_t *data, uint16_t size, uint32_t timeout)
-{
+static UART_Status_t WaitForRingData(UART_Handle_t *handle, uint8_t *data, uint16_t size,
+                                     uint32_t timeout) {
     uint32_t startTick = HAL_GetTick();
 
     while (timeout > 0 && !handle->rxComplete) {
@@ -50,8 +49,7 @@ static UART_Status_t WaitForRingData(UART_Handle_t *handle, uint8_t *data, uint1
 
 /* Reception is armed the same way whether it is the first call or a re-arm
    from interrupt context, so both paths share this. */
-static bool StartReceive(UART_Handle_t* handle)
-{
+static bool StartReceive(UART_Handle_t *handle) {
     if (HAL_UARTEx_ReceiveToIdle_DMA(handle->huart, handle->rxBuffer, handle->rxSize) == HAL_OK) {
         /* Half-transfer interrupts would report packets that have not arrived yet. */
         __HAL_DMA_DISABLE_IT(handle->huart->hdmarx, DMA_IT_HT);
@@ -62,8 +60,7 @@ static bool StartReceive(UART_Handle_t* handle)
     return HAL_UART_Receive_DMA(handle->huart, handle->rxBuffer, handle->rxSize) == HAL_OK;
 }
 
-UART_Status_t UART_DMA_Init(UART_Handle_t* handle, const UART_Config_t* config)
-{
+UART_Status_t UART_DMA_Init(UART_Handle_t *handle, const UART_Config_t *config) {
     if (handle == NULL || config == NULL || config->instance == NULL || handle->huart == NULL) {
         log_debug("DMA UART: handle, huart or config is NULL");
         return UART_ERROR;
@@ -77,9 +74,11 @@ UART_Status_t UART_DMA_Init(UART_Handle_t* handle, const UART_Config_t* config)
     RingBuffer_Init(&handle->rxRing);
     memset(handle->huart, 0, sizeof(UART_HandleTypeDef));
 
-    /* Publish before HAL_UART_Init(), which calls into HAL_UART_MspInit() and
-     * needs the mode to decide whether to wire up DMA. */
-    UART_SetActiveHandle(handle);
+    /* Register before HAL_UART_Init(), which calls into HAL_UART_MspInit() and
+     * needs the config to find the DMA streams. */
+    if (UART_Register(handle) != UART_OK) {
+        return UART_ERROR;
+    }
 
     handle->huart->Instance = config->instance;
     handle->huart->Init.BaudRate = config->baudRate;
@@ -92,6 +91,7 @@ UART_Status_t UART_DMA_Init(UART_Handle_t* handle, const UART_Config_t* config)
 
     if (HAL_UART_Init(handle->huart) != HAL_OK) {
         log_debug("DMA UART initialization failed");
+        UART_Unregister(handle);
         return UART_ERROR;
     }
 
@@ -99,6 +99,8 @@ UART_Status_t UART_DMA_Init(UART_Handle_t* handle, const UART_Config_t* config)
        dereference a NULL hdmatx/hdmarx on the first transfer. */
     if (handle->huart->hdmatx == NULL || handle->huart->hdmarx == NULL) {
         log_error("UART: DMA mode selected but no DMA stream is linked");
+        (void)HAL_UART_DeInit(handle->huart);
+        UART_Unregister(handle);
         return UART_ERROR;
     }
 
@@ -112,8 +114,7 @@ UART_Status_t UART_DMA_Init(UART_Handle_t* handle, const UART_Config_t* config)
 }
 
 /* Both transfer directions share the same preconditions. */
-static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, uint16_t size)
-{
+static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, uint16_t size) {
     if (handle == NULL) {
         log_debug("UART handle is NULL");
         return false;
@@ -137,15 +138,15 @@ static bool IsReadyForTransfer(const UART_Handle_t *handle, const void *data, ui
     return true;
 }
 
-UART_Status_t UART_DMA_Transmit(UART_Handle_t* handle, const uint8_t* data, uint16_t size, uint32_t timeout)
-{
+UART_Status_t UART_DMA_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size,
+                                uint32_t timeout) {
     if (!IsReadyForTransfer(handle, data, size)) {
         return UART_ERROR;
     }
 
     handle->txComplete = false;
 
-    if (HAL_UART_Transmit_DMA(handle->huart, (uint8_t*)data, size) != HAL_OK) {
+    if (HAL_UART_Transmit_DMA(handle->huart, (uint8_t *)data, size) != HAL_OK) {
         log_debug("DMA UART Transmit failed");
         return UART_ERROR;
     }
@@ -157,8 +158,8 @@ UART_Status_t UART_DMA_Transmit(UART_Handle_t* handle, const uint8_t* data, uint
     return WaitForFlag(&handle->txComplete, timeout);
 }
 
-UART_Status_t UART_DMA_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t size, uint32_t timeout)
-{
+UART_Status_t UART_DMA_Receive(UART_Handle_t *handle, uint8_t *data, uint16_t size,
+                               uint32_t timeout) {
     if (!IsReadyForTransfer(handle, data, size)) {
         return UART_ERROR;
     }
@@ -180,13 +181,13 @@ UART_Status_t UART_DMA_Receive(UART_Handle_t* handle, uint8_t* data, uint16_t si
     return WaitForRingData(handle, data, size, timeout);
 }
 
-void UART_DMA_Rearm(UART_Handle_t* handle)
-{
+void UART_DMA_Rearm(UART_Handle_t *handle) {
     StartReceive(handle);
 }
 
 /*
  * DMA interrupt vectors are owned by Core, not this driver.
- * DMA2_Stream7_IRQHandler() (TX) and DMA2_Stream5_IRQHandler() (RX) are
- * defined in Core/Src/stm32f4xx_it.c and dispatch via HAL_DMA_IRQHandler().
+ * DMAx_StreamN_IRQHandler() in Core/Src/stm32f4xx_it.c calls
+ * UART_DmaStreamIRQHandler(DMAx_StreamN), which finds the link that was given
+ * that stream and dispatches via HAL_DMA_IRQHandler().
  */

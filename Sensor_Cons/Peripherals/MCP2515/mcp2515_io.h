@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mcp2515_io.h
-  * @brief   Register-level access to the MCP2515 over the shared SPI bus
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mcp2515_io.h
+ * @brief   Register-level access to the MCP2515 over the shared SPI bus
+ ******************************************************************************
+ */
 
 #ifndef MCP2515_IO_H
 #define MCP2515_IO_H
@@ -31,8 +31,8 @@ MCP2515_Status_t MCP2515_ReadRegister(MCP2515_Handle_t *hmcp, uint8_t reg, uint8
  * @param   length Number of registers
  * @retval  MCP2515_Status_t Status of the operation
  */
-MCP2515_Status_t MCP2515_ReadRegisters(MCP2515_Handle_t *hmcp, uint8_t reg,
-                                       uint8_t *data, uint8_t length);
+MCP2515_Status_t MCP2515_ReadRegisters(MCP2515_Handle_t *hmcp, uint8_t reg, uint8_t *data,
+                                       uint8_t length);
 
 /**
  * @brief   Write one register
@@ -51,8 +51,8 @@ MCP2515_Status_t MCP2515_WriteRegister(MCP2515_Handle_t *hmcp, uint8_t reg, uint
  * @param   length Number of registers
  * @retval  MCP2515_Status_t Status of the operation
  */
-MCP2515_Status_t MCP2515_WriteRegisters(MCP2515_Handle_t *hmcp, uint8_t reg,
-                                        const uint8_t *data, uint8_t length);
+MCP2515_Status_t MCP2515_WriteRegisters(MCP2515_Handle_t *hmcp, uint8_t reg, const uint8_t *data,
+                                        uint8_t length);
 
 /**
  * @brief   Change only the masked bits of a register
@@ -64,8 +64,8 @@ MCP2515_Status_t MCP2515_WriteRegisters(MCP2515_Handle_t *hmcp, uint8_t reg,
  * @note    Not every register supports this; the datasheet lists the ones that
  *          do, and the control and interrupt registers used here are among them.
  */
-MCP2515_Status_t MCP2515_ModifyRegister(MCP2515_Handle_t *hmcp, uint8_t reg,
-                                        uint8_t mask, uint8_t value);
+MCP2515_Status_t MCP2515_ModifyRegister(MCP2515_Handle_t *hmcp, uint8_t reg, uint8_t mask,
+                                        uint8_t value);
 
 /**
  * @brief   Issue the reset instruction, leaving the device in configuration mode

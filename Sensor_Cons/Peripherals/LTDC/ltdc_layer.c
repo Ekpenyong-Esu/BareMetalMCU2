@@ -21,9 +21,9 @@ typedef struct {
 /* Private data --------------------------------------------------------------*/
 
 static const LTDC_BlendEntry_t s_blendModes[] = {
-    {LTDC_BLEND_CONSTANT_ALPHA, LTDC_BLENDING_FACTOR1_CA,     LTDC_BLENDING_FACTOR2_CA},
-    {LTDC_BLEND_PIXEL_ALPHA,    LTDC_BLENDING_FACTOR1_PAxCA,  LTDC_BLENDING_FACTOR2_PAxCA},
-    {LTDC_BLEND_NO_BLENDING,    LTDC_BLENDING_FACTOR1_CA,     LTDC_BLENDING_FACTOR2_CA},
+    {LTDC_BLEND_CONSTANT_ALPHA, LTDC_BLENDING_FACTOR1_CA, LTDC_BLENDING_FACTOR2_CA},
+    {LTDC_BLEND_PIXEL_ALPHA, LTDC_BLENDING_FACTOR1_PAxCA, LTDC_BLENDING_FACTOR2_PAxCA},
+    {LTDC_BLEND_NO_BLENDING, LTDC_BLENDING_FACTOR1_CA, LTDC_BLENDING_FACTOR2_CA},
 };
 
 /* Private functions ---------------------------------------------------------*/
@@ -33,12 +33,12 @@ static const LTDC_BlendEntry_t s_blendModes[] = {
  * @param config Driver layer configuration
  * @param layerCfg Destination HAL structure
  */
-static void LTDC_BuildLayerCfg(const LTDC_LayerConfig_t *config, LTDC_LayerCfgTypeDef *layerCfg)
-{
+static void LTDC_BuildLayerCfg(const LTDC_LayerConfig_t *config, LTDC_LayerCfgTypeDef *layerCfg) {
+    /* The driver keeps inclusive end coordinates; the HAL wants X0 + width. */
     layerCfg->WindowX0 = config->windowX0;
-    layerCfg->WindowX1 = config->windowX1;
+    layerCfg->WindowX1 = (uint32_t)config->windowX1 + 1U;
     layerCfg->WindowY0 = config->windowY0;
-    layerCfg->WindowY1 = config->windowY1;
+    layerCfg->WindowY1 = (uint32_t)config->windowY1 + 1U;
     layerCfg->PixelFormat = LTDC_PixelFormatToHAL(config->pixelFormat);
     layerCfg->Alpha = config->alpha;
     layerCfg->Alpha0 = config->alpha0;
@@ -57,9 +57,11 @@ static void LTDC_BuildLayerCfg(const LTDC_LayerConfig_t *config, LTDC_LayerCfgTy
         }
     }
 
-    layerCfg->Backcolor.Blue  = (uint8_t)(config->backgroundColor & 0xFFU);
-    layerCfg->Backcolor.Green = (uint8_t)((config->backgroundColor >> 8) & 0xFFU);
-    layerCfg->Backcolor.Red   = (uint8_t)((config->backgroundColor >> 16) & 0xFFU);
+    layerCfg->Backcolor.Blue = (uint8_t)(config->backgroundColor & LTDC_CHANNEL_MASK);
+    layerCfg->Backcolor.Green =
+        (uint8_t)((config->backgroundColor >> LTDC_GREEN_SHIFT) & LTDC_CHANNEL_MASK);
+    layerCfg->Backcolor.Red =
+        (uint8_t)((config->backgroundColor >> LTDC_RED_SHIFT) & LTDC_CHANNEL_MASK);
 }
 
 /**
@@ -68,8 +70,7 @@ static void LTDC_BuildLayerCfg(const LTDC_LayerConfig_t *config, LTDC_LayerCfgTy
  * @param layer Layer number
  * @return HAL_StatusTypeDef HAL_OK when both are valid
  */
-static HAL_StatusTypeDef LTDC_CheckLayerAccess(LTDC_Driver_t *driver, uint8_t layer)
-{
+static HAL_StatusTypeDef LTDC_CheckLayerAccess(LTDC_Driver_t *driver, uint8_t layer) {
     if (LTDC_ValidateDriver(driver) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -82,8 +83,8 @@ static HAL_StatusTypeDef LTDC_CheckLayerAccess(LTDC_Driver_t *driver, uint8_t la
 
 /* Public functions ----------------------------------------------------------*/
 
-HAL_StatusTypeDef LTDC_ConfigureLayer(LTDC_Driver_t *driver, uint8_t layer, LTDC_LayerConfig_t *config)
-{
+HAL_StatusTypeDef LTDC_ConfigureLayer(LTDC_Driver_t *driver, uint8_t layer,
+                                      LTDC_LayerConfig_t *config) {
     log_debug("LTDC: Configuring layer %d", layer);
 
     if (LTDC_CheckLayerAccess(driver, layer) != HAL_OK || config == NULL) {
@@ -115,8 +116,7 @@ HAL_StatusTypeDef LTDC_ConfigureLayer(LTDC_Driver_t *driver, uint8_t layer, LTDC
     return HAL_OK;
 }
 
-HAL_StatusTypeDef LTDC_EnableLayer(LTDC_Driver_t *driver, uint8_t layer)
-{
+HAL_StatusTypeDef LTDC_EnableLayer(LTDC_Driver_t *driver, uint8_t layer) {
     if (LTDC_CheckLayerAccess(driver, layer) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -133,8 +133,7 @@ HAL_StatusTypeDef LTDC_EnableLayer(LTDC_Driver_t *driver, uint8_t layer)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef LTDC_DisableLayer(LTDC_Driver_t *driver, uint8_t layer)
-{
+HAL_StatusTypeDef LTDC_DisableLayer(LTDC_Driver_t *driver, uint8_t layer) {
     if (LTDC_CheckLayerAccess(driver, layer) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -146,8 +145,7 @@ HAL_StatusTypeDef LTDC_DisableLayer(LTDC_Driver_t *driver, uint8_t layer)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef LTDC_SetActiveLayer(LTDC_Driver_t *driver, uint8_t layer)
-{
+HAL_StatusTypeDef LTDC_SetActiveLayer(LTDC_Driver_t *driver, uint8_t layer) {
     if (LTDC_CheckLayerAccess(driver, layer) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -156,8 +154,7 @@ HAL_StatusTypeDef LTDC_SetActiveLayer(LTDC_Driver_t *driver, uint8_t layer)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef LTDC_SetLayerAlpha(LTDC_Driver_t *driver, uint8_t layer, uint8_t alpha)
-{
+HAL_StatusTypeDef LTDC_SetLayerAlpha(LTDC_Driver_t *driver, uint8_t layer, uint8_t alpha) {
     if (LTDC_CheckLayerAccess(driver, layer) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -170,17 +167,18 @@ HAL_StatusTypeDef LTDC_SetLayerAlpha(LTDC_Driver_t *driver, uint8_t layer, uint8
     return status;
 }
 
-HAL_StatusTypeDef LTDC_SetWindowPosition_NoReload(LTDC_Driver_t *driver, uint16_t x, uint16_t y, uint8_t layer)
-{
+HAL_StatusTypeDef LTDC_SetWindowPosition_NoReload(LTDC_Driver_t *driver, uint16_t posX,
+                                                  uint16_t posY, uint8_t layer) {
     if (LTDC_CheckLayerAccess(driver, layer) != HAL_OK) {
         return HAL_ERROR;
     }
-    if (LTDC_ValidateCoordinates(x, y) != HAL_OK) {
+    if (LTDC_ValidateCoordinates(driver, posX, posY) != HAL_OK) {
         driver->errorCode = LTDC_ERROR_INVALID_PARAM;
         return HAL_ERROR;
     }
 
-    HAL_StatusTypeDef status = HAL_LTDC_SetWindowPosition_NoReload(driver->hltdc, x, y, layer);
+    HAL_StatusTypeDef status =
+        HAL_LTDC_SetWindowPosition_NoReload(driver->hltdc, posX, posY, layer);
     if (status != HAL_OK) {
         driver->errorCode = LTDC_ERROR_LAYER_CONFIG;
         return status;
@@ -190,17 +188,17 @@ HAL_StatusTypeDef LTDC_SetWindowPosition_NoReload(LTDC_Driver_t *driver, uint16_
     LTDC_LayerConfig_t *cached = &driver->layers[layer];
     uint16_t width = (cached->windowX1 - cached->windowX0) + 1;
     uint16_t height = (cached->windowY1 - cached->windowY0) + 1;
-    cached->windowX0 = x;
-    cached->windowY0 = y;
-    cached->windowX1 = x + width - 1;
-    cached->windowY1 = y + height - 1;
+    cached->windowX0 = posX;
+    cached->windowY0 = posY;
+    cached->windowX1 = posX + width - 1;
+    cached->windowY1 = posY + height - 1;
 
     return HAL_OK;
 }
 
-HAL_StatusTypeDef LTDC_SetLayerPosition(LTDC_Driver_t *driver, uint8_t layer, uint16_t x, uint16_t y)
-{
-    HAL_StatusTypeDef status = LTDC_SetWindowPosition_NoReload(driver, x, y, layer);
+HAL_StatusTypeDef LTDC_SetLayerPosition(LTDC_Driver_t *driver, uint8_t layer, uint16_t posX,
+                                        uint16_t posY) {
+    HAL_StatusTypeDef status = LTDC_SetWindowPosition_NoReload(driver, posX, posY, layer);
     if (status != HAL_OK) {
         return status;
     }
@@ -208,12 +206,11 @@ HAL_StatusTypeDef LTDC_SetLayerPosition(LTDC_Driver_t *driver, uint8_t layer, ui
     return LTDC_RequestReload(driver, LTDC_SRCR_VBR);
 }
 
-HAL_StatusTypeDef LTDC_SetLayerWindow(LTDC_Driver_t *driver, uint8_t layer, LTDC_Rect_t *window)
-{
+HAL_StatusTypeDef LTDC_SetLayerWindow(LTDC_Driver_t *driver, uint8_t layer, LTDC_Rect_t *window) {
     if (LTDC_CheckLayerAccess(driver, layer) != HAL_OK) {
         return HAL_ERROR;
     }
-    if (LTDC_ValidateRect(window) != HAL_OK) {
+    if (LTDC_ValidateRect(driver, window) != HAL_OK) {
         driver->errorCode = LTDC_ERROR_INVALID_PARAM;
         return HAL_ERROR;
     }
@@ -222,8 +219,8 @@ HAL_StatusTypeDef LTDC_SetLayerWindow(LTDC_Driver_t *driver, uint8_t layer, LTDC
     LTDC_LayerConfig_t config = driver->layers[layer];
     config.windowX0 = window->x;
     config.windowY0 = window->y;
-    config.windowX1 = window->x + window->width - 1;    /* inclusive */
-    config.windowY1 = window->y + window->height - 1;   /* inclusive */
+    config.windowX1 = window->x + window->width - 1;  /* inclusive */
+    config.windowY1 = window->y + window->height - 1; /* inclusive */
     config.imageWidth = window->width;
     config.imageHeight = window->height;
 
@@ -240,8 +237,8 @@ HAL_StatusTypeDef LTDC_SetLayerWindow(LTDC_Driver_t *driver, uint8_t layer, LTDC
     return HAL_OK;
 }
 
-HAL_StatusTypeDef LTDC_GetLayerInfo(LTDC_Driver_t *driver, uint8_t layer, LTDC_LayerConfig_t *info)
-{
+HAL_StatusTypeDef LTDC_GetLayerInfo(LTDC_Driver_t *driver, uint8_t layer,
+                                    LTDC_LayerConfig_t *info) {
     if (LTDC_CheckLayerAccess(driver, layer) != HAL_OK || info == NULL) {
         if (driver != NULL) {
             driver->errorCode = LTDC_ERROR_INVALID_PARAM;
@@ -253,8 +250,7 @@ HAL_StatusTypeDef LTDC_GetLayerInfo(LTDC_Driver_t *driver, uint8_t layer, LTDC_L
     return HAL_OK;
 }
 
-bool LTDC_IsLayerEnabled(LTDC_Driver_t *driver, uint8_t layer)
-{
+bool LTDC_IsLayerEnabled(LTDC_Driver_t *driver, uint8_t layer) {
     if (driver == NULL || layer >= LTDC_MAX_LAYERS) {
         return false;
     }

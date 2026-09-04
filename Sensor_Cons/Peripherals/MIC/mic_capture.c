@@ -1,17 +1,16 @@
 /**
-  ******************************************************************************
-  * @file    mic_capture.c
-  * @brief   Recording control and PCM buffer readout
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mic_capture.c
+ * @brief   Recording control and PCM buffer readout
+ ******************************************************************************
+ */
 
 #include "mic_capture.h"
 #include "mic_core.h"
 #include "mic_dsp.h"
 #include <string.h>
 
-MIC_StatusTypeDef MIC_StartRecording(MIC_HandleTypeDef *hmic)
-{
+MIC_StatusTypeDef MIC_StartRecording(MIC_HandleTypeDef *hmic) {
     MIC_StatusTypeDef status = MIC_CheckReady(hmic);
     if (status != MIC_OK) {
         return status;
@@ -28,7 +27,8 @@ MIC_StatusTypeDef MIC_StartRecording(MIC_HandleTypeDef *hmic)
     hmic->HpPrevOutput = 0;
     (void)MIC_ResetStatistics(hmic);
 
-    if (HAL_I2S_Receive_DMA(hmic->hi2s, (uint16_t *)hmic->PDMBuffer, MIC_PDM_BUFFER_SIZE) != HAL_OK) {
+    if (HAL_I2S_Receive_DMA(hmic->hi2s, (uint16_t *)hmic->PDMBuffer, MIC_PDM_BUFFER_SIZE) !=
+        HAL_OK) {
         return MIC_DMA_ERROR;
     }
 
@@ -38,8 +38,7 @@ MIC_StatusTypeDef MIC_StartRecording(MIC_HandleTypeDef *hmic)
     return MIC_OK;
 }
 
-MIC_StatusTypeDef MIC_StopRecording(MIC_HandleTypeDef *hmic)
-{
+MIC_StatusTypeDef MIC_StopRecording(MIC_HandleTypeDef *hmic) {
     if (hmic == NULL) {
         return MIC_INVALID_PARAM;
     }
@@ -57,8 +56,7 @@ MIC_StatusTypeDef MIC_StopRecording(MIC_HandleTypeDef *hmic)
     return MIC_OK;
 }
 
-MIC_StatusTypeDef MIC_PauseRecording(MIC_HandleTypeDef *hmic)
-{
+MIC_StatusTypeDef MIC_PauseRecording(MIC_HandleTypeDef *hmic) {
     if (hmic == NULL) {
         return MIC_INVALID_PARAM;
     }
@@ -73,8 +71,7 @@ MIC_StatusTypeDef MIC_PauseRecording(MIC_HandleTypeDef *hmic)
     return MIC_OK;
 }
 
-MIC_StatusTypeDef MIC_ResumeRecording(MIC_HandleTypeDef *hmic)
-{
+MIC_StatusTypeDef MIC_ResumeRecording(MIC_HandleTypeDef *hmic) {
     if (hmic == NULL) {
         return MIC_INVALID_PARAM;
     }
@@ -89,8 +86,7 @@ MIC_StatusTypeDef MIC_ResumeRecording(MIC_HandleTypeDef *hmic)
     return MIC_OK;
 }
 
-MIC_StatusTypeDef MIC_ReadAudioData(MIC_HandleTypeDef *hmic, int16_t *buffer, uint32_t length)
-{
+MIC_StatusTypeDef MIC_ReadAudioData(MIC_HandleTypeDef *hmic, int16_t *buffer, uint32_t length) {
     MIC_StatusTypeDef status = MIC_CheckReady(hmic);
     if (status != MIC_OK) {
         return status;
@@ -116,8 +112,7 @@ MIC_StatusTypeDef MIC_ReadAudioData(MIC_HandleTypeDef *hmic, int16_t *buffer, ui
     return MIC_OK;
 }
 
-bool MIC_IsRecording(const MIC_HandleTypeDef *hmic)
-{
+bool MIC_IsRecording(const MIC_HandleTypeDef *hmic) {
     if (hmic == NULL) {
         return false;
     }

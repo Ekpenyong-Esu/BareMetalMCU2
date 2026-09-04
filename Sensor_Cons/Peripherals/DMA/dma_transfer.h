@@ -21,8 +21,8 @@ extern "C" {
  * @retval  HAL_StatusTypeDef HAL_OK on success
  * @note    Both addresses must be aligned to the configured item width.
  */
-HAL_StatusTypeDef DMA_StartTransfer(DMA_Handle_t *handle, uint32_t srcAddr,
-                                    uint32_t dstAddr, uint32_t dataLength);
+HAL_StatusTypeDef DMA_StartTransfer(DMA_Handle_t *handle, uint32_t srcAddr, uint32_t dstAddr,
+                                    uint32_t dataLength);
 
 /**
  * @brief   Start a peripheral to memory transfer
@@ -32,8 +32,8 @@ HAL_StatusTypeDef DMA_StartTransfer(DMA_Handle_t *handle, uint32_t srcAddr,
  * @param   dataLength Number of items
  * @retval  HAL_StatusTypeDef HAL_OK on success
  */
-HAL_StatusTypeDef DMA_StartPeriphToMem(DMA_Handle_t *handle, uint32_t periphAddr,
-                                       uint32_t memAddr, uint32_t dataLength);
+HAL_StatusTypeDef DMA_StartPeriphToMem(DMA_Handle_t *handle, uint32_t periphAddr, uint32_t memAddr,
+                                       uint32_t dataLength);
 
 /**
  * @brief   Start a memory to peripheral transfer
@@ -43,8 +43,8 @@ HAL_StatusTypeDef DMA_StartPeriphToMem(DMA_Handle_t *handle, uint32_t periphAddr
  * @param   dataLength Number of items
  * @retval  HAL_StatusTypeDef HAL_OK on success
  */
-HAL_StatusTypeDef DMA_StartMemToPeriph(DMA_Handle_t *handle, uint32_t memAddr,
-                                       uint32_t periphAddr, uint32_t dataLength);
+HAL_StatusTypeDef DMA_StartMemToPeriph(DMA_Handle_t *handle, uint32_t memAddr, uint32_t periphAddr,
+                                       uint32_t dataLength);
 
 /**
  * @brief   Abort the transfer in progress

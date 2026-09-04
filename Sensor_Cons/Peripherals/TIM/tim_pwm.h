@@ -42,9 +42,7 @@ extern "C" {
  * @param  period    Auto-reload value (PWM period = period + 1 timer clocks)
  * @retval HAL_OK on success, HAL_ERROR if arguments invalid or HAL init fails
  */
-HAL_StatusTypeDef TIM_PWM_Init(TIM_HandleTypeDef *htim,
-                               TIM_TypeDef *instance,
-                               uint32_t prescaler,
+HAL_StatusTypeDef TIM_PWM_Init(TIM_HandleTypeDef *htim, TIM_TypeDef *instance, uint32_t prescaler,
                                uint32_t period);
 
 /**
@@ -66,10 +64,8 @@ HAL_StatusTypeDef TIM_PWM_Init(TIM_HandleTypeDef *htim,
  *         - divider exceeds 16-bit prescaler limit (65536)
  *         - HAL initialization fails
  */
-HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim,
-                                 TIM_TypeDef *instance,
-                                 uint32_t frequencyHz,
-                                 uint32_t steps);
+HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim, TIM_TypeDef *instance,
+                                 uint32_t frequencyHz, uint32_t steps);
 
 /**
  * @brief  Configure a PWM channel's duty cycle and polarity
@@ -84,9 +80,7 @@ HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim,
  * @param  polarity TIM_OCPOLARITY_HIGH (active high) or TIM_OCPOLARITY_LOW (active low)
  * @retval HAL_OK on success, HAL_ERROR if htim is NULL or HAL config fails
  */
-HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim,
-                                        uint32_t channel,
-                                        uint32_t pulse,
+HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t pulse,
                                         uint32_t polarity);
 
 /**

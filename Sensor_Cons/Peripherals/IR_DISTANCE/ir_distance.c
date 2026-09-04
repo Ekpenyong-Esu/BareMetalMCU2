@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ir_distance.c
-  * @brief   IR distance sensor lifecycle and configuration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ir_distance.c
+ * @brief   IR distance sensor lifecycle and configuration
+ ******************************************************************************
+ */
 
 #include "ir_distance_core.h"
 #include "ir_distance_adc.h"
@@ -11,8 +11,7 @@
 #include "log.h"
 #include <string.h>
 
-static IR_DISTANCE_StatusTypeDef IR_DISTANCE_ValidateConfig(const IR_DISTANCE_Config_t *config)
-{
+static IR_DISTANCE_StatusTypeDef IR_DISTANCE_ValidateConfig(const IR_DISTANCE_Config_t *config) {
     if (config == NULL || config->sensorType > IR_DISTANCE_CUSTOM) {
         return IR_DISTANCE_INVALID_PARAM;
     }
@@ -33,14 +32,11 @@ static IR_DISTANCE_StatusTypeDef IR_DISTANCE_ValidateConfig(const IR_DISTANCE_Co
     return IR_DISTANCE_OK;
 }
 
-IR_DISTANCE_StatusTypeDef IR_DISTANCE_Init(IR_DISTANCE_Handle_t *hird,
-                                           ADC_HandleStruct *hadc,
-                                           uint32_t channel,
-                                           IR_DISTANCE_SensorType_t sensorType)
-{
+IR_DISTANCE_StatusTypeDef IR_DISTANCE_Init(IR_DISTANCE_Handle_t *hird, ADC_HandleStruct *hadc,
+                                           uint32_t channel, IR_DISTANCE_SensorType_t sensorType) {
     IR_DISTANCE_Config_t defaultConfig;
-    const IR_DISTANCE_CustomCurve_t *curve;
-    IR_DISTANCE_StatusTypeDef status;
+    const IR_DISTANCE_CustomCurve_t *curve = NULL;
+    IR_DISTANCE_StatusTypeDef status = IR_DISTANCE_OK;
 
     if (hird == NULL || hadc == NULL || sensorType > IR_DISTANCE_CUSTOM) {
         log_error("IR_DISTANCE: Invalid parameters provided to IR_DISTANCE_Init");
@@ -80,8 +76,7 @@ IR_DISTANCE_StatusTypeDef IR_DISTANCE_Init(IR_DISTANCE_Handle_t *hird,
     return IR_DISTANCE_OK;
 }
 
-IR_DISTANCE_StatusTypeDef IR_DISTANCE_DeInit(IR_DISTANCE_Handle_t *hird)
-{
+IR_DISTANCE_StatusTypeDef IR_DISTANCE_DeInit(IR_DISTANCE_Handle_t *hird) {
     IR_DISTANCE_CHECK_HANDLE(hird);
 
     hird->isInitialized = false;
@@ -92,9 +87,8 @@ IR_DISTANCE_StatusTypeDef IR_DISTANCE_DeInit(IR_DISTANCE_Handle_t *hird)
 }
 
 IR_DISTANCE_StatusTypeDef IR_DISTANCE_Config(IR_DISTANCE_Handle_t *hird,
-                                             const IR_DISTANCE_Config_t *config)
-{
-    IR_DISTANCE_StatusTypeDef status;
+                                             const IR_DISTANCE_Config_t *config) {
+    IR_DISTANCE_StatusTypeDef status = IR_DISTANCE_OK;
 
     if (hird == NULL) {
         return IR_DISTANCE_INVALID_PARAM;
@@ -110,13 +104,10 @@ IR_DISTANCE_StatusTypeDef IR_DISTANCE_Config(IR_DISTANCE_Handle_t *hird,
     return IR_DISTANCE_OK;
 }
 
-IR_DISTANCE_Config_t IR_DISTANCE_GetDefaultConfig(IR_DISTANCE_SensorType_t sensorType)
-{
-    IR_DISTANCE_Config_t config = {
-        .sensorType = sensorType,
-        .averagingSamples = IR_DISTANCE_DEFAULT_AVERAGING_SAMPLES,
-        .measurementTimeout = IR_DISTANCE_DEFAULT_MEASUREMENT_TIMEOUT
-    };
+IR_DISTANCE_Config_t IR_DISTANCE_GetDefaultConfig(IR_DISTANCE_SensorType_t sensorType) {
+    IR_DISTANCE_Config_t config = {.sensorType = sensorType,
+                                   .averagingSamples = IR_DISTANCE_DEFAULT_AVERAGING_SAMPLES,
+                                   .measurementTimeout = IR_DISTANCE_DEFAULT_MEASUREMENT_TIMEOUT};
 
     switch (sensorType) {
         case IR_DISTANCE_GP2Y0A21YK:

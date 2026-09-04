@@ -144,14 +144,23 @@ Ensure RTC module is enabled in `stm32f4xx_hal_conf.h`:
 ```
 
 ### Clock Configuration
-The RTC driver automatically configures:
-- LSE (Low Speed External) oscillator as RTC clock source
-- RTC peripheral clock enable
-- Prescaler values for 1Hz RTC tick
+The application chooses the clock source through `RTC_ConfigTypeDef.ClockSource`;
+the driver assumes nothing about the board. `RTC_Init()` uses LSI because it needs
+no external part. To use a fitted 32.768 kHz crystal:
+
+```c
+RTC_ConfigTypeDef cfg = RTC_ConfigForClockSource(RTC_CLOCK_LSE);  /* 127 / 255 */
+RTC_Init_Custom(&cfg);
+```
+
+`RTC_ConfigForClockSource()` fills the 1 Hz prescalers for LSI (124 / 255) and
+LSE (127 / 255). For `RTC_CLOCK_HSE_DIV` set `HseRtcClockSelection` to one of
+`RCC_RTCCLKSOURCE_HSE_DIVx` and both prescalers yourself; HSE must already be
+running, the driver only verifies it.
 
 ### Hardware Requirements
-- 32.768 kHz crystal oscillator (LSE) on the STM32F429I Discovery board
 - Backup domain power supply (VBAT) for RTC operation during main power loss
+- A 32.768 kHz crystal only when `RTC_CLOCK_LSE` is selected
 
 ## Examples
 
@@ -202,7 +211,7 @@ if (RTC_Init() != RTC_STATUS_OK) {
 - Alarm interrupts require proper NVIC configuration
 - The timestamp functions use a simplified algorithm and may not be accurate for all edge cases
 - For production applications, consider using a more robust timestamp conversion library
-- The LSE crystal provides high accuracy timekeeping
+- LSI drifts by a few percent; trim `AsynchPrediv`/`SynchPrediv` or select LSE for accuracy
 
 ## Integration
 

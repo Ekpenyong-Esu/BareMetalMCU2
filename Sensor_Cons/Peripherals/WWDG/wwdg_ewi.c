@@ -9,15 +9,13 @@
 static WWDG_EWI_Callback_t s_ewiCallback = NULL;
 static bool s_ewiEnabled = false;
 
-WWDG_StatusTypeDef WWDG_RegisterEWICallback(WWDG_EWI_Callback_t callback)
-{
+WWDG_StatusTypeDef WWDG_RegisterEWICallback(WWDG_EWI_Callback_t callback) {
     s_ewiCallback = callback;
 
     return WWDG_OK;
 }
 
-WWDG_StatusTypeDef WWDG_EnableEWI(void)
-{
+WWDG_StatusTypeDef WWDG_EnableEWI(void) {
     WWDG_HandleTypeDef *handle = WWDG_GetHandle();
 
     if (handle == NULL) {
@@ -40,21 +38,18 @@ WWDG_StatusTypeDef WWDG_EnableEWI(void)
     return WWDG_OK;
 }
 
-WWDG_StatusTypeDef WWDG_DisableEWI(void)
-{
+WWDG_StatusTypeDef WWDG_DisableEWI(void) {
     HAL_NVIC_DisableIRQ(WWDG_IRQn);
     s_ewiEnabled = false;
 
     return WWDG_OK;
 }
 
-bool WWDG_IsEWIEnabled(void)
-{
+bool WWDG_IsEWIEnabled(void) {
     return s_ewiEnabled;
 }
 
-void WWDG_EWI_IRQHandler(void)
-{
+void WWDG_EWI_IRQHandler(void) {
     WWDG_HandleTypeDef *handle = WWDG_GetHandle();
 
     if (handle == NULL) {
@@ -64,8 +59,7 @@ void WWDG_EWI_IRQHandler(void)
     HAL_WWDG_IRQHandler(handle);
 }
 
-void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg)
-{
+void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg) {
     UNUSED(hwwdg);
 
     /* Deliberately does not refresh: kicking the watchdog here would make the

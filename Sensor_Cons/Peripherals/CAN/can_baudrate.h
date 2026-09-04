@@ -1,19 +1,19 @@
 /**
-  ******************************************************************************
-  * @file    can_baudrate.h
-  * @brief   CAN bit-timing solver
-  * @details Derives prescaler, BS1, BS2 and SJW from the live APB1 clock so
-  *          the same presets work on any clock tree. Replaces the former
-  *          fixed-14-tq table that only divided 42 MHz exactly.
-  *
-  * CAN Bit Timing:
-  * - One bit = 1 sync quantum + BS1 (1..16 tq) + BS2 (1..8 tq)
-  * - Sample point placed near 87.5% (CiA recommendation) via CAN_SplitBit()
-  * - Solver searches every legal bit length (8..25 tq) for an exact
-  *   PCLK1 / (baud * tq) prescaler, picking the split closest to 87.5%
-  * - Custom timing: when baud_rate == 0 the caller supplies raw register values
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    can_baudrate.h
+ * @brief   CAN bit-timing solver
+ * @details Derives prescaler, BS1, BS2 and SJW from the live APB1 clock so
+ *          the same presets work on any clock tree. Replaces the former
+ *          fixed-14-tq table that only divided 42 MHz exactly.
+ *
+ * CAN Bit Timing:
+ * - One bit = 1 sync quantum + BS1 (1..16 tq) + BS2 (1..8 tq)
+ * - Sample point placed near 87.5% (CiA recommendation) via CAN_SplitBit()
+ * - Solver searches every legal bit length (8..25 tq) for an exact
+ *   PCLK1 / (baud * tq) prescaler, picking the split closest to 87.5%
+ * - Custom timing: when baud_rate == 0 the caller supplies raw register values
+ ******************************************************************************
+ */
 
 #ifndef CAN_BAUDRATE_H
 #define CAN_BAUDRATE_H

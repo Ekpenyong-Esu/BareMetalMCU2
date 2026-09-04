@@ -9,56 +9,82 @@
 
 /* JEDEC asks for a 100 us pause between clock enable and the first command;
    HAL_Delay's resolution is a millisecond, so one tick is the shortest wait. */
-#define SDRAM_POWERUP_DELAY_MS  1U
+#define SDRAM_POWERUP_DELAY_MS 1U
+
+/* Row and column counts are 2^(address bits) for each FMC geometry setting. */
+#define SDRAM_ROWS_11BIT 2048U
+#define SDRAM_ROWS_12BIT 4096U
+#define SDRAM_ROWS_13BIT 8192U
+#define SDRAM_COLUMNS_8BIT 256U
+#define SDRAM_COLUMNS_9BIT 512U
+#define SDRAM_COLUMNS_10BIT 1024U
+#define SDRAM_COLUMNS_11BIT 2048U
+
+/** Hz per kHz, used to keep the refresh-count product inside 32 bits */
+#define SDRAM_HZ_PER_KHZ 1000U
+
+/** Memory test folds the upper half of the word index into the lower half */
+#define SDRAM_TEST_INDEX_FOLD_SHIFT 16U
 
 /**
  * @brief Number of rows to be refreshed within SDRAM_REFRESH_PERIOD_MS
  */
-static uint32_t FMC_Driver_SDRAM_RowCount(uint32_t rowBits)
-{
+static uint32_t FMC_Driver_SDRAM_RowCount(uint32_t rowBits) {
     switch (rowBits) {
-        case FMC_SDRAM_ROW_BITS_NUM_11: return 2048U;
-        case FMC_SDRAM_ROW_BITS_NUM_12: return 4096U;
-        case FMC_SDRAM_ROW_BITS_NUM_13: return 8192U;
-        default:                        return 0U;
+        case FMC_SDRAM_ROW_BITS_NUM_11:
+            return SDRAM_ROWS_11BIT;
+        case FMC_SDRAM_ROW_BITS_NUM_12:
+            return SDRAM_ROWS_12BIT;
+        case FMC_SDRAM_ROW_BITS_NUM_13:
+            return SDRAM_ROWS_13BIT;
+        default:
+            return 0U;
     }
 }
 
-static uint32_t FMC_Driver_SDRAM_ColumnCount(uint32_t columnBits)
-{
+static uint32_t FMC_Driver_SDRAM_ColumnCount(uint32_t columnBits) {
     switch (columnBits) {
-        case FMC_SDRAM_COLUMN_BITS_NUM_8:  return 256U;
-        case FMC_SDRAM_COLUMN_BITS_NUM_9:  return 512U;
-        case FMC_SDRAM_COLUMN_BITS_NUM_10: return 1024U;
-        case FMC_SDRAM_COLUMN_BITS_NUM_11: return 2048U;
-        default:                           return 0U;
+        case FMC_SDRAM_COLUMN_BITS_NUM_8:
+            return SDRAM_COLUMNS_8BIT;
+        case FMC_SDRAM_COLUMN_BITS_NUM_9:
+            return SDRAM_COLUMNS_9BIT;
+        case FMC_SDRAM_COLUMN_BITS_NUM_10:
+            return SDRAM_COLUMNS_10BIT;
+        case FMC_SDRAM_COLUMN_BITS_NUM_11:
+            return SDRAM_COLUMNS_11BIT;
+        default:
+            return 0U;
     }
 }
 
-static uint32_t FMC_Driver_SDRAM_BusBytes(uint32_t dataWidth)
-{
+static uint32_t FMC_Driver_SDRAM_BusBytes(uint32_t dataWidth) {
     switch (dataWidth) {
-        case FMC_SDRAM_MEM_BUS_WIDTH_8:  return 1U;
-        case FMC_SDRAM_MEM_BUS_WIDTH_16: return 2U;
-        case FMC_SDRAM_MEM_BUS_WIDTH_32: return 4U;
-        default:                         return 0U;
+        case FMC_SDRAM_MEM_BUS_WIDTH_8:
+            return 1U;
+        case FMC_SDRAM_MEM_BUS_WIDTH_16:
+            return 2U;
+        case FMC_SDRAM_MEM_BUS_WIDTH_32:
+            return 4U;
+        default:
+            return 0U;
     }
 }
 
 /**
  * @brief SDRAM clock in Hz for a configured HCLK divider
  */
-static uint32_t FMC_Driver_SDRAM_ClockHz(uint32_t clockPeriod)
-{
+static uint32_t FMC_Driver_SDRAM_ClockHz(uint32_t clockPeriod) {
     switch (clockPeriod) {
-        case FMC_SDRAM_CLOCK_PERIOD_2: return HAL_RCC_GetHCLKFreq() / 2U;
-        case FMC_SDRAM_CLOCK_PERIOD_3: return HAL_RCC_GetHCLKFreq() / 3U;
-        default:                       return 0U;
+        case FMC_SDRAM_CLOCK_PERIOD_2:
+            return HAL_RCC_GetHCLKFreq() / 2U;
+        case FMC_SDRAM_CLOCK_PERIOD_3:
+            return HAL_RCC_GetHCLKFreq() / 3U;
+        default:
+            return 0U;
     }
 }
 
-uint32_t FMC_Driver_SDRAM_GetBase(const FMC_Driver_SDRAM_Config_t *config)
-{
+uint32_t FMC_Driver_SDRAM_GetBase(const FMC_Driver_SDRAM_Config_t *config) {
     if (config == NULL) {
         return 0U;
     }
@@ -66,12 +92,11 @@ uint32_t FMC_Driver_SDRAM_GetBase(const FMC_Driver_SDRAM_Config_t *config)
     return (config->bank == FMC_SDRAM_BANK1) ? SDRAM_BANK1_BASE_ADDR : SDRAM_BANK2_BASE_ADDR;
 }
 
-uint32_t FMC_Driver_SDRAM_GetSize(const FMC_Driver_SDRAM_Config_t *config)
-{
-    uint32_t rows;
-    uint32_t columns;
-    uint32_t busBytes;
-    uint32_t banks;
+uint32_t FMC_Driver_SDRAM_GetSize(const FMC_Driver_SDRAM_Config_t *config) {
+    uint32_t rows = 0;
+    uint32_t columns = 0;
+    uint32_t busBytes = 0;
+    uint32_t banks = 0;
 
     if (config == NULL) {
         return 0U;
@@ -89,11 +114,10 @@ uint32_t FMC_Driver_SDRAM_GetSize(const FMC_Driver_SDRAM_Config_t *config)
     return rows * columns * banks * busBytes;
 }
 
-uint32_t FMC_Driver_SDRAM_GetRefreshCount(const FMC_Driver_SDRAM_Config_t *config)
-{
-    uint32_t sdclk;
-    uint32_t rows;
-    uint32_t count;
+uint32_t FMC_Driver_SDRAM_GetRefreshCount(const FMC_Driver_SDRAM_Config_t *config) {
+    uint32_t sdclk = 0;
+    uint32_t rows = 0;
+    uint32_t count = 0;
 
     if (config == NULL) {
         return 0U;
@@ -106,7 +130,7 @@ uint32_t FMC_Driver_SDRAM_GetRefreshCount(const FMC_Driver_SDRAM_Config_t *confi
     }
 
     /* COUNT = (refresh window x SDCLK) / rows - margin, in SDRAM clock cycles. */
-    count = ((sdclk / 1000U) * SDRAM_REFRESH_PERIOD_MS) / rows;
+    count = ((sdclk / SDRAM_HZ_PER_KHZ) * SDRAM_REFRESH_PERIOD_MS) / rows;
     if (count <= SDRAM_REFRESH_MARGIN) {
         return 0U;
     }
@@ -119,29 +143,26 @@ uint32_t FMC_Driver_SDRAM_GetRefreshCount(const FMC_Driver_SDRAM_Config_t *confi
     return count;
 }
 
-FMC_Driver_SDRAM_Config_t FMC_Driver_SDRAM_GetDefaultConfig(void)
-{
-    FMC_Driver_SDRAM_Config_t config = {
-        .bank = FMC_SDRAM_BANK2,
-        .columnBits = FMC_SDRAM_COLUMN_BITS_NUM_8,
-        .rowBits = FMC_SDRAM_ROW_BITS_NUM_12,
-        .dataWidth = FMC_SDRAM_MEM_BUS_WIDTH_16,
-        .internalBanks = FMC_SDRAM_INTERN_BANKS_NUM_4,
-        .casLatency = FMC_SDRAM_CAS_LATENCY_3,
-        .clockPeriod = FMC_SDRAM_CLOCK_PERIOD_3,
-        .readBurst = FMC_SDRAM_RBURST_DISABLE,
-        .readPipeDelay = FMC_SDRAM_RPIPE_DELAY_1,
-        .writeProtection = FMC_SDRAM_WRITE_PROTECTION_DISABLE,
-        .burstLength = SDRAM_MODEREG_BURST_LENGTH_1,
-        .writeBurstMode = SDRAM_MODEREG_WRITEBURST_MODE_SINGLE,
-        .loadToActiveDelay = 2,
-        .exitSelfRefreshDelay = 7,
-        .selfRefreshTime = 4,
-        .rowCycleDelay = 7,
-        .writeRecoveryTime = 2,
-        .rpDelay = 2,
-        .rcdDelay = 2
-    };
+FMC_Driver_SDRAM_Config_t FMC_Driver_SDRAM_GetDefaultConfig(void) {
+    FMC_Driver_SDRAM_Config_t config = {.bank = FMC_SDRAM_BANK2,
+                                        .columnBits = FMC_SDRAM_COLUMN_BITS_NUM_8,
+                                        .rowBits = FMC_SDRAM_ROW_BITS_NUM_12,
+                                        .dataWidth = FMC_SDRAM_MEM_BUS_WIDTH_16,
+                                        .internalBanks = FMC_SDRAM_INTERN_BANKS_NUM_4,
+                                        .casLatency = FMC_SDRAM_CAS_LATENCY_3,
+                                        .clockPeriod = FMC_SDRAM_CLOCK_PERIOD_3,
+                                        .readBurst = FMC_SDRAM_RBURST_DISABLE,
+                                        .readPipeDelay = FMC_SDRAM_RPIPE_DELAY_1,
+                                        .writeProtection = FMC_SDRAM_WRITE_PROTECTION_DISABLE,
+                                        .burstLength = SDRAM_MODEREG_BURST_LENGTH_1,
+                                        .writeBurstMode = SDRAM_MODEREG_WRITEBURST_MODE_SINGLE,
+                                        .loadToActiveDelay = 2,
+                                        .exitSelfRefreshDelay = 7,
+                                        .selfRefreshTime = 4,
+                                        .rowCycleDelay = 7,
+                                        .writeRecoveryTime = 2,
+                                        .rpDelay = 2,
+                                        .rcdDelay = 2};
 
     return config;
 }
@@ -149,10 +170,9 @@ FMC_Driver_SDRAM_Config_t FMC_Driver_SDRAM_GetDefaultConfig(void)
 /**
  * @brief Issue one SDRAM command and record the failure in the handle
  */
-static HAL_StatusTypeDef FMC_Driver_SDRAM_Command(FMC_Driver_Handle_t *handle,
-                                                  uint32_t mode, uint32_t target,
-                                                  uint32_t autoRefresh, uint32_t modeRegister)
-{
+static HAL_StatusTypeDef FMC_Driver_SDRAM_Command(FMC_Driver_Handle_t *handle, uint32_t mode,
+                                                  uint32_t target, uint32_t autoRefresh,
+                                                  uint32_t modeRegister) {
     FMC_SDRAM_CommandTypeDef command = {0};
 
     command.CommandMode = mode;
@@ -169,13 +189,12 @@ static HAL_StatusTypeDef FMC_Driver_SDRAM_Command(FMC_Driver_Handle_t *handle,
 }
 
 HAL_StatusTypeDef FMC_Driver_SDRAM_Init(FMC_Driver_Handle_t *handle,
-                                        const FMC_Driver_SDRAM_Config_t *config)
-{
+                                        const FMC_Driver_SDRAM_Config_t *config) {
     FMC_SDRAM_TimingTypeDef timing = {0};
-    uint32_t commandTarget;
-    uint32_t refreshCount;
-    uint32_t deviceSize;
-    uint32_t modeRegister;
+    uint32_t commandTarget = 0;
+    uint32_t refreshCount = 0;
+    uint32_t deviceSize = 0;
+    uint32_t modeRegister = 0;
 
     log_debug("FMC: Initializing SDRAM");
 
@@ -218,35 +237,31 @@ HAL_StatusTypeDef FMC_Driver_SDRAM_Init(FMC_Driver_Handle_t *handle,
         return HAL_ERROR;
     }
 
-    commandTarget = (config->bank == FMC_SDRAM_BANK1) ? FMC_SDRAM_CMD_TARGET_BANK1
-                                                      : FMC_SDRAM_CMD_TARGET_BANK2;
+    commandTarget =
+        (config->bank == FMC_SDRAM_BANK1) ? FMC_SDRAM_CMD_TARGET_BANK1 : FMC_SDRAM_CMD_TARGET_BANK2;
 
-    if (FMC_Driver_SDRAM_Command(handle, FMC_SDRAM_CMD_CLK_ENABLE,
-                                 commandTarget, 1, 0) != HAL_OK) {
+    if (FMC_Driver_SDRAM_Command(handle, FMC_SDRAM_CMD_CLK_ENABLE, commandTarget, 1, 0) != HAL_OK) {
         return HAL_ERROR;
     }
 
     HAL_Delay(SDRAM_POWERUP_DELAY_MS);
 
-    if (FMC_Driver_SDRAM_Command(handle, FMC_SDRAM_CMD_PALL,
-                                 commandTarget, 1, 0) != HAL_OK) {
+    if (FMC_Driver_SDRAM_Command(handle, FMC_SDRAM_CMD_PALL, commandTarget, 1, 0) != HAL_OK) {
         return HAL_ERROR;
     }
 
-    if (FMC_Driver_SDRAM_Command(handle, FMC_SDRAM_CMD_AUTOREFRESH_MODE,
-                                 commandTarget, 4, 0) != HAL_OK) {
+    if (FMC_Driver_SDRAM_Command(handle, FMC_SDRAM_CMD_AUTOREFRESH_MODE, commandTarget, 4, 0) !=
+        HAL_OK) {
         return HAL_ERROR;
     }
 
-    modeRegister = (uint32_t)config->burstLength |
-                   SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL |
-                   ((config->casLatency == FMC_SDRAM_CAS_LATENCY_2)
-                        ? SDRAM_MODEREG_CAS_LATENCY_2 : SDRAM_MODEREG_CAS_LATENCY_3) |
-                   SDRAM_MODEREG_OPERATING_MODE_STANDARD |
-                   (uint32_t)config->writeBurstMode;
+    modeRegister = (uint32_t)config->burstLength | SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL |
+                   ((config->casLatency == FMC_SDRAM_CAS_LATENCY_2) ? SDRAM_MODEREG_CAS_LATENCY_2
+                                                                    : SDRAM_MODEREG_CAS_LATENCY_3) |
+                   SDRAM_MODEREG_OPERATING_MODE_STANDARD | (uint32_t)config->writeBurstMode;
 
-    if (FMC_Driver_SDRAM_Command(handle, FMC_SDRAM_CMD_LOAD_MODE,
-                                 commandTarget, 1, modeRegister) != HAL_OK) {
+    if (FMC_Driver_SDRAM_Command(handle, FMC_SDRAM_CMD_LOAD_MODE, commandTarget, 1, modeRegister) !=
+        HAL_OK) {
         return HAL_ERROR;
     }
 
@@ -272,9 +287,8 @@ HAL_StatusTypeDef FMC_Driver_SDRAM_Init(FMC_Driver_Handle_t *handle,
 /**
  * @brief Reject a transfer that would leave the mapped SDRAM window
  */
-static bool FMC_Driver_SDRAM_InRange(const FMC_Driver_Handle_t *handle,
-                                     uint32_t address, uint32_t size)
-{
+static bool FMC_Driver_SDRAM_InRange(const FMC_Driver_Handle_t *handle, uint32_t address,
+                                     uint32_t size) {
     if (address < handle->baseAddress) {
         return false;
     }
@@ -284,8 +298,7 @@ static bool FMC_Driver_SDRAM_InRange(const FMC_Driver_Handle_t *handle,
 }
 
 HAL_StatusTypeDef FMC_Driver_SDRAM_Write(FMC_Driver_Handle_t *handle, uint32_t address,
-                                         const uint8_t *data, uint32_t size)
-{
+                                         const uint8_t *data, uint32_t size) {
     if (handle == NULL || data == NULL || !handle->initialized ||
         handle->memoryType != FMC_DRIVER_MEMORY_SDRAM) {
         return HAL_ERROR;
@@ -303,8 +316,7 @@ HAL_StatusTypeDef FMC_Driver_SDRAM_Write(FMC_Driver_Handle_t *handle, uint32_t a
 }
 
 HAL_StatusTypeDef FMC_Driver_SDRAM_Read(FMC_Driver_Handle_t *handle, uint32_t address,
-                                        uint8_t *data, uint32_t size)
-{
+                                        uint8_t *data, uint32_t size) {
     if (handle == NULL || data == NULL || !handle->initialized ||
         handle->memoryType != FMC_DRIVER_MEMORY_SDRAM) {
         return HAL_ERROR;
@@ -320,13 +332,11 @@ HAL_StatusTypeDef FMC_Driver_SDRAM_Read(FMC_Driver_Handle_t *handle, uint32_t ad
     return HAL_OK;
 }
 
-bool FMC_Driver_SDRAM_Test(FMC_Driver_Handle_t *handle, uint32_t startAddr, uint32_t size)
-{
-    uint16_t *pMem;
-    uint32_t numWords;
+bool FMC_Driver_SDRAM_Test(FMC_Driver_Handle_t *handle, uint32_t startAddr, uint32_t size) {
+    uint16_t *pMem = NULL;
+    uint32_t numWords = 0;
 
-    if (handle == NULL || !handle->initialized ||
-        handle->memoryType != FMC_DRIVER_MEMORY_SDRAM) {
+    if (handle == NULL || !handle->initialized || handle->memoryType != FMC_DRIVER_MEMORY_SDRAM) {
         return false;
     }
 
@@ -342,21 +352,21 @@ bool FMC_Driver_SDRAM_Test(FMC_Driver_Handle_t *handle, uint32_t startAddr, uint
        with a stuck or shorted address line, because every cell holds the
        same value. */
     for (uint32_t i = 0; i < numWords; i++) {
-        pMem[i] = (uint16_t)(i ^ (i >> 16));
+        pMem[i] = (uint16_t)(i ^ (i >> SDRAM_TEST_INDEX_FOLD_SHIFT));
     }
 
     for (uint32_t i = 0; i < numWords; i++) {
-        if (pMem[i] != (uint16_t)(i ^ (i >> 16))) {
+        if (pMem[i] != (uint16_t)(i ^ (i >> SDRAM_TEST_INDEX_FOLD_SHIFT))) {
             return false;
         }
     }
 
     for (uint32_t i = 0; i < numWords; i++) {
-        pMem[i] = (uint16_t)~(i ^ (i >> 16));
+        pMem[i] = (uint16_t) ~(i ^ (i >> SDRAM_TEST_INDEX_FOLD_SHIFT));
     }
 
     for (uint32_t i = 0; i < numWords; i++) {
-        if (pMem[i] != (uint16_t)~(i ^ (i >> 16))) {
+        if (pMem[i] != (uint16_t) ~(i ^ (i >> SDRAM_TEST_INDEX_FOLD_SHIFT))) {
             return false;
         }
     }

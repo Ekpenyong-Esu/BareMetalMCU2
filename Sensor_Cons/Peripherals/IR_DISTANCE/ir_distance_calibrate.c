@@ -1,18 +1,17 @@
 /**
-  ******************************************************************************
-  * @file    ir_distance_calibrate.c
-  * @brief   IR distance sensor calibration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ir_distance_calibrate.c
+ * @brief   IR distance sensor calibration
+ ******************************************************************************
+ */
 
 #include "ir_distance_calibrate.h"
 #include "ir_distance_curve.h"
 #include "log.h"
 
 IR_DISTANCE_StatusTypeDef IR_DISTANCE_SetCustomCurve(IR_DISTANCE_Handle_t *hird,
-                                                     const IR_DISTANCE_CustomCurve_t *curve)
-{
-    IR_DISTANCE_StatusTypeDef status;
+                                                     const IR_DISTANCE_CustomCurve_t *curve) {
+    IR_DISTANCE_StatusTypeDef status = IR_DISTANCE_OK;
 
     if (hird == NULL) {
         return IR_DISTANCE_INVALID_PARAM;
@@ -30,12 +29,10 @@ IR_DISTANCE_StatusTypeDef IR_DISTANCE_SetCustomCurve(IR_DISTANCE_Handle_t *hird,
     return IR_DISTANCE_OK;
 }
 
-IR_DISTANCE_StatusTypeDef IR_DISTANCE_CalibratePoint(IR_DISTANCE_Handle_t *hird,
-                                                     uint16_t distance,
-                                                     uint16_t adcValue)
-{
+IR_DISTANCE_StatusTypeDef IR_DISTANCE_CalibratePoint(IR_DISTANCE_Handle_t *hird, uint16_t distance,
+                                                     uint16_t adcValue) {
     IR_DISTANCE_CustomCurve_t candidate;
-    IR_DISTANCE_StatusTypeDef status;
+    IR_DISTANCE_StatusTypeDef status = IR_DISTANCE_OK;
 
     IR_DISTANCE_CHECK_HANDLE(hird);
 
@@ -62,9 +59,8 @@ IR_DISTANCE_StatusTypeDef IR_DISTANCE_CalibratePoint(IR_DISTANCE_Handle_t *hird,
     return IR_DISTANCE_OK;
 }
 
-IR_DISTANCE_StatusTypeDef IR_DISTANCE_ResetCalibration(IR_DISTANCE_Handle_t *hird)
-{
-    const IR_DISTANCE_CustomCurve_t *curve;
+IR_DISTANCE_StatusTypeDef IR_DISTANCE_ResetCalibration(IR_DISTANCE_Handle_t *hird) {
+    const IR_DISTANCE_CustomCurve_t *curve = NULL;
 
     IR_DISTANCE_CHECK_HANDLE(hird);
 

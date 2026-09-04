@@ -6,8 +6,7 @@
 #include "ltdc_sync.h"
 #include "ltdc_core.h"
 
-HAL_StatusTypeDef LTDC_RequestReload(LTDC_Driver_t *driver, uint32_t reload)
-{
+HAL_StatusTypeDef LTDC_RequestReload(LTDC_Driver_t *driver, uint32_t reload) {
     if (LTDC_ValidateDriver(driver) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -17,8 +16,7 @@ HAL_StatusTypeDef LTDC_RequestReload(LTDC_Driver_t *driver, uint32_t reload)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef LTDC_WaitForReload(LTDC_Driver_t *driver, uint32_t timeout_ms)
-{
+HAL_StatusTypeDef LTDC_WaitForReload(LTDC_Driver_t *driver, uint32_t timeout_ms) {
     if (LTDC_ValidateDriver(driver) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -28,7 +26,7 @@ HAL_StatusTypeDef LTDC_WaitForReload(LTDC_Driver_t *driver, uint32_t timeout_ms)
         if ((HAL_GetTick() - start) > timeout_ms) {
             return HAL_TIMEOUT;
         }
-        __WFE();    /* HAL_LTDC_ReloadEventCallback() issues __SEV() to wake us */
+        __WFE(); /* HAL_LTDC_ReloadEventCallback() issues __SEV() to wake us */
     }
 
     driver->reloadFlag = 0;

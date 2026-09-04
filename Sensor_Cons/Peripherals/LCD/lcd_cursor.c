@@ -10,15 +10,13 @@
 
 /* Public functions ----------------------------------------------------------*/
 
-LCD_StatusTypeDef LCD_SetCursor(LCD_HandleTypeDef* handle, uint8_t col, uint8_t row)
-{
-    const uint8_t* rowOffsets;
+LCD_StatusTypeDef LCD_SetCursor(LCD_HandleTypeDef *handle, uint8_t col, uint8_t row) {
+    const uint8_t *rowOffsets = 0;
 
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
-    if (col >= handle->cols || row >= handle->rows)
-    {
+    if (col >= handle->cols || row >= handle->rows) {
         return LCD_INVALID_PARAM;
     }
 
@@ -32,8 +30,7 @@ LCD_StatusTypeDef LCD_SetCursor(LCD_HandleTypeDef* handle, uint8_t col, uint8_t 
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_CursorOn(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_CursorOn(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -43,8 +40,7 @@ LCD_StatusTypeDef LCD_CursorOn(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_CursorOff(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_CursorOff(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -54,8 +50,7 @@ LCD_StatusTypeDef LCD_CursorOff(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_BlinkOn(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_BlinkOn(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -65,8 +60,7 @@ LCD_StatusTypeDef LCD_BlinkOn(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_BlinkOff(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_BlinkOff(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
@@ -76,30 +70,26 @@ LCD_StatusTypeDef LCD_BlinkOff(LCD_HandleTypeDef* handle)
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_CursorLeft(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_CursorLeft(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
     LCD_IO_WriteByte(handle, LCD_CMD_CURSOR_SHIFT | LCD_SHIFT_CURSOR | LCD_SHIFT_LEFT, 0);
 
-    if (handle->cursorCol > 0U)
-    {
+    if (handle->cursorCol > 0U) {
         handle->cursorCol--;
     }
 
     return LCD_OK;
 }
 
-LCD_StatusTypeDef LCD_CursorRight(LCD_HandleTypeDef* handle)
-{
+LCD_StatusTypeDef LCD_CursorRight(LCD_HandleTypeDef *handle) {
     LCD_CHECK_HANDLE(handle);
     LCD_CHECK_INIT(handle);
 
     LCD_IO_WriteByte(handle, LCD_CMD_CURSOR_SHIFT | LCD_SHIFT_CURSOR | LCD_SHIFT_RIGHT, 0);
 
-    if ((handle->cursorCol + 1U) < handle->cols)
-    {
+    if ((handle->cursorCol + 1U) < handle->cols) {
         handle->cursorCol++;
     }
 

@@ -9,11 +9,16 @@
 #include "log.h"
 #include <string.h>
 
+/* MACA0HR/MACA0LR pack the six address bytes little-endian: byte 0 sits in
+   bits 7..0 of MACA0LR, byte 3 in bits 31..24, byte 4 in bits 7..0 of MACA0HR. */
+#define ETH_MAC_BYTE1_SHIFT 8U
+#define ETH_MAC_BYTE2_SHIFT 16U
+#define ETH_MAC_BYTE3_SHIFT 24U
+
 /**
  * @brief   Validate a requested configuration
  */
-static bool ETH_ValidateConfig(const ETH_Config_t *config)
-{
+static bool ETH_ValidateConfig(const ETH_Config_t *config) {
     if (config == NULL) {
         return false;
     }
@@ -40,8 +45,7 @@ static bool ETH_ValidateConfig(const ETH_Config_t *config)
     return true;
 }
 
-HAL_StatusTypeDef ETH_Init(ETH_Handle_t *handle, const ETH_Config_t *config)
-{
+HAL_StatusTypeDef ETH_Init(ETH_Handle_t *handle, const ETH_Config_t *config) {
     ETH_MACConfigTypeDef macConfig;
 
     if (handle == NULL) {
@@ -89,8 +93,7 @@ HAL_StatusTypeDef ETH_Init(ETH_Handle_t *handle, const ETH_Config_t *config)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef ETH_DeInit(ETH_Handle_t *handle)
-{
+HAL_StatusTypeDef ETH_DeInit(ETH_Handle_t *handle) {
     if ((handle == NULL) || !handle->initialized) {
         return HAL_ERROR;
     }
@@ -105,8 +108,7 @@ HAL_StatusTypeDef ETH_DeInit(ETH_Handle_t *handle)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef ETH_Start(ETH_Handle_t *handle)
-{
+HAL_StatusTypeDef ETH_Start(ETH_Handle_t *handle) {
     if ((handle == NULL) || !handle->initialized) {
         return HAL_ERROR;
     }
@@ -118,8 +120,7 @@ HAL_StatusTypeDef ETH_Start(ETH_Handle_t *handle)
     return HAL_ETH_Start(&handle->heth);
 }
 
-HAL_StatusTypeDef ETH_Stop(ETH_Handle_t *handle)
-{
+HAL_StatusTypeDef ETH_Stop(ETH_Handle_t *handle) {
     if ((handle == NULL) || !handle->initialized) {
         return HAL_ERROR;
     }
@@ -127,8 +128,7 @@ HAL_StatusTypeDef ETH_Stop(ETH_Handle_t *handle)
     return HAL_ETH_Stop(&handle->heth);
 }
 
-bool ETH_IsReady(const ETH_Handle_t *handle)
-{
+bool ETH_IsReady(const ETH_Handle_t *handle) {
     if ((handle == NULL) || !handle->initialized) {
         return false;
     }
@@ -136,13 +136,11 @@ bool ETH_IsReady(const ETH_Handle_t *handle)
     return (handle->heth.gState == HAL_ETH_STATE_STARTED);
 }
 
-bool ETH_IsInitialized(const ETH_Handle_t *handle)
-{
+bool ETH_IsInitialized(const ETH_Handle_t *handle) {
     return ((handle != NULL) && handle->initialized);
 }
 
-uint32_t ETH_GetConfiguredSpeed(const ETH_Handle_t *handle)
-{
+uint32_t ETH_GetConfiguredSpeed(const ETH_Handle_t *handle) {
     if ((handle == NULL) || !handle->initialized) {
         return 0U;
     }
@@ -150,8 +148,7 @@ uint32_t ETH_GetConfiguredSpeed(const ETH_Handle_t *handle)
     return handle->config.speed;
 }
 
-uint32_t ETH_GetConfiguredDuplex(const ETH_Handle_t *handle)
-{
+uint32_t ETH_GetConfiguredDuplex(const ETH_Handle_t *handle) {
     if ((handle == NULL) || !handle->initialized) {
         return 0U;
     }
@@ -159,10 +156,9 @@ uint32_t ETH_GetConfiguredDuplex(const ETH_Handle_t *handle)
     return handle->config.duplexMode;
 }
 
-HAL_StatusTypeDef ETH_SetMACAddress(ETH_Handle_t *handle, const uint8_t *macAddr)
-{
-    uint32_t high;
-    uint32_t low;
+HAL_StatusTypeDef ETH_SetMACAddress(ETH_Handle_t *handle, const uint8_t *macAddr) {
+    uint32_t high = 0;
+    uint32_t low = 0;
 
     if ((handle == NULL) || (macAddr == NULL) || !handle->initialized) {
         return HAL_ERROR;
@@ -175,9 +171,10 @@ HAL_StatusTypeDef ETH_SetMACAddress(ETH_Handle_t *handle, const uint8_t *macAddr
 
     memcpy(handle->config.macAddr, macAddr, ETH_ADDR_LEN);
 
-    high = ((uint32_t)macAddr[5] << 8) | (uint32_t)macAddr[4];
-    low = ((uint32_t)macAddr[3] << 24) | ((uint32_t)macAddr[2] << 16) |
-          ((uint32_t)macAddr[1] << 8) | (uint32_t)macAddr[0];
+    high = ((uint32_t)macAddr[5] << ETH_MAC_BYTE1_SHIFT) | (uint32_t)macAddr[4];
+    low = ((uint32_t)macAddr[3] << ETH_MAC_BYTE3_SHIFT) |
+          ((uint32_t)macAddr[2] << ETH_MAC_BYTE2_SHIFT) |
+          ((uint32_t)macAddr[1] << ETH_MAC_BYTE1_SHIFT) | (uint32_t)macAddr[0];
 
     handle->heth.Instance->MACA0HR = high;
     handle->heth.Instance->MACA0LR = low;
@@ -185,8 +182,7 @@ HAL_StatusTypeDef ETH_SetMACAddress(ETH_Handle_t *handle, const uint8_t *macAddr
     return HAL_OK;
 }
 
-HAL_StatusTypeDef ETH_GetMACAddress(const ETH_Handle_t *handle, uint8_t *macAddr)
-{
+HAL_StatusTypeDef ETH_GetMACAddress(const ETH_Handle_t *handle, uint8_t *macAddr) {
     if ((handle == NULL) || (macAddr == NULL) || !handle->initialized) {
         return HAL_ERROR;
     }

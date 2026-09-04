@@ -21,13 +21,13 @@
 
 #include "tim_clock.h"
 
+/** Largest (prescaler + 1) * (period + 1) product a 16-bit prescaler can express */
+#define TIM_PWM_MAX_DIVIDER 0x10000u
+
 /* ========================== PWM Output ========================== */
 
-HAL_StatusTypeDef TIM_PWM_Init(TIM_HandleTypeDef *htim,
-                               TIM_TypeDef *instance,
-                               uint32_t prescaler,
-                               uint32_t period)
-{
+HAL_StatusTypeDef TIM_PWM_Init(TIM_HandleTypeDef *htim, TIM_TypeDef *instance, uint32_t prescaler,
+                               uint32_t period) {
     if (htim == NULL || instance == NULL) {
         return HAL_ERROR;
     }
@@ -42,11 +42,8 @@ HAL_StatusTypeDef TIM_PWM_Init(TIM_HandleTypeDef *htim,
     return HAL_TIM_PWM_Init(htim);
 }
 
-HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim,
-                                 TIM_TypeDef *instance,
-                                 uint32_t frequencyHz,
-                                 uint32_t steps)
-{
+HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim, TIM_TypeDef *instance,
+                                 uint32_t frequencyHz, uint32_t steps) {
     if (htim == NULL || frequencyHz == 0u || steps == 0u ||
         !TIM_Clock_HasOutputChannels(instance) || !TIM_Clock_Enable(instance)) {
         return HAL_ERROR;
@@ -58,18 +55,15 @@ HAL_StatusTypeDef TIM_PWM_InitHz(TIM_HandleTypeDef *htim,
      * divider must fit in 16 bits (prescaler is 16-bit). */
     uint32_t divider = TIM_Clock_GetHz(instance) / (frequencyHz * steps);
 
-    if (divider == 0u || divider > 0x10000u) {
+    if (divider == 0u || divider > TIM_PWM_MAX_DIVIDER) {
         return HAL_ERROR;
     }
 
     return TIM_PWM_Init(htim, instance, divider - 1u, steps - 1u);
 }
 
-HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim,
-                                        uint32_t channel,
-                                        uint32_t pulse,
-                                        uint32_t polarity)
-{
+HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t pulse,
+                                        uint32_t polarity) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
@@ -83,40 +77,35 @@ HAL_StatusTypeDef TIM_PWM_ConfigChannel(TIM_HandleTypeDef *htim,
     return HAL_TIM_PWM_ConfigChannel(htim, &sConfigOC, channel);
 }
 
-HAL_StatusTypeDef TIM_PWM_Start(TIM_HandleTypeDef *htim, uint32_t channel)
-{
+HAL_StatusTypeDef TIM_PWM_Start(TIM_HandleTypeDef *htim, uint32_t channel) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_PWM_Start(htim, channel);
 }
 
-HAL_StatusTypeDef TIM_PWM_Start_IT(TIM_HandleTypeDef *htim, uint32_t channel)
-{
+HAL_StatusTypeDef TIM_PWM_Start_IT(TIM_HandleTypeDef *htim, uint32_t channel) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_PWM_Start_IT(htim, channel);
 }
 
-HAL_StatusTypeDef TIM_PWM_Stop(TIM_HandleTypeDef *htim, uint32_t channel)
-{
+HAL_StatusTypeDef TIM_PWM_Stop(TIM_HandleTypeDef *htim, uint32_t channel) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_PWM_Stop(htim, channel);
 }
 
-HAL_StatusTypeDef TIM_PWM_Stop_IT(TIM_HandleTypeDef *htim, uint32_t channel)
-{
+HAL_StatusTypeDef TIM_PWM_Stop_IT(TIM_HandleTypeDef *htim, uint32_t channel) {
     if (htim == NULL) {
         return HAL_ERROR;
     }
     return HAL_TIM_PWM_Stop_IT(htim, channel);
 }
 
-void TIM_PWM_SetDuty(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t pulse)
-{
+void TIM_PWM_SetDuty(TIM_HandleTypeDef *htim, uint32_t channel, uint32_t pulse) {
     if (htim == NULL) {
         return;
     }

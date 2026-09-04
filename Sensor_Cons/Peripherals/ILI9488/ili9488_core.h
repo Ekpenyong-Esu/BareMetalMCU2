@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ili9488_core.h
-  * @brief   Lifecycle, orientation and full-screen operations
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ili9488_core.h
+ * @brief   Lifecycle, orientation and full-screen operations
+ ******************************************************************************
+ */
 
 #ifndef ILI9488_CORE_H
 #define ILI9488_CORE_H
@@ -15,13 +15,14 @@ extern "C" {
 #include "ili9488_types.h"
 
 /**
- * @brief   Bring up the panel on the given control lines.
+ * @brief   Bring up the panel on the given bus and control lines.
  * @param   hili Pointer to ILI9488 handle
- * @retval  ILI9488_INVALID_PARAM if the handle or any port is NULL.
+ * @param   bus  Bus the panel is wired to, already opened with SPI_BusInit
+ * @retval  ILI9488_INVALID_PARAM if the handle, the bus or any port is NULL.
+ * @note    The bus owns SCK/MISO/MOSI; the driver configures CS/DC/RST itself.
  */
-ILI9488_StatusTypeDef ILI9488_Init(ILI9488_Handle_t *hili,
-                                   GPIO_TypeDef *cs_port, uint16_t cs_pin,
-                                   GPIO_TypeDef *dc_port, uint16_t dc_pin,
+ILI9488_StatusTypeDef ILI9488_Init(ILI9488_Handle_t *hili, SPI_Bus_t *bus, GPIO_TypeDef *cs_port,
+                                   uint16_t cs_pin, GPIO_TypeDef *dc_port, uint16_t dc_pin,
                                    GPIO_TypeDef *rst_port, uint16_t rst_pin);
 
 /**

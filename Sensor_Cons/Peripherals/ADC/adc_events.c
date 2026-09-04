@@ -13,9 +13,8 @@
 
 /* HAL callbacks -------------------------------------------------------------*/
 
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    ADC_HandleStruct* handle = ADC_GetHandleFor(hadc);
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+    ADC_HandleStruct *handle = ADC_GetHandleFor(hadc);
     if (handle == NULL) {
         return;
     }
@@ -29,9 +28,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
     }
 }
 
-void HAL_ADC_ErrorCallback(ADC_HandleTypeDef* hadc)
-{
-    ADC_HandleStruct* handle = ADC_GetHandleFor(hadc);
+void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc) {
+    ADC_HandleStruct *handle = ADC_GetHandleFor(hadc);
     if (handle == NULL) {
         return;
     }

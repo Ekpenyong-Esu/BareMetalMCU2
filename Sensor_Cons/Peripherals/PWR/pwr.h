@@ -1,11 +1,11 @@
 /**
-  ******************************************************************************
-  * @file    pwr.h
-  * @brief   Power Management aggregator header
-  * @details Includes every PWR module. Existing code can keep including
-  *          "pwr.h"; new code may include only the module it needs.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    pwr.h
+ * @brief   Power Management aggregator header
+ * @details Includes every PWR module. Existing code can keep including
+ *          "pwr.h"; new code may include only the module it needs.
+ ******************************************************************************
+ */
 
 #ifndef __PWR_H__
 #define __PWR_H__

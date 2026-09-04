@@ -12,13 +12,11 @@
 
 /* Public functions ----------------------------------------------------------*/
 
-RTC_StatusTypeDef RTC_SetAlarm(const RTC_Alarm_t* sAlarm)
-{
+RTC_StatusTypeDef RTC_SetAlarm(const RTC_Alarm_t *sAlarm) {
     RTC_AlarmTypeDef hal_alarm = {0};
     RTC_HandleTypeDef *handle = NULL;
 
-    if (sAlarm == NULL)
-    {
+    if (sAlarm == NULL) {
         return RTC_STATUS_ERROR;
     }
 
@@ -33,29 +31,25 @@ RTC_StatusTypeDef RTC_SetAlarm(const RTC_Alarm_t* sAlarm)
     hal_alarm.Alarm = sAlarm->Alarm;
 
     handle = RTC_GetHandle();
-    if (HAL_RTC_SetAlarm_IT(handle, &hal_alarm, RTC_FORMAT_BIN) != HAL_OK)
-    {
+    if (HAL_RTC_SetAlarm_IT(handle, &hal_alarm, RTC_FORMAT_BIN) != HAL_OK) {
         return RTC_STATUS_ERROR;
     }
 
     return RTC_STATUS_OK;
 }
 
-RTC_StatusTypeDef RTC_GetAlarm(RTC_Alarm_t* sAlarm, uint32_t Alarm)
-{
+RTC_StatusTypeDef RTC_GetAlarm(RTC_Alarm_t *sAlarm, uint32_t Alarm) {
     RTC_AlarmTypeDef hal_alarm = {0};
     RTC_HandleTypeDef *handle = NULL;
 
-    if (sAlarm == NULL)
-    {
+    if (sAlarm == NULL) {
         return RTC_STATUS_ERROR;
     }
 
     hal_alarm.Alarm = Alarm;
 
     handle = RTC_GetHandle();
-    if (HAL_RTC_GetAlarm(handle, &hal_alarm, Alarm, RTC_FORMAT_BIN) != HAL_OK)
-    {
+    if (HAL_RTC_GetAlarm(handle, &hal_alarm, Alarm, RTC_FORMAT_BIN) != HAL_OK) {
         return RTC_STATUS_ERROR;
     }
 
@@ -72,27 +66,23 @@ RTC_StatusTypeDef RTC_GetAlarm(RTC_Alarm_t* sAlarm, uint32_t Alarm)
     return RTC_STATUS_OK;
 }
 
-RTC_StatusTypeDef RTC_DisableAlarm(uint32_t Alarm)
-{
+RTC_StatusTypeDef RTC_DisableAlarm(uint32_t Alarm) {
     RTC_HandleTypeDef *handle = NULL;
     handle = RTC_GetHandle();
 
-    if (HAL_RTC_DeactivateAlarm(handle, Alarm) != HAL_OK)
-    {
+    if (HAL_RTC_DeactivateAlarm(handle, Alarm) != HAL_OK) {
         return RTC_STATUS_ERROR;
     }
 
     return RTC_STATUS_OK;
 }
 
-__weak void RTC_AlarmCallback(uint32_t Alarm)
-{
+__weak void RTC_AlarmCallback(uint32_t Alarm) {
     /* Override this function in the application to react to alarms */
     UNUSED(Alarm);
 }
 
-void RTC_ISR_Dispatch(void)
-{
+void RTC_ISR_Dispatch(void) {
     RTC_HandleTypeDef *handle = RTC_GetHandle();
     HAL_RTC_AlarmIRQHandler(handle);
 }
@@ -104,8 +94,7 @@ void RTC_ISR_Dispatch(void)
  * @param  hrtc: RTC handle
  * @retval None
  */
-void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef* hrtc)
-{
+void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {
     UNUSED(hrtc);
     RTC_AlarmCallback(RTC_ALARM_A);
 }
@@ -115,8 +104,7 @@ void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef* hrtc)
  * @param  hrtc: RTC handle
  * @retval None
  */
-void HAL_RTCEx_AlarmBEventCallback(RTC_HandleTypeDef* hrtc)
-{
+void HAL_RTCEx_AlarmBEventCallback(RTC_HandleTypeDef *hrtc) {
     UNUSED(hrtc);
     RTC_AlarmCallback(RTC_ALARM_B);
 }

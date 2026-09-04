@@ -1,10 +1,10 @@
 /**
-  ******************************************************************************
-  * @file    ir_distance_adc.h
-  * @brief   ADC access for the IR distance sensor (internal)
-  * @details Not part of the public ir_distance.h aggregator.
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ir_distance_adc.h
+ * @brief   ADC access for the IR distance sensor (internal)
+ * @details Not part of the public ir_distance.h aggregator.
+ ******************************************************************************
+ */
 
 #ifndef IR_DISTANCE_ADC_H
 #define IR_DISTANCE_ADC_H

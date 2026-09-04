@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ssd1306_font.c
-  * @brief   6x8 ASCII font for the SSD1306
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ssd1306_font.c
+ * @brief   6x8 ASCII font for the SSD1306
+ ******************************************************************************
+ */
 
 #include "ssd1306_font.h"
 
@@ -106,10 +106,9 @@ static const uint8_t font6x8[SSD1306_FONT_CHAR_COUNT][SSD1306_FONT_WIDTH] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}  // DEL
 };
 
-const uint8_t *SSD1306_FONT_GetGlyph(char c)
-{
+const uint8_t *SSD1306_FONT_GetGlyph(char chr) {
     /* Read through uint8_t: char is signed on some targets. */
-    uint8_t index = (uint8_t)c;
+    uint8_t index = (uint8_t)chr;
 
     if (index < SSD1306_FONT_FIRST_CHAR ||
         index >= SSD1306_FONT_FIRST_CHAR + SSD1306_FONT_CHAR_COUNT) {

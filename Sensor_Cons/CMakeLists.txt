@@ -282,6 +282,25 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Applications/servo_sweep_app
 )
 
+# The LVGL dashboard with its display and touch ports and the low-power
+# manager. It is an application, not a driver, so it lives in Applications/.
+# It is compiled by default so it cannot drift from the driver APIs, but only
+# runs when main() calls it. Applications/gui_app/lv_conf.h is still the LVGL
+# configuration, referenced from cmake/lvgl-*.cmake.
+option(BUILD_GUI_APP "Compile the LVGL dashboard application" ON)
+if(BUILD_GUI_APP)
+    file(GLOB GUI_APP_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_SOURCE_DIR}/Applications/gui_app/*.c"
+    )
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${GUI_APP_SOURCES})
+endif()
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/Applications/gui_app
+)
+
+# Examples/ holds stand-alone demo files for individual drivers. They are
+# reference code, not part of the firmware, so nothing here compiles them.
+
 # ------------------------------------------------------------------------------
 # Compile Definitions (Preprocessor Macros)
 # ------------------------------------------------------------------------------

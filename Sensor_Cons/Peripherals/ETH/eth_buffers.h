@@ -14,7 +14,7 @@ extern "C" {
 #include "eth_types.h"
 
 /** @brief Buffer size handed to the DMA, a multiple of 4 as the MAC requires */
-#define ETH_BUFFER_SIZE     ETH_RX_BUF_SIZE
+#define ETH_BUFFER_SIZE ETH_RX_BUF_SIZE
 
 /**
  * @brief   Attach the descriptor tables to a HAL handle before HAL_ETH_Init()

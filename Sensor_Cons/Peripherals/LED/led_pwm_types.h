@@ -11,6 +11,6 @@
 #define LED_PWM_TYPES_H
 
 /* Exported constants --------------------------------------------------------*/
-#define LED_PWM_MAX_BRIGHTNESS      100u    /**< Brightness is a percentage */
+#define LED_PWM_MAX_BRIGHTNESS 100u /**< Brightness is a percentage */
 
 #endif /* LED_PWM_TYPES_H */

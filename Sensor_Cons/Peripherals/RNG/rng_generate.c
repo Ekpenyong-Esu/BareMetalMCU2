@@ -6,13 +6,12 @@
 #include "rng_generate.h"
 #include "rng_core.h"
 
-#define RNG_BYTES_PER_WORD  4U
+#define RNG_BYTES_PER_WORD 4U
 
-RNG_StatusTypeDef RNG_Generate(uint32_t *randomNumber)
-{
+RNG_StatusTypeDef RNG_Generate(uint32_t *randomNumber) {
     RNG_HandleTypeDef *hrng = RNG_GetHandle();
-    RNG_StatusTypeDef status;
-    HAL_StatusTypeDef halStatus;
+    RNG_StatusTypeDef status = RNG_OK;
+    HAL_StatusTypeDef halStatus = HAL_OK;
 
     if (randomNumber == NULL) {
         return RNG_ERROR;
@@ -41,8 +40,7 @@ RNG_StatusTypeDef RNG_Generate(uint32_t *randomNumber)
     return RNG_OK;
 }
 
-RNG_StatusTypeDef RNG_GenerateBuffer(uint32_t *buffer, uint32_t count)
-{
+RNG_StatusTypeDef RNG_GenerateBuffer(uint32_t *buffer, uint32_t count) {
     if (buffer == NULL || count == 0U) {
         return RNG_ERROR;
     }
@@ -57,8 +55,7 @@ RNG_StatusTypeDef RNG_GenerateBuffer(uint32_t *buffer, uint32_t count)
     return RNG_OK;
 }
 
-RNG_StatusTypeDef RNG_GenerateBytes(uint8_t *buffer, uint32_t length)
-{
+RNG_StatusTypeDef RNG_GenerateBytes(uint8_t *buffer, uint32_t length) {
     uint32_t bytesRemaining = length;
     uint32_t bufferIndex = 0;
 
@@ -68,15 +65,14 @@ RNG_StatusTypeDef RNG_GenerateBytes(uint8_t *buffer, uint32_t length)
 
     while (bytesRemaining > 0U) {
         uint32_t randomWord = 0;
-        uint32_t bytesToCopy;
+        uint32_t bytesToCopy = 0;
 
         RNG_StatusTypeDef status = RNG_Generate(&randomWord);
         if (status != RNG_OK) {
             return status;
         }
 
-        bytesToCopy = (bytesRemaining >= RNG_BYTES_PER_WORD) ? RNG_BYTES_PER_WORD
-                                                            : bytesRemaining;
+        bytesToCopy = (bytesRemaining >= RNG_BYTES_PER_WORD) ? RNG_BYTES_PER_WORD : bytesRemaining;
         for (uint32_t i = 0; i < bytesToCopy; i++) {
             buffer[bufferIndex++] = (uint8_t)(randomWord >> (i * 8U));
         }

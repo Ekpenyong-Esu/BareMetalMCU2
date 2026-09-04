@@ -14,17 +14,25 @@ This driver provides support for resistive touchscreens with XPT2046 controller.
 ## Hardware Requirements
 
 - XPT2046 resistive touchscreen controller
-- SPI peripheral
-- 2 GPIO pins (CS, IRQ)
+- An SPI bus opened by the application (`SPI_BusInit`), which may be shared with the display
+- 2 GPIO pins (CS, IRQ), chosen by the application
 
 ## Usage Example
 
 ```c
 #include "xpt2046.h"
 
-// Initialize touchscreen
+// The application owns the bus and decides which pins carry it
+SPI_BusConfig_t busConfig = { .instance = SPI2,
+                              .sckPort = GPIOB, .sckPin = GPIO_PIN_10,
+                              .misoPort = GPIOC, .misoPin = GPIO_PIN_2,
+                              .mosiPort = GPIOC, .mosiPin = GPIO_PIN_3 };
+SPI_Bus_t bus;
+SPI_BusInit(&bus, &busConfig);
+
+// Initialize touchscreen on that bus; the driver configures CS and IRQ itself
 XPT2046_Handle_t hxpt;
-XPT2046_Init(&hxpt, GPIOB, GPIO_PIN_15, GPIOB, GPIO_PIN_0, 320, 480);
+XPT2046_Init(&hxpt, &bus, GPIOB, GPIO_PIN_15, GPIOB, GPIO_PIN_0, 320, 480);
 
 // Check for touch
 if (XPT2046_IsTouched(&hxpt)) {
@@ -78,6 +86,6 @@ cmake -DUSE_XPT2046=ON ..
 
 ## Dependencies
 
-- STM32 HAL SPI driver
+- `Peripherals/SPI` bus driver
 - GPIO driver
 - Standard C libraries

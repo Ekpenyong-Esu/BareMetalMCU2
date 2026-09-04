@@ -31,10 +31,10 @@ bool IR_TimingIsRunning(void);
  * @brief Busy-wait for a number of microseconds
  * @note  IR pulses are tens of microseconds long, so HAL_Delay() with its 1 ms
  *        granularity cannot be used here.
- * @param us: Delay in microseconds
+ * @param microseconds: Delay in microseconds
  * @return void
  */
-void IR_DelayUs(uint32_t us);
+void IR_DelayUs(uint32_t microseconds);
 
 /**
  * @brief Convert microseconds to timer ticks

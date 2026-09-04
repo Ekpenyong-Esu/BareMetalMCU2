@@ -12,7 +12,7 @@ This directory contains a comprehensive MMA8452Q accelerometer driver implementa
 - **`accel_config.c/.h`** - Mode, data rate, range, filters, interrupt configuration
 - **`accel_calibration.c/.h`** - Offset calibration
 - **`accel_diag.c/.h`** - Self-test and status strings
-- **`accel_core.c/.h`** - Init/DeInit, device identification, cached range
+- **`accel_core.c/.h`** - Init/DeInit, device identification
 
 ## Features
 
@@ -26,7 +26,7 @@ This directory contains a comprehensive MMA8452Q accelerometer driver implementa
 - **Self-Test**: Built-in self-test functionality
 
 ### Supported Operations
-- `ACCEL_Init()` - Initialize with default settings
+- `ACCEL_Init()` - Bind the part to a bus and chip-select pin, apply settings
 - `ACCEL_ReadData()` - Read processed acceleration data
 - `ACCEL_ReadRawData()` - Read raw 14-bit acceleration data
 - `ACCEL_SetDataRate()` - Configure output data rate
@@ -34,22 +34,37 @@ This directory contains a comprehensive MMA8452Q accelerometer driver implementa
 - `ACCEL_Calibrate()` - Perform automatic calibration
 - `ACCEL_SelfTest()` - Run built-in self-test
 
+Every call takes an `ACCEL_Handle_t *`; the driver keeps no global state, so
+two parts on different chip selects are two handles.
+
 ## Usage Examples
 
 ### Basic Initialization and Reading
 ```c
+#include "spi_core.h"
 #include "accel_core.h"
 #include "accel_data.h"
 
+// The application owns the bus and decides which pins carry it.
+SPI_BusConfig_t busConfig = {
+    .instance = SPI5,
+    .sckPort = GPIOF,  .sckPin = GPIO_PIN_7,
+    .misoPort = GPIOF, .misoPin = GPIO_PIN_8,
+    .mosiPort = GPIOF, .mosiPin = GPIO_PIN_9,
+};
+SPI_Bus_t bus;
+SPI_BusInit(&bus, &busConfig);
+
 // Initialize accelerometer with default settings (100Hz, ±2g, active mode)
-ACCEL_StatusTypeDef status = ACCEL_Init();
+ACCEL_Handle_t accel;
+ACCEL_StatusTypeDef status = ACCEL_Init(&accel, &bus, GPIOC, GPIO_PIN_1, NULL);
 if (status != ACCEL_OK) {
     // Handle initialization error
 }
 
 // Read acceleration data
 ACCEL_DataTypeDef data;
-status = ACCEL_ReadData(&data);
+status = ACCEL_ReadData(&accel, &data);
 if (status == ACCEL_OK) {
     printf("X: %.3f g, Y: %.3f g, Z: %.3f g\n",
            data.X_g, data.Y_g, data.Z_g);
@@ -66,13 +81,13 @@ ACCEL_ConfigTypeDef config = {
     .LowNoise = true                  // Enable low noise mode
 };
 
-ACCEL_StatusTypeDef status = ACCEL_Init_Custom(&config);
+ACCEL_StatusTypeDef status = ACCEL_Init(&accel, &bus, GPIOC, GPIO_PIN_1, &config);
 ```
 
 ### Raw Data Reading
 ```c
 int16_t xRaw, yRaw, zRaw;
-ACCEL_StatusTypeDef status = ACCEL_ReadRawData(&xRaw, &yRaw, &zRaw);
+ACCEL_StatusTypeDef status = ACCEL_ReadRawData(&accel, &xRaw, &yRaw, &zRaw);
 if (status == ACCEL_OK) {
     // Raw values are 14-bit signed (-8192 to +8191)
     printf("Raw: X=%d, Y=%d, Z=%d\n", xRaw, yRaw, zRaw);
@@ -82,40 +97,41 @@ if (status == ACCEL_OK) {
 ### Calibration
 ```c
 // Automatic calibration (keep sensor level during calibration)
-ACCEL_StatusTypeDef status = ACCEL_Calibrate();
+ACCEL_StatusTypeDef status = ACCEL_Calibrate(&accel);
 if (status == ACCEL_OK) {
     printf("Calibration completed successfully\n");
 }
 
 // Manual offset adjustment
-status = ACCEL_SetOffset(10, -5, 20);  // X, Y, Z offsets
+status = ACCEL_SetOffset(&accel, 10, -5, 20);  // X, Y, Z offsets
 ```
 
 ### Interrupt Configuration
 ```c
+ACCEL_IntConfigTypeDef intConfig = {
     .DataReady = true,     // Interrupt on new data
     .Motion = false,       // Motion detection disabled
     .Freefall = false,     // Freefall detection disabled
     .Tap = true            // Tap detection enabled
 };
 
-ACCEL_StatusTypeDef status = ACCEL_ConfigInterrupts(&intConfig);
+ACCEL_StatusTypeDef status = ACCEL_ConfigInterrupts(&accel, &intConfig);
 ```
 
 ## Hardware Configuration
 
 ### SPI Interface
-The driver communicates with the MMA8452Q via SPI with the following configuration:
+The driver registers its own `SPI_Device_t` on the bus the application hands
+it, with these settings:
 - **Mode**: SPI Mode 0 (CPOL=0, CPHA=0)
 - **Data Size**: 8-bit transfers
 - **Clock Speed**: Up to 1MHz (device limit)
-- **Chip Select**: Software controlled
+- **Chip Select**: Software controlled, on the port/pin passed to `ACCEL_Init()`
 
-### Pin Connections (STM32F429-Discovery)
-- **MOSI**: PF9 (SPI5)
-- **MISO**: PF8 (SPI5)
-- **SCK**: PF7 (SPI5)
-- **CS**: Software controlled (GPIO output)
+### Pin Connections
+The driver does not know the board. SCK/MISO/MOSI belong to the bus and are
+chosen in `SPI_BusConfig_t`; the chip-select pin is chosen by the caller of
+`ACCEL_Init()`. On the STM32F429-Discovery the free SPI5 chip select is PC1.
 
 ### SPI Command Format
 - **Read**: 0x80 | register_address
@@ -243,7 +259,7 @@ This will demonstrate:
 The driver is not thread-safe. Use mutex protection for multi-threaded applications.
 
 ### Memory Usage
-- **RAM**: ~50 bytes for static variables
+- **RAM**: one `ACCEL_Handle_t` per part, owned by the application; no statics
 - **Stack**: ~100 bytes for local variables during operation
 
 ---

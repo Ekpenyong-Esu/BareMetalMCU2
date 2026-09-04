@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ir_distance_calibrate.h
-  * @brief   IR distance sensor calibration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ir_distance_calibrate.h
+ * @brief   IR distance sensor calibration
+ ******************************************************************************
+ */
 
 #ifndef IR_DISTANCE_CALIBRATE_H
 #define IR_DISTANCE_CALIBRATE_H
@@ -25,8 +25,7 @@ IR_DISTANCE_StatusTypeDef IR_DISTANCE_SetCustomCurve(IR_DISTANCE_Handle_t *hird,
 /**
  * @brief   Add or update one calibration point on the active curve.
  */
-IR_DISTANCE_StatusTypeDef IR_DISTANCE_CalibratePoint(IR_DISTANCE_Handle_t *hird,
-                                                     uint16_t distance,
+IR_DISTANCE_StatusTypeDef IR_DISTANCE_CalibratePoint(IR_DISTANCE_Handle_t *hird, uint16_t distance,
                                                      uint16_t adcValue);
 
 /**

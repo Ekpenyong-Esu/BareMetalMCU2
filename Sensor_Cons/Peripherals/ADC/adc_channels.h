@@ -47,7 +47,7 @@ HAL_StatusTypeDef ADC_ConfigureChannelGpio(uint32_t channel);
  * @param   channel ADC channel
  * @retval  const char* Pin name, or "UNKNOWN"
  */
-const char* ADC_GetChannelName(uint32_t channel);
+const char *ADC_GetChannelName(uint32_t channel);
 
 #ifdef __cplusplus
 }

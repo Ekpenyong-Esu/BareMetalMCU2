@@ -9,12 +9,17 @@
 #include "dma2d_validate.h"
 #include "log.h"
 
+/* Private defines -----------------------------------------------------------*/
+
+/** Side of the square buffer filled by DMA2D_SelfTest, in pixels */
+#define DMA2D_SELFTEST_SIDE_PX 4U
+
 /* Private types -------------------------------------------------------------*/
 
 /** How the caller wants to observe completion. */
 typedef enum {
-    DMA2D_WAIT_POLLING = 0,   /**< Block until the transfer finishes */
-    DMA2D_WAIT_INTERRUPT      /**< Return as soon as the transfer is armed */
+    DMA2D_WAIT_POLLING = 0, /**< Block until the transfer finishes */
+    DMA2D_WAIT_INTERRUPT    /**< Return as soon as the transfer is armed */
 } DMA2D_WaitMode;
 
 /* Private functions ---------------------------------------------------------*/
@@ -23,8 +28,7 @@ typedef enum {
  * @brief Common precondition check for every transfer entry point
  * @return HAL_OK when a transfer may be started
  */
-static HAL_StatusTypeDef DMA2D_ReadyToStart(void)
-{
+static HAL_StatusTypeDef DMA2D_ReadyToStart(void) {
     if (!DMA2D_IsInitialized()) {
         log_error("DMA2D not initialized");
         DMA2D_UpdateStatus(HAL_ERROR);
@@ -51,29 +55,28 @@ static HAL_StatusTypeDef DMA2D_ReadyToStart(void)
  * @param height Transfer height in pixels
  * @return HAL status of the start call
  */
-static HAL_StatusTypeDef DMA2D_LaunchConfiguredMode(DMA2D_WaitMode wait,
-                                                    const uint32_t *pSrc, uint32_t *pDst,
-                                                    uint32_t width, uint32_t height)
-{
+static HAL_StatusTypeDef DMA2D_LaunchConfiguredMode(DMA2D_WaitMode wait, const uint32_t *pSrc,
+                                                    uint32_t *pDst, uint32_t width,
+                                                    uint32_t height) {
     DMA2D_HandleTypeDef *hal = &DMA2D_GetDevice()->hal;
     const bool useInterrupt = (wait == DMA2D_WAIT_INTERRUPT);
 
     switch (hal->Init.Mode) {
         case DMA2D_R2M:
-            return useInterrupt
-                ? HAL_DMA2D_Start_IT(hal, 0, (uint32_t)pDst, width, height)
-                : HAL_DMA2D_Start(hal, 0, (uint32_t)pDst, width, height);
+            return useInterrupt ? HAL_DMA2D_Start_IT(hal, 0, (uint32_t)pDst, width, height)
+                                : HAL_DMA2D_Start(hal, 0, (uint32_t)pDst, width, height);
 
         case DMA2D_M2M:
         case DMA2D_M2M_PFC:
             return useInterrupt
-                ? HAL_DMA2D_Start_IT(hal, (uint32_t)pSrc, (uint32_t)pDst, width, height)
-                : HAL_DMA2D_Start(hal, (uint32_t)pSrc, (uint32_t)pDst, width, height);
+                       ? HAL_DMA2D_Start_IT(hal, (uint32_t)pSrc, (uint32_t)pDst, width, height)
+                       : HAL_DMA2D_Start(hal, (uint32_t)pSrc, (uint32_t)pDst, width, height);
 
         case DMA2D_M2M_BLEND:
-            return useInterrupt
-                ? HAL_DMA2D_BlendingStart_IT(hal, (uint32_t)pSrc, 0, (uint32_t)pDst, width, height)
-                : HAL_DMA2D_BlendingStart(hal, (uint32_t)pSrc, 0, (uint32_t)pDst, width, height);
+            return useInterrupt ? HAL_DMA2D_BlendingStart_IT(hal, (uint32_t)pSrc, 0, (uint32_t)pDst,
+                                                             width, height)
+                                : HAL_DMA2D_BlendingStart(hal, (uint32_t)pSrc, 0, (uint32_t)pDst,
+                                                          width, height);
 
         default:
             log_error("Unsupported DMA2D mode: %lu", (unsigned long)hal->Init.Mode);
@@ -86,8 +89,7 @@ static HAL_StatusTypeDef DMA2D_LaunchConfiguredMode(DMA2D_WaitMode wait,
  * @note  HAL_DMA2D_ConfigLayer copies LayerCfg into the registers, so the
  *        fields have to be written before it is called.
  */
-static void DMA2D_ConfigureBlendLayers(void)
-{
+static void DMA2D_ConfigureBlendLayers(void) {
     DMA2D_HandleTypeDef *hal = &DMA2D_GetDevice()->hal;
 
     for (uint32_t layer = DMA2D_BACKGROUND_LAYER; layer <= DMA2D_FOREGROUND_LAYER; layer++) {
@@ -104,10 +106,8 @@ static void DMA2D_ConfigureBlendLayers(void)
  * @param context Short label used in the failure log
  * @return Final HAL status of the operation
  */
-static HAL_StatusTypeDef DMA2D_FinishTransfer(DMA2D_WaitMode wait,
-                                              HAL_StatusTypeDef result,
-                                              const char *context)
-{
+static HAL_StatusTypeDef DMA2D_FinishTransfer(DMA2D_WaitMode wait, HAL_StatusTypeDef result,
+                                              const char *context) {
     if (result != HAL_OK) {
         const char *errStr = DMA2D_GetErrorString(result);
         log_error("DMA2D %s start failed: %s", context, errStr);
@@ -133,12 +133,10 @@ static HAL_StatusTypeDef DMA2D_FinishTransfer(DMA2D_WaitMode wait,
 /**
  * @brief Shared implementation of DMA2D_StartTransfer and DMA2D_StartTransfer_IT
  */
-static HAL_StatusTypeDef DMA2D_Transfer(DMA2D_WaitMode wait, const uint32_t *pSrc,
-                                        uint32_t *pDst, uint32_t width, uint32_t height)
-{
+static HAL_StatusTypeDef DMA2D_Transfer(DMA2D_WaitMode wait, const uint32_t *pSrc, uint32_t *pDst,
+                                        uint32_t width, uint32_t height) {
     uint32_t halMode = DMA2D_GetDevice()->hal.Init.Mode;
-    HAL_StatusTypeDef result = DMA2D_ValidateTransfer(halMode,
-                                                      pSrc, pDst, width, height);
+    HAL_StatusTypeDef result = DMA2D_ValidateTransfer(halMode, pSrc, pDst, width, height);
     if (result != HAL_OK) {
         DMA2D_UpdateStatus(result);
         return result;
@@ -149,8 +147,7 @@ static HAL_StatusTypeDef DMA2D_Transfer(DMA2D_WaitMode wait, const uint32_t *pSr
         return result;
     }
 
-    return DMA2D_FinishTransfer(wait,
-                                DMA2D_LaunchConfiguredMode(wait, pSrc, pDst, width, height),
+    return DMA2D_FinishTransfer(wait, DMA2D_LaunchConfiguredMode(wait, pSrc, pDst, width, height),
                                 "transfer");
 }
 
@@ -158,8 +155,7 @@ static HAL_StatusTypeDef DMA2D_Transfer(DMA2D_WaitMode wait, const uint32_t *pSr
  * @brief Shared implementation of DMA2D_StartFill and DMA2D_StartFill_IT
  */
 static HAL_StatusTypeDef DMA2D_Fill(DMA2D_WaitMode wait, uint32_t color, uint32_t *pDst,
-                                    uint32_t width, uint32_t height)
-{
+                                    uint32_t width, uint32_t height) {
     /* A fill never reads memory, so it is validated as a register-to-memory op. */
     HAL_StatusTypeDef result = DMA2D_ValidateTransfer(DMA2D_R2M, NULL, pDst, width, height);
     if (result != HAL_OK) {
@@ -174,8 +170,8 @@ static HAL_StatusTypeDef DMA2D_Fill(DMA2D_WaitMode wait, uint32_t color, uint32_
 
     DMA2D_HandleTypeDef *hal = &DMA2D_GetDevice()->hal;
     result = (wait == DMA2D_WAIT_INTERRUPT)
-        ? HAL_DMA2D_Start_IT(hal, color, (uint32_t)pDst, width, height)
-        : HAL_DMA2D_Start(hal, color, (uint32_t)pDst, width, height);
+                 ? HAL_DMA2D_Start_IT(hal, color, (uint32_t)pDst, width, height)
+                 : HAL_DMA2D_Start(hal, color, (uint32_t)pDst, width, height);
 
     return DMA2D_FinishTransfer(wait, result, "fill");
 }
@@ -184,9 +180,8 @@ static HAL_StatusTypeDef DMA2D_Fill(DMA2D_WaitMode wait, uint32_t color, uint32_
  * @brief Shared implementation of DMA2D_StartBlending and DMA2D_StartBlending_IT
  */
 static HAL_StatusTypeDef DMA2D_Blend(DMA2D_WaitMode wait, const uint32_t *pSrc1,
-                                     const uint32_t *pSrc2, uint32_t *pDst,
-                                     uint32_t width, uint32_t height)
-{
+                                     const uint32_t *pSrc2, uint32_t *pDst, uint32_t width,
+                                     uint32_t height) {
     HAL_StatusTypeDef result = DMA2D_ValidateTransfer(DMA2D_M2M_BLEND, pSrc1, pDst, width, height);
     if (result != HAL_OK) {
         DMA2D_UpdateStatus(result);
@@ -208,65 +203,56 @@ static HAL_StatusTypeDef DMA2D_Blend(DMA2D_WaitMode wait, const uint32_t *pSrc1,
 
     DMA2D_HandleTypeDef *hal = &DMA2D_GetDevice()->hal;
     result = (wait == DMA2D_WAIT_INTERRUPT)
-        ? HAL_DMA2D_BlendingStart_IT(hal, (uint32_t)pSrc1, (uint32_t)pSrc2,
-                                     (uint32_t)pDst, width, height)
-        : HAL_DMA2D_BlendingStart(hal, (uint32_t)pSrc1, (uint32_t)pSrc2,
-                                  (uint32_t)pDst, width, height);
+                 ? HAL_DMA2D_BlendingStart_IT(hal, (uint32_t)pSrc1, (uint32_t)pSrc2, (uint32_t)pDst,
+                                              width, height)
+                 : HAL_DMA2D_BlendingStart(hal, (uint32_t)pSrc1, (uint32_t)pSrc2, (uint32_t)pDst,
+                                           width, height);
 
     return DMA2D_FinishTransfer(wait, result, "blending");
 }
 
 /* Public functions ----------------------------------------------------------*/
 
-HAL_StatusTypeDef DMA2D_StartTransfer(const uint32_t *pSrc, uint32_t *pDst,
-                                      uint32_t width, uint32_t height)
-{
+HAL_StatusTypeDef DMA2D_StartTransfer(const uint32_t *pSrc, uint32_t *pDst, uint32_t width,
+                                      uint32_t height) {
     log_debug("Starting DMA2D transfer: %lux%lu", (unsigned long)width, (unsigned long)height);
     return DMA2D_Transfer(DMA2D_WAIT_POLLING, pSrc, pDst, width, height);
 }
 
-HAL_StatusTypeDef DMA2D_StartTransfer_IT(const uint32_t *pSrc, uint32_t *pDst,
-                                         uint32_t width, uint32_t height)
-{
-    log_debug("Starting DMA2D transfer (interrupt): %lux%lu",
-              (unsigned long)width, (unsigned long)height);
+HAL_StatusTypeDef DMA2D_StartTransfer_IT(const uint32_t *pSrc, uint32_t *pDst, uint32_t width,
+                                         uint32_t height) {
+    log_debug("Starting DMA2D transfer (interrupt): %lux%lu", (unsigned long)width,
+              (unsigned long)height);
     return DMA2D_Transfer(DMA2D_WAIT_INTERRUPT, pSrc, pDst, width, height);
 }
 
-HAL_StatusTypeDef DMA2D_StartFill(uint32_t color, uint32_t *pDst,
-                                  uint32_t width, uint32_t height)
-{
-    log_debug("Starting DMA2D fill: color=0x%08lx, size=%lux%lu",
-              (unsigned long)color, (unsigned long)width, (unsigned long)height);
+HAL_StatusTypeDef DMA2D_StartFill(uint32_t color, uint32_t *pDst, uint32_t width, uint32_t height) {
+    log_debug("Starting DMA2D fill: color=0x%08lx, size=%lux%lu", (unsigned long)color,
+              (unsigned long)width, (unsigned long)height);
     return DMA2D_Fill(DMA2D_WAIT_POLLING, color, pDst, width, height);
 }
 
-HAL_StatusTypeDef DMA2D_StartFill_IT(uint32_t color, uint32_t *pDst,
-                                     uint32_t width, uint32_t height)
-{
-    log_debug("Starting DMA2D fill (interrupt): color=0x%08lx, size=%lux%lu",
-              (unsigned long)color, (unsigned long)width, (unsigned long)height);
+HAL_StatusTypeDef DMA2D_StartFill_IT(uint32_t color, uint32_t *pDst, uint32_t width,
+                                     uint32_t height) {
+    log_debug("Starting DMA2D fill (interrupt): color=0x%08lx, size=%lux%lu", (unsigned long)color,
+              (unsigned long)width, (unsigned long)height);
     return DMA2D_Fill(DMA2D_WAIT_INTERRUPT, color, pDst, width, height);
 }
 
-HAL_StatusTypeDef DMA2D_StartBlending(const uint32_t *pSrc1, const uint32_t *pSrc2,
-                                      uint32_t *pDst, uint32_t width, uint32_t height)
-{
-    log_debug("Starting DMA2D blending: size=%lux%lu",
-              (unsigned long)width, (unsigned long)height);
+HAL_StatusTypeDef DMA2D_StartBlending(const uint32_t *pSrc1, const uint32_t *pSrc2, uint32_t *pDst,
+                                      uint32_t width, uint32_t height) {
+    log_debug("Starting DMA2D blending: size=%lux%lu", (unsigned long)width, (unsigned long)height);
     return DMA2D_Blend(DMA2D_WAIT_POLLING, pSrc1, pSrc2, pDst, width, height);
 }
 
 HAL_StatusTypeDef DMA2D_StartBlending_IT(const uint32_t *pSrc1, const uint32_t *pSrc2,
-                                         uint32_t *pDst, uint32_t width, uint32_t height)
-{
-    log_debug("Starting DMA2D blending (interrupt): size=%lux%lu",
-              (unsigned long)width, (unsigned long)height);
+                                         uint32_t *pDst, uint32_t width, uint32_t height) {
+    log_debug("Starting DMA2D blending (interrupt): size=%lux%lu", (unsigned long)width,
+              (unsigned long)height);
     return DMA2D_Blend(DMA2D_WAIT_INTERRUPT, pSrc1, pSrc2, pDst, width, height);
 }
 
-HAL_StatusTypeDef DMA2D_SelfTest(void)
-{
+HAL_StatusTypeDef DMA2D_SelfTest(void) {
     log_info("Starting DMA2D self-test");
 
     if (!DMA2D_IsInitialized()) {
@@ -274,8 +260,9 @@ HAL_StatusTypeDef DMA2D_SelfTest(void)
         return HAL_ERROR;
     }
 
-    uint32_t test_buffer[16] = {0};
-    HAL_StatusTypeDef result = DMA2D_StartFill(DMA2D_COLOR_RED, test_buffer, 4, 4);
+    uint32_t test_buffer[DMA2D_SELFTEST_SIDE_PX * DMA2D_SELFTEST_SIDE_PX] = {0};
+    HAL_StatusTypeDef result = DMA2D_StartFill(DMA2D_COLOR_RED, test_buffer, DMA2D_SELFTEST_SIDE_PX,
+                                               DMA2D_SELFTEST_SIDE_PX);
     if (result != HAL_OK) {
         log_error("DMA2D self-test failed: %s", DMA2D_GetErrorString(result));
         return result;

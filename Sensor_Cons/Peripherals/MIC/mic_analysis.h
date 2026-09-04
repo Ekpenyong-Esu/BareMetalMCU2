@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mic_analysis.h
-  * @brief   Frequency-domain analysis of the captured PCM buffer
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mic_analysis.h
+ * @brief   Frequency-domain analysis of the captured PCM buffer
+ ******************************************************************************
+ */
 
 #ifndef MIC_ANALYSIS_H
 #define MIC_ANALYSIS_H
@@ -18,7 +18,8 @@ extern "C" {
  * @brief Fill magnitude spectrum, spectral centroid and zero-crossing rate.
  * @note  Requires a captured buffer; returns MIC_BUSY until one is ready.
  */
-MIC_StatusTypeDef MIC_PerformAudioAnalysis(MIC_HandleTypeDef *hmic, MIC_AudioAnalysisTypeDef *analysis);
+MIC_StatusTypeDef MIC_PerformAudioAnalysis(MIC_HandleTypeDef *hmic,
+                                           MIC_AudioAnalysisTypeDef *analysis);
 
 #ifdef __cplusplus
 }

@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    qspi_erase.c
-  * @brief   Erase paths for the serial NOR flash
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    qspi_erase.c
+ * @brief   Erase paths for the serial NOR flash
+ ******************************************************************************
+ */
 
 #include "qspi_erase.h"
 #include "qspi_flash.h"
@@ -15,8 +15,8 @@
 /* Every erase is the same sequence; only the opcode, whether an address is
    sent, and how long the part may take differ. */
 static QSPI_StatusTypeDef QSPI_EraseWithCommand(QSPI_HandleStructTypeDef *hqspi, uint8_t command,
-                                                uint32_t address, bool addressed, uint32_t timeout)
-{
+                                                uint32_t address, bool addressed,
+                                                uint32_t timeout) {
     QSPI_StatusTypeDef ready = QSPI_CheckReady(hqspi);
     if (ready != QSPI_OK) {
         return ready;
@@ -31,10 +31,10 @@ static QSPI_StatusTypeDef QSPI_EraseWithCommand(QSPI_HandleStructTypeDef *hqspi,
         return status;
     }
 
-    QSPI_ChipSelect(true);
+    QSPI_ChipSelect(hqspi, true);
     status = addressed ? QSPI_SendCommandWithAddress(hqspi, command, address)
                        : QSPI_SendCommand(hqspi, command);
-    QSPI_ChipSelect(false);
+    QSPI_ChipSelect(hqspi, false);
 
     if (status != QSPI_OK) {
         return status;
@@ -43,22 +43,20 @@ static QSPI_StatusTypeDef QSPI_EraseWithCommand(QSPI_HandleStructTypeDef *hqspi,
     return (QSPI_WaitForWriteEndWithin(hqspi, timeout) == QSPI_OK) ? QSPI_OK : QSPI_ERASE_ERROR;
 }
 
-QSPI_StatusTypeDef QSPI_EraseSector(QSPI_HandleStructTypeDef *hqspi, uint32_t address)
-{
+QSPI_StatusTypeDef QSPI_EraseSector(QSPI_HandleStructTypeDef *hqspi, uint32_t address) {
     return QSPI_EraseWithCommand(hqspi, QSPI_CMD_SECTOR_ERASE, address, true, QSPI_ERASE_TIMEOUT);
 }
 
-QSPI_StatusTypeDef QSPI_EraseBlock32K(QSPI_HandleStructTypeDef *hqspi, uint32_t address)
-{
-    return QSPI_EraseWithCommand(hqspi, QSPI_CMD_BLOCK_ERASE_32K, address, true, QSPI_ERASE_TIMEOUT);
+QSPI_StatusTypeDef QSPI_EraseBlock32K(QSPI_HandleStructTypeDef *hqspi, uint32_t address) {
+    return QSPI_EraseWithCommand(hqspi, QSPI_CMD_BLOCK_ERASE_32K, address, true,
+                                 QSPI_ERASE_TIMEOUT);
 }
 
-QSPI_StatusTypeDef QSPI_EraseBlock64K(QSPI_HandleStructTypeDef *hqspi, uint32_t address)
-{
-    return QSPI_EraseWithCommand(hqspi, QSPI_CMD_BLOCK_ERASE_64K, address, true, QSPI_ERASE_TIMEOUT);
+QSPI_StatusTypeDef QSPI_EraseBlock64K(QSPI_HandleStructTypeDef *hqspi, uint32_t address) {
+    return QSPI_EraseWithCommand(hqspi, QSPI_CMD_BLOCK_ERASE_64K, address, true,
+                                 QSPI_ERASE_TIMEOUT);
 }
 
-QSPI_StatusTypeDef QSPI_EraseChip(QSPI_HandleStructTypeDef *hqspi)
-{
+QSPI_StatusTypeDef QSPI_EraseChip(QSPI_HandleStructTypeDef *hqspi) {
     return QSPI_EraseWithCommand(hqspi, QSPI_CMD_CHIP_ERASE, 0U, false, QSPI_CHIP_ERASE_TIMEOUT);
 }

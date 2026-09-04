@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    mic_events.h
-  * @brief   Interrupt-context servicing for the PDM microphone
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    mic_events.h
+ * @brief   Interrupt-context servicing for the PDM microphone
+ ******************************************************************************
+ */
 
 #ifndef MIC_EVENTS_H
 #define MIC_EVENTS_H
@@ -33,10 +33,13 @@ void MIC_TransferCompleteCallback(MIC_HandleTypeDef *hmic);
 void MIC_ErrorCallback(MIC_HandleTypeDef *hmic);
 
 /**
- * @brief Vector entry points; wired from Core/Src/stm32f4xx_it.c.
+ * @brief Vector entry points. The application's vector table passes the
+ *        stream or I2S block that fired, e.g. from DMA1_Stream3_IRQHandler()
+ *        call MIC_DMA_IRQHandler(DMA1_Stream3); from SPI2_IRQHandler() call
+ *        MIC_I2S_IRQHandler(SPI2). Unknown sources are ignored.
  */
-void MIC_DMA_IRQHandler(void);
-void MIC_I2S_IRQHandler(void);
+void MIC_DMA_IRQHandler(const DMA_Stream_TypeDef *stream);
+void MIC_I2S_IRQHandler(const SPI_TypeDef *instance);
 
 #ifdef __cplusplus
 }

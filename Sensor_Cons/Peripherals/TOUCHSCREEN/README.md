@@ -4,10 +4,15 @@ This driver provides an interface for the STMPE811 resistive touchscreen control
 
 ## Hardware Overview
 
-The STM32F429I Discovery board includes:
-- **STMPE811** resistive touchscreen controller
+The driver knows the STMPE811 register map and nothing about the board. The
+application supplies the wiring in `TS_ConfigTypeDef`: the open `I2C_Bus_t`
+the controller sits on, the MCU pin its INT output reaches (or none, for
+polling) and the size of the display behind the panel.
+
+On the STM32F429I Discovery board that is:
+- **STMPE811** at 8-bit address `0x82` (the default when `address` is 0)
 - **240x320 pixel** resistive touchscreen display
-- **I2C3** interface for communication
+- **I2C3** on PA8 (SCL) / PC9 (SDA)
 - **PA15** interrupt pin for touch detection
 
 ## Features
@@ -20,43 +25,35 @@ The STM32F429I Discovery board includes:
 - ✅ FIFO buffer support
 - ✅ Hardware filtering and averaging
 
-## Pin Configuration
-
-| Function | Pin | GPIO Port | Alternative Function |
-|----------|-----|-----------|---------------------|
-| I2C3_SCL | PA8 | GPIOA | AF4 |
-| I2C3_SDA | PC9 | GPIOC | AF4 |
-| Touch INT | PA15 | GPIOA | GPIO Input |
-
 ## Quick Start
 
 ### 1. Basic Initialization
 
+The application opens the bus, then hands it to the driver together with the
+INT pin and display size:
+
 ```c
-#include "touchscreen.h"
+#include "i2c.h"
+#include "ts_core.h"
 
-// Declare touchscreen handle
+I2C_Bus_t i2c3;
 TS_HandleTypeDef hts;
-I2C_HandleTypeDef hi2c3;
 
-// Initialize I2C3 (in your main.c or init function)
-void MX_I2C3_Init(void)
-{
-    hi2c3.Instance = I2C3;
-    hi2c3.Init.ClockSpeed = 100000;
-    hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
-    hi2c3.Init.OwnAddress1 = 0;
-    hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-    hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-    hi2c3.Init.OwnAddress2 = 0;
-    hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-    hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-    HAL_I2C_Init(&hi2c3);
-}
+I2C_BusConfig_t busCfg = {
+    .instance = I2C3,
+    .sclPort = GPIOA, .sclPin = GPIO_PIN_8,
+    .sdaPort = GPIOC, .sdaPin = GPIO_PIN_9,
+};
+I2C_BusInit(&i2c3, &busCfg);
 
-// Initialize touchscreen
-TS_StatusTypeDef status = TS_Init(&hts, &hi2c3);
-if (status == TS_OK) {
+TS_ConfigTypeDef tsCfg = TS_GetDefaultConfig();
+tsCfg.bus = &i2c3;
+tsCfg.intPort = GPIOA;          /* NULL to poll instead of using EXTI */
+tsCfg.intPin = GPIO_PIN_15;
+tsCfg.displayWidth = 240;
+tsCfg.displayHeight = 320;
+
+if (TS_Init(&hts, &tsCfg) == TS_OK) {
     printf("Touchscreen initialized successfully\\n");
 }
 ```
@@ -80,26 +77,32 @@ if (TS_GetTouchData(&hts, &touchData) == TS_OK) {
 
 ### 3. Interrupt-Driven Operation
 
-```c
-// Enable interrupts
-TS_EnableInterrupt(&hts, true);
+The driver never defines `HAL_GPIO_EXTI_Callback`; the application owns it and
+forwards the edge of the pin it configured. The EXTI callback only raises a
+flag, because clearing the STMPE811 needs I2C, so the application services it
+from its main loop or LVGL task.
 
+```c
 // Set callbacks
-hts.TouchCallback = MyTouchCallback;
-hts.ReleaseCallback = MyReleaseCallback;
-hts.GestureCallback = MyGestureCallback;
+TS_RegisterCallbacks(&hts, MyTouchCallback, MyReleaseCallback, MyGestureCallback);
+TS_SetActivityCallback(&hts, MyWakeBookkeeping);   /* optional, runs in ISR context */
 
 // In your interrupt handler (stm32f4xx_it.c)
 void EXTI15_10_IRQHandler(void)
 {
-    HAL_GPIO_EXTI_IRQHandler(TS_INT_PIN);
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    if (GPIO_Pin == TS_INT_PIN) {
-        TS_IRQHandler(&hts);
+    if (GPIO_Pin == tsCfg.intPin) {
+        TS_EXTI_Callback(&hts);
     }
+}
+
+// In the main loop / LVGL task
+if (TS_IrqPending(&hts)) {
+    TS_ServiceIRQ(&hts);
 }
 
 // Callback functions
@@ -142,7 +145,7 @@ The crosshair UI and storing the values belong to the application, not the drive
 
 ### Initialization Functions
 
-- `TS_Init(hts, hi2c)` - Initialize touchscreen controller
+- `TS_Init(hts, config)` - Initialize touchscreen controller on the bus and pins in `config`
 - `TS_DeInit(hts)` - Deinitialize touchscreen controller
 - `TS_Reset(hts)` - Reset touchscreen controller
 
@@ -157,7 +160,9 @@ The crosshair UI and storing the values belong to the application, not the drive
 ### Configuration Functions
 
 - `TS_Configure(hts, config)` - Apply a touchscreen configuration
-- `TS_GetDefaultConfig(config)` - Fill a configuration with defaults
+- `TS_GetDefaultConfig()` - Configuration with interrupts on; bus, INT pin and display size left for the application
+- `TS_RegisterCallbacks(hts, touch, release, gesture)` - Attach event callbacks
+- `TS_SetActivityCallback(hts, cb)` - Attach the ISR-context callback run on every touch edge
 
 ### Calibration Functions
 
@@ -167,7 +172,10 @@ The crosshair UI and storing the values belong to the application, not the drive
 ### Interrupt Functions
 
 - `TS_EnableInterrupt(hts, enable)` - Enable or disable touchscreen interrupts
-- `TS_IRQHandler(hts)` - Handle touchscreen interrupt
+- `TS_EXTI_Callback(hts)` - Note a touch edge; call from the application's `HAL_GPIO_EXTI_Callback`
+- `TS_IrqPending(hts)` - Whether an edge is waiting to be serviced
+- `TS_ServiceIRQ(hts)` - Clear the controller and run callbacks from thread context
+- `TS_IRQHandler(hts)` - Handle touchscreen interrupt (called by `TS_ServiceIRQ`)
 
 ## Configuration Options
 
@@ -242,7 +250,7 @@ Enable debug output to monitor touchscreen operation:
 ## Hardware Specifications
 
 - **Resolution**: 4096 x 4096 (12-bit ADC)
-- **Display Mapping**: 240 x 320 pixels
+- **Display Mapping**: `displayWidth` x `displayHeight` from the configuration
 - **Pressure Levels**: 4096 levels (12-bit)
 - **Sample Rate**: Up to 80 Hz (configurable)
 - **Power Supply**: 3.3V

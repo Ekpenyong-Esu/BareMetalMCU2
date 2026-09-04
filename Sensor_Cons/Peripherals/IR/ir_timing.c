@@ -7,22 +7,19 @@
 #include "ir_timing.h"
 
 /* Private define ------------------------------------------------------------*/
-#define IR_MICROSECONDS_PER_SECOND  1000000U
+#define IR_MICROSECONDS_PER_SECOND 1000000U
 
 /* Public functions ----------------------------------------------------------*/
 
-void IR_TimingInit(void)
-{
-    if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0U)
-    {
+void IR_TimingInit(void) {
+    if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0U) {
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     }
 
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 }
 
-bool IR_TimingIsRunning(void)
-{
+bool IR_TimingIsRunning(void) {
     /* IR_DelayUs() spins on CYCCNT, so a counter that never advances would
        hang it; some debug configurations leave the DWT unavailable. */
     const uint32_t first = DWT->CYCCNT;
@@ -30,21 +27,17 @@ bool IR_TimingIsRunning(void)
     return DWT->CYCCNT != first;
 }
 
-void IR_DelayUs(uint32_t us)
-{
+void IR_DelayUs(uint32_t microseconds) {
     const uint32_t start = DWT->CYCCNT;
-    const uint32_t ticks = (SystemCoreClock / IR_MICROSECONDS_PER_SECOND) * us;
+    const uint32_t ticks = (SystemCoreClock / IR_MICROSECONDS_PER_SECOND) * microseconds;
 
-    while ((DWT->CYCCNT - start) < ticks)
-    {
+    while ((DWT->CYCCNT - start) < ticks) {
         __NOP();
     }
 }
 
-uint32_t IR_MicrosecondsToTicks(uint32_t microseconds, uint32_t timerFreq)
-{
-    if (timerFreq == 0U)
-    {
+uint32_t IR_MicrosecondsToTicks(uint32_t microseconds, uint32_t timerFreq) {
+    if (timerFreq == 0U) {
         return 0U;
     }
 
@@ -53,22 +46,19 @@ uint32_t IR_MicrosecondsToTicks(uint32_t microseconds, uint32_t timerFreq)
     return (uint32_t)(((uint64_t)microseconds * timerFreq) / IR_MICROSECONDS_PER_SECOND);
 }
 
-uint32_t IR_TicksToMicroseconds(uint32_t ticks, uint32_t timerFreq)
-{
-    if (timerFreq == 0U)
-    {
+uint32_t IR_TicksToMicroseconds(uint32_t ticks, uint32_t timerFreq) {
+    if (timerFreq == 0U) {
         return 0U;
     }
 
     return (uint32_t)(((uint64_t)ticks * IR_MICROSECONDS_PER_SECOND) / timerFreq);
 }
 
-bool IR_IsWithinTolerance(uint32_t measured, uint32_t expected, uint32_t tolerance)
-{
+bool IR_IsWithinTolerance(uint32_t measured, uint32_t expected, uint32_t tolerance) {
     /* Computing expected - tolerance first would wrap when the tolerance is the
        larger of the two and make every comparison fail. */
-    const uint32_t difference = (measured > expected) ? (measured - expected)
-                                                      : (expected - measured);
+    const uint32_t difference =
+        (measured > expected) ? (measured - expected) : (expected - measured);
 
     return difference <= tolerance;
 }

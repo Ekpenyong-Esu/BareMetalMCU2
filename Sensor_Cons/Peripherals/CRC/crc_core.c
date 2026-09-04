@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    crc_core.c
-  * @brief   Lifecycle, calculation and status for the CRC driver
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    crc_core.c
+ * @brief   Lifecycle, calculation and status for the CRC driver
+ ******************************************************************************
+ */
 
 #include "crc_core.h"
 #include "crc_sw.h"
@@ -12,16 +12,15 @@
 #include <string.h>
 
 /** Words staged per hardware pass; bounds the stack cost of byte-wise input */
-#define CRC_HW_CHUNK_WORDS          16U
+#define CRC_HW_CHUNK_WORDS 16U
 
-#define CRC_BYTES_PER_WORD          4U
+#define CRC_BYTES_PER_WORD 4U
 
 static CRC_HandleTypeDef s_hcrc;
 static CRC_Status s_status = {0};
 static CRC_Config s_config = {0};
 
-static HAL_StatusTypeDef CRC_ValidateConfig(const CRC_Config *config)
-{
+static HAL_StatusTypeDef CRC_ValidateConfig(const CRC_Config *config) {
     if (config->polynomial == 0U) {
         return HAL_ERROR;
     }
@@ -35,8 +34,8 @@ static HAL_StatusTypeDef CRC_ValidateConfig(const CRC_Config *config)
        return a checksum the caller did not ask for. */
     if (config->method == CRC_METHOD_HARDWARE) {
         if (config->polynomial != CRC_DEFAULT_POLYNOMIAL ||
-            config->init_value != CRC_DEFAULT_INIT_VALUE ||
-            config->input_reverse || config->output_reverse) {
+            config->init_value != CRC_DEFAULT_INIT_VALUE || config->input_reverse ||
+            config->output_reverse) {
             log_error("CRC: hardware unit only supports the default polynomial and init value");
             return HAL_ERROR;
         }
@@ -45,8 +44,7 @@ static HAL_StatusTypeDef CRC_ValidateConfig(const CRC_Config *config)
     return HAL_OK;
 }
 
-static HAL_StatusTypeDef CRC_ConfigureHardware(void)
-{
+static HAL_StatusTypeDef CRC_ConfigureHardware(void) {
     s_hcrc.Instance = CRC;
 
     return HAL_CRC_Init(&s_hcrc);
@@ -58,8 +56,7 @@ static HAL_StatusTypeDef CRC_ConfigureHardware(void)
  * @note  Casting the caller's @c uint8_t* straight to @c uint32_t* would be an
  *        unaligned access, and dividing the size by four would drop the tail.
  */
-static uint32_t CRC_HardwareBytes(const uint8_t *data, uint32_t size, bool reset)
-{
+static uint32_t CRC_HardwareBytes(const uint8_t *data, uint32_t size, bool reset) {
     uint32_t buffer[CRC_HW_CHUNK_WORDS];
     uint32_t result = 0U;
     uint32_t offset = 0U;
@@ -86,22 +83,19 @@ static uint32_t CRC_HardwareBytes(const uint8_t *data, uint32_t size, bool reset
     return result;
 }
 
-static void CRC_ApplyXor(uint32_t *crc)
-{
+static void CRC_ApplyXor(uint32_t *crc) {
     if (s_config.xor_output) {
         *crc ^= s_config.xor_value;
     }
 }
 
-static void CRC_RecordResult(uint32_t crc)
-{
+static void CRC_RecordResult(uint32_t crc) {
     s_status.last_calculated_crc = crc;
     s_status.calculation_count++;
 }
 
-static HAL_StatusTypeDef CRC_CheckInput(const void *data, uint32_t size,
-                                        const uint32_t *crc, uint32_t maxSize)
-{
+static HAL_StatusTypeDef CRC_CheckInput(const void *data, uint32_t size, const uint32_t *crc,
+                                        uint32_t maxSize) {
     if (data == NULL || crc == NULL || size == 0U) {
         CRC_NotifyError(CRC_ERROR_INVALID_PARAM);
         return HAL_ERROR;
@@ -120,9 +114,8 @@ static HAL_StatusTypeDef CRC_CheckInput(const void *data, uint32_t size,
     return HAL_OK;
 }
 
-HAL_StatusTypeDef CRC_Init(const CRC_Config *config)
-{
-    HAL_StatusTypeDef status;
+HAL_StatusTypeDef CRC_Init(const CRC_Config *config) {
+    HAL_StatusTypeDef status = HAL_OK;
 
     log_debug("CRC: Initializing CRC");
 
@@ -156,8 +149,7 @@ HAL_StatusTypeDef CRC_Init(const CRC_Config *config)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef CRC_DeInit(void)
-{
+HAL_StatusTypeDef CRC_DeInit(void) {
     HAL_StatusTypeDef status = HAL_OK;
 
     if (s_status.initialized && s_config.method == CRC_METHOD_HARDWARE) {
@@ -174,8 +166,7 @@ HAL_StatusTypeDef CRC_DeInit(void)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef CRC_Calculate(const uint8_t *data, uint32_t size, uint32_t *crc)
-{
+HAL_StatusTypeDef CRC_Calculate(const uint8_t *data, uint32_t size, uint32_t *crc) {
     if (CRC_CheckInput(data, size, crc, CRC_MAX_DATA_SIZE) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -183,7 +174,8 @@ HAL_StatusTypeDef CRC_Calculate(const uint8_t *data, uint32_t size, uint32_t *cr
     if (s_config.method == CRC_METHOD_HARDWARE) {
         *crc = CRC_HardwareBytes(data, size, true);
         s_status.hardware_usage_count++;
-    } else {
+    }
+    else {
         *crc = CRC_SoftwareFinalize(&s_config,
                                     CRC_SoftwareUpdate(&s_config, s_config.init_value, data, size));
         s_status.software_usage_count++;
@@ -196,8 +188,7 @@ HAL_StatusTypeDef CRC_Calculate(const uint8_t *data, uint32_t size, uint32_t *cr
     return HAL_OK;
 }
 
-HAL_StatusTypeDef CRC_Calculate32(const uint32_t *data, uint32_t size, uint32_t *crc)
-{
+HAL_StatusTypeDef CRC_Calculate32(const uint32_t *data, uint32_t size, uint32_t *crc) {
     if (CRC_CheckInput(data, size, crc, CRC_MAX_DATA_SIZE / CRC_BYTES_PER_WORD) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -206,9 +197,10 @@ HAL_StatusTypeDef CRC_Calculate32(const uint32_t *data, uint32_t size, uint32_t 
         __HAL_CRC_DR_RESET(&s_hcrc);
         *crc = HAL_CRC_Accumulate(&s_hcrc, (uint32_t *)(uintptr_t)data, size);
         s_status.hardware_usage_count++;
-    } else {
-        *crc = CRC_SoftwareFinalize(&s_config,
-                                    CRC_SoftwareUpdate32(&s_config, s_config.init_value, data, size));
+    }
+    else {
+        *crc = CRC_SoftwareFinalize(
+            &s_config, CRC_SoftwareUpdate32(&s_config, s_config.init_value, data, size));
         s_status.software_usage_count++;
     }
 
@@ -219,8 +211,7 @@ HAL_StatusTypeDef CRC_Calculate32(const uint32_t *data, uint32_t size, uint32_t 
     return HAL_OK;
 }
 
-HAL_StatusTypeDef CRC_Accumulate(const uint8_t *data, uint32_t size, uint32_t *crc)
-{
+HAL_StatusTypeDef CRC_Accumulate(const uint8_t *data, uint32_t size, uint32_t *crc) {
     if (CRC_CheckInput(data, size, crc, CRC_MAX_DATA_SIZE) != HAL_OK) {
         return HAL_ERROR;
     }
@@ -229,7 +220,8 @@ HAL_StatusTypeDef CRC_Accumulate(const uint8_t *data, uint32_t size, uint32_t *c
         /* No reset: the hardware DR still holds the previous block's result. */
         *crc = CRC_HardwareBytes(data, size, false);
         s_status.hardware_usage_count++;
-    } else {
+    }
+    else {
         /* Continue the polynomial division from the caller's running value
            instead of XOR-ing two independent checksums together. */
         *crc = CRC_SoftwareUpdate(&s_config, *crc, data, size);
@@ -241,8 +233,7 @@ HAL_StatusTypeDef CRC_Accumulate(const uint8_t *data, uint32_t size, uint32_t *c
     return HAL_OK;
 }
 
-HAL_StatusTypeDef CRC_Reset(void)
-{
+HAL_StatusTypeDef CRC_Reset(void) {
     if (!s_status.initialized) {
         return HAL_ERROR;
     }
@@ -254,8 +245,7 @@ HAL_StatusTypeDef CRC_Reset(void)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef CRC_GetStatus(CRC_Status *status)
-{
+HAL_StatusTypeDef CRC_GetStatus(CRC_Status *status) {
     if (status == NULL) {
         return HAL_ERROR;
     }
@@ -265,8 +255,7 @@ HAL_StatusTypeDef CRC_GetStatus(CRC_Status *status)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef CRC_SetPolynomial(uint32_t polynomial)
-{
+HAL_StatusTypeDef CRC_SetPolynomial(uint32_t polynomial) {
     if (!s_status.initialized || polynomial == 0U) {
         return HAL_ERROR;
     }
@@ -281,8 +270,7 @@ HAL_StatusTypeDef CRC_SetPolynomial(uint32_t polynomial)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef CRC_SetInitValue(uint32_t init_value)
-{
+HAL_StatusTypeDef CRC_SetInitValue(uint32_t init_value) {
     if (!s_status.initialized) {
         return HAL_ERROR;
     }
@@ -297,10 +285,11 @@ HAL_StatusTypeDef CRC_SetInitValue(uint32_t init_value)
     return HAL_OK;
 }
 
-CRC_HandleTypeDef *CRC_GetHandle(void) { return &s_hcrc; }
+CRC_HandleTypeDef *CRC_GetHandle(void) {
+    return &s_hcrc;
+}
 
-void CRC_GetDefaultConfig(CRC_Config *config)
-{
+void CRC_GetDefaultConfig(CRC_Config *config) {
     if (config == NULL) {
         return;
     }

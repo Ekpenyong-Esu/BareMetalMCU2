@@ -1,9 +1,9 @@
 /**
-  ******************************************************************************
-  * @file    ir_distance_core.h
-  * @brief   IR distance sensor lifecycle and configuration
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    ir_distance_core.h
+ * @brief   IR distance sensor lifecycle and configuration
+ ******************************************************************************
+ */
 
 #ifndef IR_DISTANCE_CORE_H
 #define IR_DISTANCE_CORE_H
@@ -18,10 +18,8 @@ extern "C" {
  * @brief   Initialize an IR distance sensor on an ADC channel.
  * @param   hadc Already initialized ADC handle.
  */
-IR_DISTANCE_StatusTypeDef IR_DISTANCE_Init(IR_DISTANCE_Handle_t *hird,
-                                           ADC_HandleStruct *hadc,
-                                           uint32_t channel,
-                                           IR_DISTANCE_SensorType_t sensorType);
+IR_DISTANCE_StatusTypeDef IR_DISTANCE_Init(IR_DISTANCE_Handle_t *hird, ADC_HandleStruct *hadc,
+                                           uint32_t channel, IR_DISTANCE_SensorType_t sensorType);
 
 IR_DISTANCE_StatusTypeDef IR_DISTANCE_DeInit(IR_DISTANCE_Handle_t *hird);
 

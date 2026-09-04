@@ -2,16 +2,18 @@
  * @file uart_dma.h
  * @brief DMA transfer mode
  *
- * Buffer transfers are offloaded to a DMA stream; the streams themselves are
- * wired up by HAL_UART_MspInit() in Core. Independently callable, like
- * tim_ic.h: no vtable, no dispatch.
+ * Buffer transfers are offloaded to the DMA streams the application names in
+ * UART_Config_t (dmaTxStream/dmaRxStream and their channels); the driver's
+ * MSP in uart_hw.c wires them up. Independently callable, like tim_ic.h: no
+ * vtable, no dispatch.
  *
  * Characteristics:
  * - Highest throughput: CPU completely free during transfer
  * - TX: HAL_UART_Transmit_DMA() - DMA moves buffer to DR register
  * - RX: HAL_UARTEx_ReceiveToIdle_DMA() - DMA fills landing buffer, IDLE
  *        triggers transfer complete, data copied to ring buffer
- * - Requires DMA streams configured in HAL_UART_MspInit() (Core)
+ * - Requires both DMA streams in the config; Core must route the matching
+ *   DMAx_StreamN_IRQHandler() vectors to UART_DmaStreamIRQHandler()
  * - Ring buffer decouples DMA reception from application reads
  * - IDLE line detection enables variable-length frames
  *
@@ -50,8 +52,8 @@ extern "C" {
  * IDLE interrupt, and verifies DMA streams are attached to the HAL handle.
  * If the handle was already open, it is deinitialized first.
  *
- * @note   Fails if no DMA stream has been linked to the HAL handle
- *         (see HAL_UART_MspInit() in Core/Src/stm32f4xx_hal_msp.c).
+ * @note   Fails if the config names no DMA streams or a stream could not be
+ *         initialised (see HAL_UART_MspInit() in uart_hw.c).
  *
  * @param  handle UART handle to populate (must have huart, rxBuffer, rxSize set)
  * @param  config Desired configuration (baud rate, word length, stop bits, parity)
@@ -73,7 +75,8 @@ UART_Status_t UART_DMA_Init(UART_Handle_t *handle, const UART_Config_t *config);
  * @retval UART_OK on success (or started if timeout==0), UART_ERROR on invalid args,
  *         UART_TIMEOUT_ERROR if timeout expired
  */
-UART_Status_t UART_DMA_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size, uint32_t timeout);
+UART_Status_t UART_DMA_Transmit(UART_Handle_t *handle, const uint8_t *data, uint16_t size,
+                                uint32_t timeout);
 
 /**
  * @brief  Start reception and wait for a full packet to drain from the ring
@@ -89,7 +92,8 @@ UART_Status_t UART_DMA_Transmit(UART_Handle_t *handle, const uint8_t *data, uint
  * @retval UART_OK on success, UART_TIMEOUT_ERROR if timeout expired,
  *         UART_ERROR on invalid args or ring buffer error
  */
-UART_Status_t UART_DMA_Receive(UART_Handle_t *handle, uint8_t *data, uint16_t size, uint32_t timeout);
+UART_Status_t UART_DMA_Receive(UART_Handle_t *handle, uint8_t *data, uint16_t size,
+                               uint32_t timeout);
 
 /**
  * @brief  Re-arm one-shot reception after a completed transfer

@@ -8,17 +8,15 @@
  *  - dac_output.h  : conversion control and output value access
  *  - dac_convert.h : conversion between codes and volts
  *
- * STM32F4 DAC on Discovery Board:
- * - Single DAC peripheral with 2 channels
- * - Only DAC_CHANNEL_1 (PA4/DAC_OUT1) is wired on the board
- * - DAC_CHANNEL_2 (PA5/DAC_OUT2) is not connected
+ * STM32F4 DAC:
+ * - Single DAC peripheral with 2 channels (DAC_OUT1 on PA4, DAC_OUT2 on PA5)
  * - Output buffer: enabled (default, drives loads) or disabled (high-Z)
  * - Triggers: software, timer TRGO (TIM2,4,5,6,7,8), EXTI9
  * - Alignment: 12-bit right/left, 8-bit right
  * - Reference: VDDA (3.3V nominal)
  *
- * @note Only DAC_CHANNEL_1 is supported. The MSP wires PA4 (DAC_OUT1) alone,
- *       so a channel 2 request is rejected rather than silently driving PA5.
+ * The application supplies the channel and the pin that carries it in
+ * DAC_ConfigTypeDef (channel, outPort, outPin); the driver assumes no wiring.
  */
 
 #ifndef DAC_H

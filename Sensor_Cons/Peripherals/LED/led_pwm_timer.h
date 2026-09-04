@@ -36,24 +36,24 @@ extern "C" {
 #include <stdint.h>
 
 /* Exported constants --------------------------------------------------------*/
-#define LED_PWM_TIMER_STEPS   1024u  /**< Duty resolution of one PWM period */
+#define LED_PWM_TIMER_STEPS 1024u /**< Duty resolution of one PWM period */
 
 /* Exported types ------------------------------------------------------------*/
 
 /** Which pin and timer channel to drive, and at what carrier frequency. */
 typedef struct {
-    GPIO_TypeDef* port;            /**< Port of the PWM output pin */
-    uint16_t      pin;             /**< PWM output pin */
-    uint8_t       alternate;       /**< GPIO alternate function selecting the timer */
-    TIM_TypeDef*  timer;           /**< Timer peripheral; must have output channels */
-    uint32_t      channel;         /**< TIM_CHANNEL_1..4 */
-    uint32_t      pwmFrequencyHz;  /**< Carrier frequency; keep above ~100 Hz to avoid flicker */
-    bool          activeLow;       /**< True when the LED lights on a low output */
+    GPIO_TypeDef *port;      /**< Port of the PWM output pin */
+    uint16_t pin;            /**< PWM output pin */
+    uint8_t alternate;       /**< GPIO alternate function selecting the timer */
+    TIM_TypeDef *timer;      /**< Timer peripheral; must have output channels */
+    uint32_t channel;        /**< TIM_CHANNEL_1..4 */
+    uint32_t pwmFrequencyHz; /**< Carrier frequency; keep above ~100 Hz to avoid flicker */
+    bool activeLow;          /**< True when the LED lights on a low output */
 } LedPwmTimerConfig_t;
 
 typedef struct {
-    TIM_HandleTypeDef htim;     /**< Timer handle owned by this module */
-    uint32_t          channel;  /**< Channel being modulated */
+    TIM_HandleTypeDef htim; /**< Timer handle owned by this module */
+    uint32_t channel;       /**< Channel being modulated */
 } LedPwmTimer_t;
 
 /* Exported functions --------------------------------------------------------*/
@@ -65,7 +65,7 @@ typedef struct {
  * @retval true on success, false if the timer has no output channels or the
  *         requested frequency is unreachable from the timer clock
  */
-bool LedPwmTimer_Init(LedPwmTimer_t* pwm, const LedPwmTimerConfig_t* config);
+bool LedPwmTimer_Init(LedPwmTimer_t *pwm, const LedPwmTimerConfig_t *config);
 
 /**
  * @brief  Set the duty cycle
@@ -73,7 +73,7 @@ bool LedPwmTimer_Init(LedPwmTimer_t* pwm, const LedPwmTimerConfig_t* config);
  * @param  brightness 0 (off) to LED_PWM_MAX_BRIGHTNESS (full on), clamped
  * @retval true on success
  */
-bool LedPwmTimer_SetBrightness(LedPwmTimer_t* pwm, uint8_t brightness);
+bool LedPwmTimer_SetBrightness(LedPwmTimer_t *pwm, uint8_t brightness);
 
 #ifdef __cplusplus
 }

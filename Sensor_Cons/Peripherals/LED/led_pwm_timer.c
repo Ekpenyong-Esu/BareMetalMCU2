@@ -15,8 +15,7 @@
  * @brief   Route the pin to the timer's output compare unit
  * @param   config Pin description
  */
-static bool LedPwmTimer_PinInit(const LedPwmTimerConfig_t* config)
-{
+static bool LedPwmTimer_PinInit(const LedPwmTimerConfig_t *config) {
     GPIO_InitTypeDef gpioInit = {0};
 
     gpioInit.Pin = config->pin;
@@ -30,18 +29,19 @@ static bool LedPwmTimer_PinInit(const LedPwmTimerConfig_t* config)
 
 /* Exported functions --------------------------------------------------------*/
 
-bool LedPwmTimer_Init(LedPwmTimer_t* pwm, const LedPwmTimerConfig_t* config)
-{
+bool LedPwmTimer_Init(LedPwmTimer_t *pwm, const LedPwmTimerConfig_t *config) {
     if (pwm == NULL || config == NULL || config->port == NULL) {
         return false;
     }
 
     if (TIM_PWM_InitHz(&pwm->htim, config->timer, config->pwmFrequencyHz,
-                       LED_PWM_TIMER_STEPS) != HAL_OK) {  // Initialize the timer for PWM output with the specified frequency and resolution
+                       LED_PWM_TIMER_STEPS) !=
+        HAL_OK) { // Initialize the timer for PWM output with the specified frequency and resolution
         return false;
     }
 
-    if (!LedPwmTimer_PinInit(config)) {  // Initialize the GPIO pin for the timer's output compare function
+    if (!LedPwmTimer_PinInit(
+            config)) { // Initialize the GPIO pin for the timer's output compare function
         return false;
     }
 
@@ -52,11 +52,10 @@ bool LedPwmTimer_Init(LedPwmTimer_t* pwm, const LedPwmTimerConfig_t* config)
     const uint32_t polarity = config->activeLow ? TIM_OCPOLARITY_LOW : TIM_OCPOLARITY_HIGH;
 
     return ((TIM_PWM_ConfigChannel(&pwm->htim, pwm->channel, 0u, polarity) == HAL_OK) &&
-           (TIM_PWM_Start(&pwm->htim, pwm->channel) == HAL_OK)) != 0;
+            (TIM_PWM_Start(&pwm->htim, pwm->channel) == HAL_OK)) != 0;
 }
 
-bool LedPwmTimer_SetBrightness(LedPwmTimer_t* pwm, uint8_t brightness)
-{
+bool LedPwmTimer_SetBrightness(LedPwmTimer_t *pwm, uint8_t brightness) {
     if (pwm == NULL) {
         return false;
     }

@@ -8,8 +8,7 @@
 
 /* Exported functions --------------------------------------------------------*/
 
-bool LedPwm_Init(LedPwm_t* pwm, LedHandle_t* led, uint32_t periodUs)
-{
+bool LedPwm_Init(LedPwm_t *pwm, LedHandle_t *led, uint32_t periodUs) {
     if (pwm == NULL || led == NULL || periodUs == 0u) {
         return false;
     }
@@ -22,8 +21,7 @@ bool LedPwm_Init(LedPwm_t* pwm, LedHandle_t* led, uint32_t periodUs)
     return true;
 }
 
-bool LedPwm_Start(LedPwm_t* pwm, uint32_t nowUs)
-{
+bool LedPwm_Start(LedPwm_t *pwm, uint32_t nowUs) {
     if (pwm == NULL || pwm->led == NULL) {
         return false;
     }
@@ -33,8 +31,7 @@ bool LedPwm_Start(LedPwm_t* pwm, uint32_t nowUs)
     return true;
 }
 
-bool LedPwm_Stop(LedPwm_t* pwm)
-{
+bool LedPwm_Stop(LedPwm_t *pwm) {
     if (pwm == NULL || pwm->led == NULL) {
         return false;
     }
@@ -43,24 +40,20 @@ bool LedPwm_Stop(LedPwm_t* pwm)
     return Led_Off(pwm->led);
 }
 
-bool LedPwm_SetBrightness(LedPwm_t* pwm, uint8_t brightness)
-{
+bool LedPwm_SetBrightness(LedPwm_t *pwm, uint8_t brightness) {
     if (pwm == NULL) {
         return false;
     }
 
-    pwm->brightness = (brightness > LED_PWM_MAX_BRIGHTNESS) ? LED_PWM_MAX_BRIGHTNESS
-                                                            : brightness;
+    pwm->brightness = (brightness > LED_PWM_MAX_BRIGHTNESS) ? LED_PWM_MAX_BRIGHTNESS : brightness;
     return true;
 }
 
-uint8_t LedPwm_GetBrightness(const LedPwm_t* pwm)
-{
+uint8_t LedPwm_GetBrightness(const LedPwm_t *pwm) {
     return (pwm != NULL) ? pwm->brightness : 0u;
 }
 
-bool LedPwm_Update(LedPwm_t* pwm, uint32_t nowUs)
-{
+bool LedPwm_Update(LedPwm_t *pwm, uint32_t nowUs) {
     if (pwm == NULL || pwm->led == NULL) {
         return false;
     }
@@ -77,8 +70,15 @@ bool LedPwm_Update(LedPwm_t* pwm, uint32_t nowUs)
     }
 
     /* Multiply before dividing: periodUs is not necessarily a multiple of 100. */
-    uint32_t onTimeUs = (pwm->periodUs * pwm->brightness) / LED_PWM_MAX_BRIGHTNESS; // convert brightness into microseconds and scaling it using the periodUs. This gives us the time in microseconds that the LED should be on for the current cycle.
-    LedState_t wanted = (elapsedUs < onTimeUs) ? LED_ON : LED_OFF; // If the scaled period is less than the current elapsed time keep the led on
+    uint32_t onTimeUs =
+        (pwm->periodUs * pwm->brightness) /
+        LED_PWM_MAX_BRIGHTNESS; // convert brightness into microseconds and scaling it using the
+                                // periodUs. This gives us the time in microseconds that the LED
+                                // should be on for the current cycle.
+    LedState_t wanted =
+        (elapsedUs < onTimeUs)
+            ? LED_ON
+            : LED_OFF; // If the scaled period is less than the current elapsed time keep the led on
 
     if (Led_GetState(pwm->led) != wanted) {
         Led_SetState(pwm->led, wanted);
@@ -87,15 +87,14 @@ bool LedPwm_Update(LedPwm_t* pwm, uint32_t nowUs)
     return true;
 }
 
-uint8_t LedPwm_Waveform_Smooth(uint32_t elapsedMs, uint32_t periodMs)
-{
+uint8_t LedPwm_Waveform_Smooth(uint32_t elapsedMs, uint32_t periodMs) {
     uint32_t halfPeriodMs = periodMs / 2u;
     uint32_t position = elapsedMs % periodMs;
 
     /* Triangle ramp 0..LED_PWM_MAX_BRIGHTNESS..0 */
     uint32_t level = (position < halfPeriodMs)
-                   ? (position * LED_PWM_MAX_BRIGHTNESS) / halfPeriodMs
-                   : ((periodMs - position) * LED_PWM_MAX_BRIGHTNESS) / halfPeriodMs;
+                         ? (position * LED_PWM_MAX_BRIGHTNESS) / halfPeriodMs
+                         : ((periodMs - position) * LED_PWM_MAX_BRIGHTNESS) / halfPeriodMs;
 
     /* Square for perceptual linearity */
     return (uint8_t)((level * level) / LED_PWM_MAX_BRIGHTNESS);
