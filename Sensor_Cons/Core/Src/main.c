@@ -2,7 +2,11 @@
 /**
  ******************************************************************************
  * @file           : main.c
- * @brief          : Application launcher (STM32F429I-DISC1)
+ * @brief          : Application 7, "Servo Sweep" (STM32F429I-DISC1)
+ *
+ * One application per branch, as Peripherals/APPLICATIONS.md suggests, so each
+ * one can be flashed on its own. This branch builds Application 7 and nothing
+ * else; the wiring it expects is documented in servo_sweep_app.c.
  ******************************************************************************
  */
 /* USER CODE END Header */
@@ -12,8 +16,7 @@
 #include "servo_sweep_app.h"
 
 /**
- * @brief  Program entry point: bring up the system, then run one application.
- * @note   Swap the call below for another *App_Run() to flash a different one.
+ * @brief  Program entry point: bring up the system, then run the application.
  */
 int main(void) {
     SYS_Init(); /* HAL init, system clock, SysTick */

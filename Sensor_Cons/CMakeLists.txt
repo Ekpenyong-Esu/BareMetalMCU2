@@ -282,12 +282,12 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Applications/servo_sweep_app
 )
 
-# The LVGL dashboard with its display and touch ports and the low-power
-# manager. It is an application, not a driver, so it lives in Applications/.
-# It is compiled by default so it cannot drift from the driver APIs, but only
-# runs when main() calls it. Applications/gui_app/lv_conf.h is still the LVGL
-# configuration, referenced from cmake/lvgl-*.cmake.
-option(BUILD_GUI_APP "Compile the LVGL dashboard application" ON)
+# The LVGL dashboard lives on its own branch (32-lvgl-gui-app). This branch
+# builds Application 7 alone, so the dashboard is left out and the firmware
+# contains only what the servo sweep needs. Turn this on to compile it here
+# as well. Applications/gui_app/lv_conf.h is still the LVGL configuration,
+# referenced from cmake/lvgl-*.cmake.
+option(BUILD_GUI_APP "Compile the LVGL dashboard application" OFF)
 if(BUILD_GUI_APP)
     file(GLOB GUI_APP_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_SOURCE_DIR}/Applications/gui_app/*.c"
