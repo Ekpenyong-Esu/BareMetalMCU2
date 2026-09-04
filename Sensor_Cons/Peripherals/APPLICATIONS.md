@@ -34,7 +34,7 @@ Small apps that exercise exactly one driver. Great starting points.
 | 14 | Flash Key/Value Store | `FLASH` | Persist settings in internal flash across resets. |
 | 15 | EEPROM Settings | `EEPROM` | Store and reload configuration in emulated EEPROM. |
 | 16 | Watchdog Guard | `IWDG` / `WWDG` | Auto-reset on a hung loop; demonstrate safe refresh. |
-| 17 | Low-Power Sleep Demo | `PWR`, `RTC` (see `Applications/gui_app` for the dashboard's power manager) | Enter Sleep/Stop/Standby and wake on button/RTC. |
+| 17 | Low-Power Sleep Demo | `PWR`, `RTC` (the dashboard's power manager is on branch `32-lvgl-gui-app`) | Enter Sleep/Stop/Standby and wake on button/RTC. |
 | 18 | Seven-Segment Counter | `SEVEN_SEGMENT` | Multiplexed digit counter (0–9999). |
 | 19 | Keypad Reader | `KEYPAD` | Scan a matrix keypad and report pressed keys. |
 | 20 | System Info Dump | `SYS` | Report clocks, reset cause, and core status over UART. |
@@ -75,7 +75,7 @@ Anything that renders to a screen.
 | 29 | Nokia 5110 Dashboard | `NOKIA5110` | Classic monochrome LCD readout. |
 | 30 | Character LCD Menu | `LCD` | HD44780-style text menu navigation. |
 | 31 | Touch Paint | `TOUCHSCREEN`, `XPT2046`, `ILI9341` | Draw on screen with a resistive touch panel. |
-| 32 | LVGL GUI App | `LTDC`, `DMA2D`, `TOUCHSCREEN` (lives in `Applications/gui_app`) | Buttons, sliders, and charts with the LVGL framework. |
+| 32 | LVGL GUI App | `LTDC`, `DMA2D`, `TOUCHSCREEN` (on branch `32-lvgl-gui-app`) | Buttons, sliders, and charts with the LVGL framework. |
 | 33 | Accelerated Graphics | `DMA2D`, `LTDC` | Hardware-accelerated fills/blits and image blending. |
 
 ---
@@ -131,7 +131,7 @@ Multi-peripheral projects that behave like real products.
 1. **Basics:** `GPIO` → `LED` → `BUTTON` → `TIM` → `UART`
 2. **Analog:** `ADC` → `DAC` → `BUZZER`/`SERVO`
 3. **Buses:** `I2C` → `SPI` → sensors (`ACCEL`, `MEMS`, displays)
-4. **Display/UI:** `ILI9341`/`LTDC` → `TOUCHSCREEN` → the LVGL dashboard in `Applications/gui_app`
+4. **Display/UI:** `ILI9341`/`LTDC` → `TOUCHSCREEN` → the LVGL dashboard on branch `32-lvgl-gui-app`
 5. **Storage:** `FLASH` → `EEPROM` → `FMC`/`QSPI`
 6. **Systems:** `RTC` → `IWDG`/`WWDG` → `PWR` → `DMA`
 7. **Networking:** `CAN` → `USB` → `ETH`

@@ -2,8 +2,8 @@
 # STM32F429I-Discovery CMake Configuration
 # ==============================================================================
 # Main build configuration for the Sensor Console embedded project.
-# This file orchestrates the build of STM32 HAL, FreeRTOS, LVGL, and
-# peripheral drivers for the STM32F429I-DISC1 development board.
+# This file orchestrates the build of STM32 HAL, FreeRTOS and the peripheral
+# drivers for the STM32F429I-DISC1 development board.
 #
 # For Beginners:
 # - This file is the entry point for the entire build system
@@ -67,20 +67,12 @@ add_executable(${CMAKE_PROJECT_NAME})
 add_subdirectory(cmake/stm32cubemx)
 
 # ------------------------------------------------------------------------------
-# LVGL Graphics Library
+# LVGL Graphics Library - not built on this branch
 # ------------------------------------------------------------------------------
-# Allow choosing between local LVGL checkout or the automatic FetchContent
-# Default is to use the fetched LVGL. To use a local copy set LVGL_USE_LOCAL
-# to ON and optionally set LVGL_LOCAL_DIR to the path of your local lvgl.
-option(LVGL_USE_LOCAL "Use a local LVGL checkout instead of FetchContent" ON)
-
-if(LVGL_USE_LOCAL)
-    message(STATUS "Config: Using local LVGL checkout")
-    include("cmake/lvgl-local.cmake")
-else()
-    message(STATUS "Config: Using FetchContent to download LVGL")
-    include("cmake/lvgl-fetch.cmake")
-endif()
+# Application 7 draws nothing, so LVGL is left out entirely. It was costing
+# around 1900 compilations per build for libraries the linker then discarded.
+# The dashboard that needs it lives on 32-lvgl-gui-app, together with the
+# lv_conf.h that cmake/lvgl-local.cmake and cmake/lvgl-fetch.cmake point at.
 
 # ------------------------------------------------------------------------------
 # External Libraries - Choose which ones to include
@@ -282,22 +274,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Applications/servo_sweep_app
 )
 
-# The LVGL dashboard lives on its own branch (32-lvgl-gui-app). This branch
-# builds Application 7 alone, so the dashboard is left out and the firmware
-# contains only what the servo sweep needs. Turn this on to compile it here
-# as well. Applications/gui_app/lv_conf.h is still the LVGL configuration,
-# referenced from cmake/lvgl-*.cmake.
-option(BUILD_GUI_APP "Compile the LVGL dashboard application" OFF)
-if(BUILD_GUI_APP)
-    file(GLOB GUI_APP_SOURCES CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/Applications/gui_app/*.c"
-    )
-    target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${GUI_APP_SOURCES})
-endif()
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    ${CMAKE_SOURCE_DIR}/Applications/gui_app
-)
-
 # Examples/ holds stand-alone demo files for individual drivers. They are
 # reference code, not part of the firmware, so nothing here compiles them.
 
@@ -306,9 +282,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # ------------------------------------------------------------------------------
 # Add preprocessor defines for conditional compilation
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
-    # LVGL configuration: Use simplified include paths
-    LV_CONF_INCLUDE_SIMPLE
-
     # Add your custom defines here:
     # MY_CUSTOM_FEATURE=1
     # APP_VERSION_MAJOR=1
@@ -320,7 +293,6 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 # Link all required libraries to the final executable
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx      # STM32 HAL, middleware (FreeRTOS, USB), startup code
-    ${LVGL_TARGET}   # LVGL graphics library (auto-resolved target name)
 
     # Core utility libraries
     $<$<BOOL:${USE_LITTLEFS}>:littlefs>
@@ -370,7 +342,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 # Peripheral Drivers - Automatic Discovery
 # ------------------------------------------------------------------------------
 # This section automatically includes all peripheral drivers from Peripherals/
-# Each peripheral folder (ADC, GPIO, LVGL, etc.) is added to include paths
+# Each peripheral folder (ADC, GPIO, SERVO, etc.) is added to include paths
 
 # Step 1: Find all peripheral directories
 file(GLOB PERIPHERAL_DIRS LIST_DIRECTORIES true "${CMAKE_CURRENT_SOURCE_DIR}/Peripherals/*")
