@@ -16,6 +16,7 @@
  * @brief Factory settings: 20 kHz carrier, 1000 duty steps, coast on stop.
  */
 DCMOTOR_Config_t DCMOTOR_GetDefaultConfig(void) {
+
     DCMOTOR_Config_t config = {.pwmFrequencyHz = DCMOTOR_DEFAULT_PWM_FREQUENCY_HZ,
                                .speedSteps = DCMOTOR_DEFAULT_SPEED_STEPS,
                                .stopMode = DCMOTOR_STOP_COAST};
@@ -27,6 +28,7 @@ DCMOTOR_Config_t DCMOTOR_GetDefaultConfig(void) {
  * @brief Bring up the bridge pins and PWM base, leaving the motor stopped.
  */
 DCMOTOR_StatusTypeDef DCMOTOR_Init(DCMOTOR_Handle_t *hmotor, const DCMOTOR_Pins_t *pins) {
+    
     if (hmotor == NULL || pins == NULL) {
         return DCMOTOR_INVALID_PARAM;
     }

@@ -31,9 +31,9 @@ flowchart LR
 
     MAG["RJ45 with integrated magnetics"]
 
-    pREF --> REF
-    pCRS --> CRS
-    pRXD --> RXD
+    REF ---|"50 MHz ref in"| pREF
+    CRS ---|"carrier sense in"| pCRS
+    RXD ---|"receive data in"| pRXD
     TXEN --> pTXEN
     TXD --> pTXD
     MDC --> pMDC

@@ -23,8 +23,8 @@ flowchart LR
     D4["STMPE811 touch - 0x41 on-board"]
 
     V33 --- PU
-    PU --- SCL
-    PU --- SDA
+    SCL --- PU
+    SDA --- PU
     SCL --> D1
     SCL --> D2
     SCL --> D3

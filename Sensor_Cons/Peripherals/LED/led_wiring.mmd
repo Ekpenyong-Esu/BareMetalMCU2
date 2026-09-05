@@ -18,22 +18,16 @@ flowchart LR
 
     LD3["On-board green LED"]
     LD4["On-board red LED"]
-
-    subgraph EXT["External LED - dimmable"]
-        R1["330 ohm resistor"]
-        L1["LED anode to resistor"]
-    end
-
-    subgraph EXT2["External LED - on/off"]
-        R2["330 ohm resistor"]
-        L2["LED anode to resistor"]
-    end
+    R1["330 ohm resistor"]
+    R2["330 ohm resistor"]
+    L1["External LED - dimmable"]
+    L2["External LED - on/off"]
 
     PG13 --> LD3
     PG14 --> LD4
     PA5 --> R1
     R1 --> L1
-    L1 --- GND
+    GND --- L1
     PB4 --> R2
     R2 --> L2
-    L2 --- GND
+    GND --- L2

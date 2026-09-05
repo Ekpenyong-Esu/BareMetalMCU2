@@ -42,6 +42,7 @@ Small apps that exercise exactly one driver. Great starting points.
 | 52 | Joystick Reader | `ADC`, `GPIO` | Read analog X/Y axes and the push switch, then report position and direction. |
 | 53 | Rotary Encoder Reader | `TIM`, `GPIO` | Decode quadrature A/B signals and the push switch for menu navigation. |
 | 54 | RFID Tag Reader | `SPI` + RFID module | Read an RFID tag UID and display or transmit it. |
+| 63 | DC Motor Drive (L298N) | `DCMOTOR`, `TIM` | Drive a brushed DC motor via L298N H-bridge; PWM speed, direction and coast/brake control. |
 
 ---
 
@@ -123,6 +124,10 @@ Multi-peripheral projects that behave like real products.
 | 48 | Touch Synth | `TOUCHSCREEN` + `DAC` + `BUZZER` | Generate tones from touch position (theremin-style). |
 | 49 | Motor Control Panel | `STEPPER`/`SERVO` + `KEYPAD` + `LCD` | Command motors from a keypad with an LCD menu. |
 | 50 | Low-Power Sensor Node | `PWR` + `RTC` + Sensor + `UART` | Wake on RTC, sample, transmit, sleep — battery-friendly. |
+| 64 | Joystick LED Dimmer | `ADC` + `LED`, `TIM` | Map joystick X/Y to PWM brightness on one or more LEDs. |
+| 65 | Joystick DC Motor Drive | `ADC` + `DCMOTOR`, `TIM` | Drive an L298N DC motor: joystick deflection sets speed and direction. |
+| 66 | Joystick Stepper Control | `ADC` + `STEPPER` | Joystick position steps a stepper motor forward/reverse with variable rate. |
+| 67 | Joystick Servo Control | `ADC` + `SERVO`, `TIM` | Map joystick axes to servo angle for pan/tilt or steering. |
 
 ---
 

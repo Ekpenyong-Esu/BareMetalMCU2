@@ -20,8 +20,6 @@ flowchart LR
         GND["GND"]
     end
 
-    R1["330 ohm backlight resistor"]
-
     subgraph NK["Nokia 5110 module - PCD8544"]
         nRST["1 RST"]
         nCE["2 CE"]
@@ -38,7 +36,6 @@ flowchart LR
     CE --> nCE
     DC --> nDC
     RST --> nRST
-    BL --> R1
-    R1 --> nBL
+    BL -->|"through a 330 ohm resistor"| nBL
     V33 --- nV
     GND --- nG

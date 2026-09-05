@@ -36,6 +36,6 @@ flowchart LR
     PRE --> CAL
     CAL --> ALRM
     ALRM --> WK
-    VBAT --> BKPR
-    VBAT --> CAL
+    BKPR --- VBAT
+    CAL ---|"backup supply"| VBAT
     COIN -.-> VBAT

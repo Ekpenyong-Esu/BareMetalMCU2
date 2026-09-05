@@ -27,8 +27,8 @@ flowchart LR
         eG["GND"]
     end
 
-    PU --- SCL
-    PU --- SDA
+    SCL --- PU
+    SDA --- PU
     SCL --> eSCL
     SDA <--> eSDA
     V33 --- eV

@@ -25,6 +25,6 @@ flowchart LR
 
     V5 --- sV
     GND --- sG
-    sO --> AIN
-    CAP --- sV
-    CAP --- sG
+    AIN ---|"0.4-3.1 V out"| sO
+    sV --- CAP
+    sG --- CAP

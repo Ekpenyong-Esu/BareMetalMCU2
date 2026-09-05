@@ -33,7 +33,7 @@ flowchart LR
     R1 --> Q
     Q --> LED
     R2 --- LED
-    LED --- GND
-    rOUT --> RX
+    GND --- LED
+    RX ---|"demodulated pulses in"| rOUT
     V33 --- rV
     GND --- rG

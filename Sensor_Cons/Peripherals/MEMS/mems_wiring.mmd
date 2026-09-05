@@ -30,5 +30,5 @@ flowchart LR
     MOSI --> gSDI
     MISO --- gSDO
     CS --> gCS
-    gI1 --> I1
-    gI2 --> I2
+    I1 ---|"INT1 in"| gI1
+    I2 ---|"DRDY in"| gI2

@@ -28,11 +28,11 @@ flowchart LR
         tG["GND"]
     end
 
-    PU --- SCL
-    PU --- SDA
+    SCL --- PU
+    SDA --- PU
     SCL --> tSCL
     SDA <--> tSDA
     XS --> tXS
-    tINT --> INT
+    INT ---|"data ready in"| tINT
     V33 --- tV
     GND --- tG

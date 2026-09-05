@@ -21,17 +21,15 @@ flowchart LR
         GND["GND"]
     end
 
-    subgraph MOD["MCP2515 module + TJA1050"]
+    subgraph MOD["MCP2515 module + TJA1050 - 8 or 16 MHz crystal"]
         mSCK["SCK"]
         mSO["SO"]
         mSI["SI"]
         mCS["CS"]
         mINT["INT - active low"]
-        mXTAL["8 or 16 MHz crystal"]
         mV["VCC 5V"]
         mG["GND"]
-        mH["CANH"]
-        mL["CANL"]
+        mBUS["CANH / CANL"]
     end
 
     BUS["CAN bus - 120 ohm at both ends"]
@@ -40,8 +38,8 @@ flowchart LR
     MOSI --> mSI
     MISO --- mSO
     CS --> mCS
-    mINT --> INT
+    INT ---|"IRQ in, active low"| mINT
     V5 --- mV
     GND --- mG
-    mH --- BUS
-    mL --- BUS
+    mSI -.->|"on-module transceiver"| mBUS
+    mBUS --- BUS

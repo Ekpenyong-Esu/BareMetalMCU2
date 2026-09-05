@@ -18,7 +18,7 @@ flowchart LR
     PU["Internal pull-up enabled in software"]
 
     V33 --- B1
-    B1 --> PA0
-    PU --- PE2
+    PA0 ---|"pressed = high"| B1
+    PE2 -.-|"internal pull-up"| PU
     PE2 --- BX
-    BX --- GND
+    GND --- BX

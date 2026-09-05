@@ -21,7 +21,7 @@ flowchart LR
         GND["GND"]
     end
 
-    POT["10k contrast potentiometer"]
+    POT["10k contrast potentiometer - ends to 5V and GND, wiper to V0"]
 
     subgraph DISP["HD44780 16x2 - 16 pins"]
         lVSS["1 VSS"]
@@ -45,7 +45,5 @@ flowchart LR
     GND --- lVSS
     GND --- lRW
     POT --> lV0
-    V5 --- POT
-    GND --- POT
     V5 --- lA
     GND --- lK

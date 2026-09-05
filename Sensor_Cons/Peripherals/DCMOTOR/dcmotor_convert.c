@@ -23,6 +23,7 @@ uint32_t DCMOTOR_PercentToDuty(uint8_t percent, uint16_t speedSteps) {
  * @brief Speed percentage for a compare value, clamped to 0..100.
  */
 uint8_t DCMOTOR_DutyToPercent(uint32_t duty, uint16_t speedSteps) {
+    
     if (speedSteps == 0U) {
         return DCMOTOR_MIN_SPEED_PERCENT;
     }

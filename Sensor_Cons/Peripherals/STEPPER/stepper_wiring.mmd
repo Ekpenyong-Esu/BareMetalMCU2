@@ -10,6 +10,7 @@ title: STEPPER - 4-wire stepper via ULN2003 or L298N
 %% ULN2003 suits a 28BYJ-48 (5-wire unipolar); L298N suits a bipolar NEMA 17.
 %% Coil current comes from the motor supply, never from the MCU.
 %% Grounds must be common.
+%% IN1..IN4 link to OUT to show the driver's internal path, not a wire you make.
 flowchart LR
     subgraph PSU["Motor supply - 5 V for 28BYJ-48, 12 V for NEMA 17"]
         VP["+V"]
@@ -43,4 +44,8 @@ flowchart LR
     VP --> VIN
     VG --- DG
     GND --- DG
+    IN1 --> OUT
+    IN2 --> OUT
+    IN3 --> OUT
+    IN4 --> OUT
     OUT --> MOT

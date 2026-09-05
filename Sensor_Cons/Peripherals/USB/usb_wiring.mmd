@@ -35,7 +35,7 @@ flowchart LR
     DM --- sDM
     DP --- sDP
     ID --- sID
-    sV --> VBUS
+    VBUS ---|"5 V sense in"| sV
     PWR -->|"switch 5 V out"| sV
     OC -.->|"fault"| PWR
     sID -->|"floating"| DEV

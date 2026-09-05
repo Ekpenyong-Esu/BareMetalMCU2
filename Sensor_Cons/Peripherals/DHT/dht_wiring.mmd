@@ -14,17 +14,15 @@ flowchart LR
         GND["GND"]
     end
 
-    PU["4.7k pull-up resistor"]
-
-    subgraph DHT["DHT22 module - 4 pins, only 3 used"]
+    subgraph DHT["DHT22 module - 4 pins, pin 3 is NC"]
         dV["VCC 3.3-5 V"]
         dD["DATA"]
-        dNC["NC"]
         dG["GND"]
     end
 
-    V33 --- PU
-    PU --- dD
-    PE2 <--> dD
+    PU["4.7k pull-up from DATA to 3V3"]
+
     V33 --- dV
+    PE2 <--> dD
     GND --- dG
+    dD --- PU

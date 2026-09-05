@@ -21,13 +21,12 @@ flowchart LR
         GND["GND"]
     end
 
-    subgraph XPT["XPT2046 on an ILI9341 shield"]
+    subgraph XPT["XPT2046 on an ILI9341 shield - 4-wire resistive film"]
         tCLK["T_CLK"]
         tDO["T_DO"]
         tDIN["T_DIN"]
         tCS["T_CS"]
         tIRQ["T_IRQ - low when pressed"]
-        tPANEL["4-wire resistive film"]
     end
 
     CAL["Calibration to 240x320 pixels"]
@@ -36,7 +35,7 @@ flowchart LR
     MOSI --> tDIN
     MISO --- tDO
     CS --> tCS
-    tIRQ --> IRQ
+    IRQ ---|"low when pressed"| tIRQ
     V33 --- XPT
     GND --- XPT
-    tPANEL --> CAL
+    tDO -->|"raw 12-bit counts"| CAL
