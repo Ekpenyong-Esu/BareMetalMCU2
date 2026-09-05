@@ -1,0 +1,49 @@
+flowchart LR
+    subgraph PSU["External supply 6-12 V"]
+        VIN["+V"]
+        VGND["GND"]
+    end
+
+    subgraph MCU["STM32F429I-DISC1"]
+        PB4["PB4 - TIM3_CH1"]
+        PE2["PE2"]
+        PE3["PE3"]
+        PC8["PC8 - TIM3_CH3"]
+        PE4["PE4"]
+        PE5["PE5"]
+        GND["GND"]
+    end
+
+    subgraph L298["L298N module - ENA/ENB jumpers REMOVED"]
+        ENA["ENA"]
+        IN1["IN1"]
+        IN2["IN2"]
+        IN3["IN3"]
+        IN4["IN4"]
+        ENB["ENB"]
+        V12["12V in"]
+        LGND["GND"]
+        OUT1["OUT1"]
+        OUT2["OUT2"]
+        OUT3["OUT3"]
+        OUT4["OUT4"]
+    end
+
+    MA["Motor A"]
+    MB["Motor B"]
+
+    PB4 --> ENA
+    PE2 --> IN1
+    PE3 --> IN2
+    PC8 --> ENB
+    PE4 --> IN3
+    PE5 --> IN4
+
+    VIN --> V12
+    VGND --> LGND
+    GND --- LGND
+
+    OUT1 --> MA
+    OUT2 --> MA
+    OUT3 --> MB
+    OUT4 --> MB
