@@ -24,8 +24,8 @@ flowchart LR
         oSDA["SDA"]
     end
 
-    PU --- SCL
-    PU --- SDA
+    SCL --- PU
+    SDA --- PU
     SCL --> oSCL
     SDA <--> oSDA
     V33 --- oV

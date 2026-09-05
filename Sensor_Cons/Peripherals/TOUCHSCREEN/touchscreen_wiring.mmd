@@ -17,11 +17,10 @@ flowchart LR
         INT["PA15 - TP_INT1 EXTI"]
     end
 
-    subgraph TP["On-board STMPE811 - addr 0x82"]
+    subgraph TP["On-board STMPE811 - addr 0x82, 4-wire ADC on XP XM YP YM"]
         tSCL["SCL"]
         tSDA["SDA"]
         tINT["INT"]
-        tADC["4-wire ADC - XP XM YP YM"]
     end
 
     PANEL["Resistive film over the 2.4in ILI9341 LCD"]
@@ -30,5 +29,5 @@ flowchart LR
     SCL --> tSCL
     SDA <--> tSDA
     INT ---|"touch detected"| tINT
-    tADC --- PANEL
-    tADC --> CAL
+    tSDA --- PANEL
+    tSDA -->|"raw counts"| CAL

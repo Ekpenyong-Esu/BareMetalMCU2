@@ -20,7 +20,7 @@ flowchart LR
 
     FB["Framebuffer in SDRAM at 0xD0000000"]
 
-    subgraph PANEL["On-board 2.4in ILI9341 - 240x320 RGB"]
+    subgraph PANEL["On-board 2.4in ILI9341 - 240x320 RGB, backlight tied on"]
         pR["R0-R7"]
         pG["G0-G7"]
         pB["B0-B7"]
@@ -28,7 +28,6 @@ flowchart LR
         pVS["VSYNC"]
         pDE["DE"]
         pCLK["DOTCLK"]
-        pBL["Backlight"]
     end
 
     FB --> MCU

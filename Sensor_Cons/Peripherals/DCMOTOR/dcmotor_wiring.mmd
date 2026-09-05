@@ -6,6 +6,8 @@ title: DCMOTOR - brushed DC motors on L298N
 %% REMOVE the ENA and ENB jumpers or the board ties enable high and ignores PWM.
 %% Leave the module 5V pin unconnected - it is a regulator OUTPUT below 12 V in.
 %% Grounds must be common or the direction inputs float.
+%% IN1..IN4 link to OUT1..OUT4 to show which input drives which output; that
+%% path is inside the H-bridge, not a wire you make.
 flowchart LR
     subgraph PSU["External supply 6-12 V"]
         VIN["+V"]
@@ -47,9 +49,14 @@ flowchart LR
     PE4 --> IN3
     PE5 --> IN4
 
-    V12 ---|"6-12 V in"| VIN
-    LGND --- VGND
+    VIN --> V12
+    VGND --- LGND
     GND --- LGND
+
+    IN1 --> OUT1
+    IN2 --> OUT2
+    IN3 --> OUT3
+    IN4 --> OUT4
 
     OUT1 --> MA
     OUT2 --> MA
