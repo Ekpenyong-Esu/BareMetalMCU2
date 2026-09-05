@@ -124,6 +124,10 @@ Multi-peripheral projects that behave like real products.
 | 48 | Touch Synth | `TOUCHSCREEN` + `DAC` + `BUZZER` | Generate tones from touch position (theremin-style). |
 | 49 | Motor Control Panel | `STEPPER`/`SERVO` + `KEYPAD` + `LCD` | Command motors from a keypad with an LCD menu. |
 | 50 | Low-Power Sensor Node | `PWR` + `RTC` + Sensor + `UART` | Wake on RTC, sample, transmit, sleep — battery-friendly. |
+| 64 | Joystick LED Dimmer | `ADC` + `LED`, `TIM` | Map joystick X/Y to PWM brightness on one or more LEDs. |
+| 65 | Joystick DC Motor Drive | `ADC` + `DCMOTOR`, `TIM` | Drive an L298N DC motor: joystick deflection sets speed and direction. |
+| 66 | Joystick Stepper Control | `ADC` + `STEPPER` | Joystick position steps a stepper motor forward/reverse with variable rate. |
+| 67 | Joystick Servo Control | `ADC` + `SERVO`, `TIM` | Map joystick axes to servo angle for pan/tilt or steering. |
 
 ---
 
