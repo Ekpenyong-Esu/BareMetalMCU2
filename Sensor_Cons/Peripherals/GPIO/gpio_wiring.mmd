@@ -23,7 +23,7 @@ flowchart LR
     EXT["External device pin"]
 
     OUTPP --> LED
-    BTN --> IN
+    IN ---|"button pulls the pin"| BTN
     AF --- EXT
     OUTOD --- EXT
     ANA --- EXT

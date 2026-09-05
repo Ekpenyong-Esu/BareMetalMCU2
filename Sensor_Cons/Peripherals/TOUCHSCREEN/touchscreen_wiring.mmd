@@ -29,6 +29,6 @@ flowchart LR
 
     SCL --> tSCL
     SDA <--> tSDA
-    tINT -->|"touch detected"| INT
-    PANEL --- tADC
+    INT ---|"touch detected"| tINT
+    tADC --- PANEL
     tADC --> CAL

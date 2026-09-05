@@ -22,8 +22,8 @@ flowchart LR
 
     PG13 --> LG
     PG14 --> LR
-    BTN --> PA0
+    PA0 ---|"pressed = high"| BTN
     PA9 --> STL
-    STL --> PA10
-    LG --- GND
-    LR --- GND
+    PA10 ---|"RX from VCP"| STL
+    GND --- LG
+    GND --- LR

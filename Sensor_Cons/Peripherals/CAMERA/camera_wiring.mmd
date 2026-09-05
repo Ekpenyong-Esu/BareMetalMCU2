@@ -35,9 +35,9 @@ flowchart LR
     end
 
     D07 --- cD
-    cH --> HS
-    cV --> VS
-    cP --> PX
+    HS ---|"HREF in"| cH
+    VS ---|"VSYNC in"| cV
+    PX ---|"PCLK in"| cP
     SCL --> cSCL
     SDA --- cSDA
     XC --> cX

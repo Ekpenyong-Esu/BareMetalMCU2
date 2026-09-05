@@ -30,9 +30,9 @@ flowchart LR
     end
 
     TX --> lRX
-    lTX --> RX
+    RX ---|"VCP TX in"| lTX
     lRX --- HOST
     lTX --- HOST
     TX -.->|"alternative"| eRX
-    eTX -.-> RX
+    RX -.-|"device TX in"| eTX
     GND -.- eG

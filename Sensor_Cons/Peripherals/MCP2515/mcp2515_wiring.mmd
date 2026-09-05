@@ -40,7 +40,7 @@ flowchart LR
     MOSI --> mSI
     MISO --- mSO
     CS --> mCS
-    mINT --> INT
+    INT ---|"IRQ in, active low"| mINT
     V5 --- mV
     GND --- mG
     mH --- BUS

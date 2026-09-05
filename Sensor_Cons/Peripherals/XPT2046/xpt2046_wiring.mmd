@@ -36,7 +36,7 @@ flowchart LR
     MOSI --> tDIN
     MISO --- tDO
     CS --> tCS
-    tIRQ --> IRQ
+    IRQ ---|"low when pressed"| tIRQ
     V33 --- XPT
     GND --- XPT
     tPANEL --> CAL
