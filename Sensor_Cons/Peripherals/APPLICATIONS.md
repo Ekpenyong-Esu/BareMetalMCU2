@@ -42,6 +42,7 @@ Small apps that exercise exactly one driver. Great starting points.
 | 52 | Joystick Reader | `ADC`, `GPIO` | Read analog X/Y axes and the push switch, then report position and direction. |
 | 53 | Rotary Encoder Reader | `TIM`, `GPIO` | Decode quadrature A/B signals and the push switch for menu navigation. |
 | 54 | RFID Tag Reader | `SPI` + RFID module | Read an RFID tag UID and display or transmit it. |
+| 63 | DC Motor Drive (L298N) | `DCMOTOR`, `TIM` | Drive a brushed DC motor via L298N H-bridge; PWM speed, direction and coast/brake control. |
 
 ---
 
