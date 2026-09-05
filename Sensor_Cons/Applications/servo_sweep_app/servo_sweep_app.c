@@ -76,6 +76,9 @@ void ServoSweepApp_Run(void) {
     /* Opened first so that a servo that will not start can say so. */
     ServoConsole_Init(SERVO_SWEEP_APP_UART);
 
+    /* SERVO_Init reads the peripheral off the handle; it never picks one itself. */
+    s_servoTimer.Instance = SERVO_SWEEP_APP_TIMER;
+
     SERVO_StatusTypeDef status = SERVO_Init(&s_servo, &s_servoTimer, SERVO_SWEEP_APP_CHANNEL,
                                             SERVO_SWEEP_APP_PORT, SERVO_SWEEP_APP_PIN);
     if (status != SERVO_OK) {

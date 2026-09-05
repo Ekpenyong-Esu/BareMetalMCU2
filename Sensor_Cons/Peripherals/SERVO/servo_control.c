@@ -10,6 +10,9 @@
 #include "servo_pwm.h"
 #include "stm32f4xx_hal.h"
 
+/**
+ * @brief Move to angle; rejects out-of-range.
+ */
 SERVO_StatusTypeDef SERVO_SetAngle(SERVO_Handle_t *hservo, uint16_t angle) {
     SERVO_CHECK_HANDLE(hservo);
 
@@ -28,6 +31,9 @@ SERVO_StatusTypeDef SERVO_SetAngle(SERVO_Handle_t *hservo, uint16_t angle) {
     return status;
 }
 
+/**
+ * @brief Drive pulse width directly; reported angle follows.
+ */
 SERVO_StatusTypeDef SERVO_SetPulseWidth(SERVO_Handle_t *hservo, uint16_t pulseWidth) {
     SERVO_CHECK_HANDLE(hservo);
 
@@ -45,26 +51,41 @@ SERVO_StatusTypeDef SERVO_SetPulseWidth(SERVO_Handle_t *hservo, uint16_t pulseWi
     return status;
 }
 
+/**
+ * @brief Last commanded angle (0 if handle is NULL).
+ */
 uint16_t SERVO_GetAngle(const SERVO_Handle_t *hservo) {
     return (hservo != NULL) ? hservo->currentAngle : 0U;
 }
 
+/**
+ * @brief Last commanded pulse width (0 if handle is NULL).
+ */
 uint16_t SERVO_GetPulseWidth(const SERVO_Handle_t *hservo) {
     return (hservo != NULL) ? hservo->currentPulse : 0U;
 }
 
+/**
+ * @brief Move to configured minimum angle.
+ */
 SERVO_StatusTypeDef SERVO_MoveToMin(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 
     return SERVO_SetAngle(hservo, hservo->config.minAngle);
 }
 
+/**
+ * @brief Move to configured maximum angle.
+ */
 SERVO_StatusTypeDef SERVO_MoveToMax(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 
     return SERVO_SetAngle(hservo, hservo->config.maxAngle);
 }
 
+/**
+ * @brief Move to midpoint of configured range.
+ */
 SERVO_StatusTypeDef SERVO_MoveToCenter(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 
@@ -74,6 +95,9 @@ SERVO_StatusTypeDef SERVO_MoveToCenter(SERVO_Handle_t *hservo) {
     return SERVO_SetAngle(hservo, center);
 }
 
+/**
+ * @brief Blocking sweep from min to max and back.
+ */
 SERVO_StatusTypeDef SERVO_Sweep(SERVO_Handle_t *hservo, uint16_t speed) {
     SERVO_StatusTypeDef status = SERVO_OK;
     uint16_t minAngle = 0;

@@ -32,6 +32,9 @@ static SERVO_StatusTypeDef SERVO_ClampToRange(SERVO_Handle_t *hservo) {
     return SERVO_OK;
 }
 
+/**
+ * @brief Narrow travel range from below.
+ */
 SERVO_StatusTypeDef SERVO_CalibrateMin(SERVO_Handle_t *hservo, uint16_t angle) {
     SERVO_CHECK_HANDLE(hservo);
 
@@ -44,6 +47,9 @@ SERVO_StatusTypeDef SERVO_CalibrateMin(SERVO_Handle_t *hservo, uint16_t angle) {
     return SERVO_ClampToRange(hservo);
 }
 
+/**
+ * @brief Narrow travel range from above.
+ */
 SERVO_StatusTypeDef SERVO_CalibrateMax(SERVO_Handle_t *hservo, uint16_t angle) {
     SERVO_CHECK_HANDLE(hservo);
 
@@ -56,6 +62,9 @@ SERVO_StatusTypeDef SERVO_CalibrateMax(SERVO_Handle_t *hservo, uint16_t angle) {
     return SERVO_ClampToRange(hservo);
 }
 
+/**
+ * @brief Restore factory travel range and move back inside it.
+ */
 SERVO_StatusTypeDef SERVO_ResetCalibration(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 

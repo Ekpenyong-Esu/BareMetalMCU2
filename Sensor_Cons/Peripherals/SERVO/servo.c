@@ -12,6 +12,9 @@
 #include "log.h"
 #include <string.h>
 
+/**
+ * @brief Factory limits: 0-180°, 500-2500 us, default 90°.
+ */
 SERVO_Config_t SERVO_GetDefaultConfig(void) {
     SERVO_Config_t config = {.minAngle = SERVO_MIN_ANGLE,
                              .maxAngle = SERVO_MAX_ANGLE,
@@ -22,6 +25,9 @@ SERVO_Config_t SERVO_GetDefaultConfig(void) {
     return config;
 }
 
+/**
+ * @brief Bring up PWM and move to default angle.
+ */
 SERVO_StatusTypeDef SERVO_Init(SERVO_Handle_t *hservo, TIM_HandleTypeDef *htim, uint32_t channel,
                                GPIO_TypeDef *gpioPort, uint16_t gpioPin) {
     SERVO_StatusTypeDef status = SERVO_OK;
@@ -59,6 +65,9 @@ SERVO_StatusTypeDef SERVO_Init(SERVO_Handle_t *hservo, TIM_HandleTypeDef *htim, 
     return SERVO_OK;
 }
 
+/**
+ * @brief Stop PWM and mark handle uninitialised.
+ */
 SERVO_StatusTypeDef SERVO_DeInit(SERVO_Handle_t *hservo) {
     SERVO_CHECK_HANDLE(hservo);
 
@@ -68,6 +77,9 @@ SERVO_StatusTypeDef SERVO_DeInit(SERVO_Handle_t *hservo) {
     return SERVO_OK;
 }
 
+/**
+ * @brief Replace travel limits and move to new default angle.
+ */
 SERVO_StatusTypeDef SERVO_Config(SERVO_Handle_t *hservo, const SERVO_Config_t *config) {
     SERVO_CHECK_HANDLE(hservo);
 

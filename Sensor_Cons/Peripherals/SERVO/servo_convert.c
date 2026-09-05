@@ -7,7 +7,11 @@
 
 #include "servo_convert.h"
 
+/**
+ * @brief Pulse width for angle, clamped to config range.
+ */
 uint16_t SERVO_AngleToPulseWidth(uint16_t angle, const SERVO_Config_t *config) {
+
     if (config == NULL) {
         return SERVO_DEFAULT_PULSE_WIDTH_US;
     }
@@ -31,6 +35,9 @@ uint16_t SERVO_AngleToPulseWidth(uint16_t angle, const SERVO_Config_t *config) {
     return (uint16_t)(config->minPulseWidth + offset);
 }
 
+/**
+ * @brief Angle for pulse width, clamped to config range.
+ */
 uint16_t SERVO_PulseWidthToAngle(uint16_t pulseWidth, const SERVO_Config_t *config) {
     if (config == NULL) {
         return SERVO_DEFAULT_ANGLE;
@@ -54,6 +61,9 @@ uint16_t SERVO_PulseWidthToAngle(uint16_t pulseWidth, const SERVO_Config_t *conf
     return (uint16_t)(config->minAngle + offset);
 }
 
+/**
+ * @brief Check angle against config limits.
+ */
 bool SERVO_IsValidAngle(uint16_t angle, const SERVO_Config_t *config) {
     if (config == NULL) {
         /* angle is unsigned, so the SERVO_MIN_ANGLE (0) bound is implicit. */
@@ -63,14 +73,20 @@ bool SERVO_IsValidAngle(uint16_t angle, const SERVO_Config_t *config) {
     return (angle >= config->minAngle && angle <= config->maxAngle);
 }
 
+/**
+ * @brief Check pulse width against config limits.
+ */
 bool SERVO_IsValidPulseWidth(uint16_t pulseWidth, const SERVO_Config_t *config) {
     if (config == NULL) {
-        return (pulseWidth >= SERVO_MIN_PULSE_WIDTH_US && pulseWidth <= SERVO_MAX_PULSE_WIDTH_US);
+        return (pulseWidth >= SERVO_MIN_PULSE_WIDTH_US && pulseWidth <= SERVO_MAX_PULSE_WIDTH_US) != 0;
     }
 
     return (pulseWidth >= config->minPulseWidth && pulseWidth <= config->maxPulseWidth);
 }
 
+/**
+ * @brief Reject a config whose ranges are empty, inverted or inconsistent.
+ */
 SERVO_StatusTypeDef SERVO_ValidateConfig(const SERVO_Config_t *config) {
     if (config == NULL) {
         return SERVO_INVALID_PARAM;

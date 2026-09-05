@@ -2,6 +2,8 @@
  ******************************************************************************
  * @file    servo.h
  * @brief   Servo motor driver - public aggregator
+ * @details Include this single header for the full driver API. For the
+ *          low-level PWM transport include servo_pwm.h directly.
  ******************************************************************************
  */
 

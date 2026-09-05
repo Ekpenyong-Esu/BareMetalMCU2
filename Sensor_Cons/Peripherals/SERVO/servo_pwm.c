@@ -16,6 +16,7 @@
 #define SERVO_PWM_COUNTER_HZ 1000000U
 
 static bool SERVO_PWM_ResolveAlternate(const TIM_TypeDef *instance, uint8_t *alternate) {
+
     if (instance == TIM1 || instance == TIM2) {
         *alternate = GPIO_AF1_TIM1;
     }
@@ -41,50 +42,81 @@ static bool SERVO_PWM_IsValidChannel(uint32_t channel) {
             channel == TIM_CHANNEL_4);
 }
 
-SERVO_StatusTypeDef SERVO_PWM_Init(SERVO_Handle_t *hservo) {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    uint8_t alternate = 0;
+static SERVO_StatusTypeDef SERVO_PWM_Validate(const SERVO_Handle_t *hservo, uint8_t *alternate) {
+    if (hservo == NULL || hservo->htim == NULL || hservo->htim->Instance == NULL) {
+        log_error("SERVO: null handle or timer");
+        return SERVO_INVALID_PARAM;
+    }
+
+    if (hservo->gpioPort == NULL || hservo->gpioPin == 0U) {
+        log_error("SERVO: invalid GPIO");
+        return SERVO_INVALID_PARAM;
+    }
 
     if (!SERVO_PWM_IsValidChannel(hservo->channel)) {
         log_error("SERVO: unsupported timer channel");
         return SERVO_INVALID_PARAM;
     }
 
-    if (!SERVO_PWM_ResolveAlternate(hservo->htim->Instance, &alternate)) {
+    if (!SERVO_PWM_ResolveAlternate(hservo->htim->Instance, alternate)) {
         log_error("SERVO: timer has no known GPIO alternate function");
         return SERVO_INVALID_PARAM;
     }
 
+    /* TIM_PWM_InitHz truncates its divider, so only an exact division keeps 1 us per step. */
     if (TIM_Clock_GetHz(hservo->htim->Instance) % SERVO_PWM_COUNTER_HZ != 0U) {
         log_error("SERVO: timer clock cannot produce a 1 MHz counter");
         return SERVO_ERROR;
     }
 
-    GPIO_InitStruct.Pin = hservo->gpioPin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIO_InitStruct.Alternate = alternate;
-    GPIO_Driver_Pin_Init(hservo->gpioPort, &GPIO_InitStruct);
+    return SERVO_OK;
+}
 
-    if (TIM_PWM_InitHz(hservo->htim, hservo->htim->Instance, SERVO_PWM_FREQUENCY_HZ,
-                       SERVO_PWM_STEPS_PER_PERIOD) != HAL_OK) {
-        log_error("SERVO: PWM timer init failed");
-        HAL_GPIO_DeInit(hservo->gpioPort, hservo->gpioPin);
-        return SERVO_ERROR;
-    }
+static HAL_StatusTypeDef SERVO_PWM_StartTimer(SERVO_Handle_t *hservo) {
+
+    HAL_StatusTypeDef status = TIM_PWM_InitHz(hservo->htim, hservo->htim->Instance,
+                                              SERVO_PWM_FREQUENCY_HZ, SERVO_PWM_STEPS_PER_PERIOD);
 
     /* Without this the channel keeps its reset output-compare mode and never
        produces a PWM waveform, however the compare register is written. */
-    if (TIM_PWM_ConfigChannel(hservo->htim, hservo->channel, SERVO_DEFAULT_PULSE_WIDTH_US,
-                              TIM_OCPOLARITY_HIGH) != HAL_OK) {
-        log_error("SERVO: PWM channel config failed");
-        HAL_GPIO_DeInit(hservo->gpioPort, hservo->gpioPin);
+    if (status == HAL_OK) {
+        status = TIM_PWM_ConfigChannel(hservo->htim, hservo->channel, SERVO_DEFAULT_PULSE_WIDTH_US,
+                                       TIM_OCPOLARITY_HIGH);
+    }
+
+    if (status == HAL_OK) {
+        status = TIM_PWM_Start(hservo->htim, hservo->channel);
+    }
+
+    return status;
+}
+
+/**
+ * @brief Bring up AF pin and program timer for 50 Hz with 1 us steps.
+ */
+SERVO_StatusTypeDef SERVO_PWM_Init(SERVO_Handle_t *hservo) {
+    uint8_t alternate = 0;
+    SERVO_StatusTypeDef status = SERVO_PWM_Validate(hservo, &alternate);
+
+    if (status != SERVO_OK) {
+        return status;
+    }
+
+    GPIO_InitTypeDef gpioInit = {
+        .Pin = hservo->gpioPin,
+        .Mode = GPIO_MODE_AF_PP,
+        .Pull = GPIO_NOPULL,
+        .Speed = GPIO_SPEED_FREQ_HIGH,
+        .Alternate = alternate,
+    };
+
+    if (GPIO_Driver_Pin_Init(hservo->gpioPort, &gpioInit) != HAL_OK) {
+        log_error("SERVO: GPIO init failed");
         return SERVO_ERROR;
     }
 
-    if (TIM_PWM_Start(hservo->htim, hservo->channel) != HAL_OK) {
-        log_error("SERVO: PWM start failed");
+    if (SERVO_PWM_StartTimer(hservo) != HAL_OK) {
+        log_error("SERVO: PWM timer setup failed");
         HAL_GPIO_DeInit(hservo->gpioPort, hservo->gpioPin);
         return SERVO_ERROR;
     }
@@ -92,6 +124,9 @@ SERVO_StatusTypeDef SERVO_PWM_Init(SERVO_Handle_t *hservo) {
     return SERVO_OK;
 }
 
+/**
+ * @brief Stop PWM and release GPIO pin.
+ */
 void SERVO_PWM_DeInit(SERVO_Handle_t *hservo) {
     if (hservo->htim != NULL) {
         (void)TIM_PWM_Stop(hservo->htim, hservo->channel);
@@ -102,6 +137,9 @@ void SERVO_PWM_DeInit(SERVO_Handle_t *hservo) {
     }
 }
 
+/**
+ * @brief Drive output at pulseWidthUs of the 20 ms frame.
+ */
 SERVO_StatusTypeDef SERVO_PWM_SetPulseWidth(SERVO_Handle_t *hservo, uint16_t pulseWidthUs) {
     if (pulseWidthUs > SERVO_PWM_STEPS_PER_PERIOD) {
         return SERVO_INVALID_PARAM;
