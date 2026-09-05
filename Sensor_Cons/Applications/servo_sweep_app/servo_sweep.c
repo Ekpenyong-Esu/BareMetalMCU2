@@ -13,6 +13,7 @@
 #define SERVO_SWEEP_DEFAULT_STEP_DELAY_MS 30U
 
 ServoSweep_Config_t ServoSweep_GetDefaultConfig(const SERVO_Handle_t *hservo) {
+
     ServoSweep_Config_t config = {
         .minAngle = SERVO_MIN_ANGLE,
         .maxAngle = SERVO_MAX_ANGLE,
@@ -31,6 +32,7 @@ ServoSweep_Config_t ServoSweep_GetDefaultConfig(const SERVO_Handle_t *hservo) {
 /** @brief Command one angle, report it, and let the horn settle */
 static SERVO_StatusTypeDef ServoSweep_Step(SERVO_Handle_t *hservo, uint16_t angleDeg,
                                            uint16_t settleMs, ServoSweep_Progress_t progress) {
+
     SERVO_StatusTypeDef status = SERVO_SetAngle(hservo, angleDeg);
     if (status != SERVO_OK) {
         return status;
@@ -46,6 +48,7 @@ static SERVO_StatusTypeDef ServoSweep_Step(SERVO_Handle_t *hservo, uint16_t angl
 
 /** @brief The angle after `angle` on the way to `end`, never overshooting */
 static uint16_t ServoSweep_NextAngle(uint16_t angle, uint16_t end, uint16_t stepDeg) {
+
     if (angle < end) {
         return (end - angle > stepDeg) ? (uint16_t)(angle + stepDeg) : end;
     }
@@ -59,6 +62,7 @@ static uint16_t ServoSweep_NextAngle(uint16_t angle, uint16_t end, uint16_t step
 static SERVO_StatusTypeDef ServoSweep_Walk(SERVO_Handle_t *hservo,
                                            const ServoSweep_Config_t *config, uint16_t fromDeg,
                                            uint16_t toDeg, ServoSweep_Progress_t progress) {
+                                            
     uint16_t angle = fromDeg;
 
     while (angle != toDeg) {

@@ -58,6 +58,12 @@ void ServoConsole_ReportReady(const char *outputDescription) {
     ServoConsole_Send("\r\n");
 }
 
+void ServoConsole_ReportTurn(const char *servoName) {
+    ServoConsole_Send("\r\nSweeping ");
+    ServoConsole_Send(servoName);
+    ServoConsole_Send("\r\n");
+}
+
 void ServoConsole_ReportAngle(uint16_t angleDeg) {
     char line[SERVO_CONSOLE_LINE_SIZE];
 

@@ -29,6 +29,9 @@ void ServoConsole_Init(USART_TypeDef *instance);
 /** Announce that the sweep has started and which output drives the servo. */
 void ServoConsole_ReportReady(const char *outputDescription);
 
+/** Name the servo whose angles follow, so two servos are told apart. */
+void ServoConsole_ReportTurn(const char *servoName);
+
 /** Report one settled angle, e.g. "angle: 90 deg". */
 void ServoConsole_ReportAngle(uint16_t angleDeg);
 

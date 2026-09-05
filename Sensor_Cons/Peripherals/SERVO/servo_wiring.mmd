@@ -2,31 +2,30 @@
 title: SERVO - hobby servo on PWM
 ---
 %% Pins from Applications/servo_sweep_app/servo_sweep_app.c.
-%% PB4 = TIM3_CH1 (AF2), free in project.ioc.
+%% PB4 = TIM3_CH1 and PC8 = TIM3_CH3 (AF2), both free in project.ioc. TIM3's
+%% other two channels only reach pins the LCD and SDRAM already own.
+%% Both servos share TIM3, so they share one 50 Hz frame.
 %% NEVER power the servo from the board 5V pin. Even an SG90 pulls stall
 %% currents that will brown out the MCU and reset it mid-sweep.
 %% The grounds MUST be tied together or the pulse has no reference and the
 %% servo jitters or ignores it.
 %% Signal is 3.3 V; almost every hobby servo accepts that as logic high.
-%% 50 Hz frame, 1.0-2.0 ms pulse. Four servos = TIM3 CH1-4 on separate pins.
+%% 50 Hz frame, 1.0-2.0 ms pulse.
 flowchart LR
-    subgraph PSU["Separate 5-6 V supply - 1 A per servo"]
-        VP["+5V"]
-        VG["GND"]
-    end
-
     subgraph MCU["STM32F429I-DISC1"]
-        PWM["PB4 - TIM3_CH1"]
+        PWMA["PB4 - TIM3_CH1"]
+        PWMB["PC8 - TIM3_CH3"]
         GND["GND"]
     end
 
-    subgraph SRV["SG90 / MG90S servo"]
-        sSIG["Signal - orange or yellow"]
-        sV["VCC - red"]
-        sG["GND - brown or black"]
-    end
+    PSU["Separate 5-6 V supply - 1 A per servo"]
 
-    PWM -->|"1-2 ms pulse at 50 Hz"| sSIG
-    VP --> sV
-    VG --- sG
-    GND ---|"common ground"| sG
+    SRVA["Servo A - SG90 / MG90S"]
+    SRVB["Servo B - SG90 / MG90S"]
+
+    PWMA -->|"signal orange - 1-2 ms pulse at 50 Hz"| SRVA
+    PWMB -->|"signal orange - 1-2 ms pulse at 50 Hz"| SRVB
+    PSU ---|"VCC red + GND brown"| SRVA
+    PSU ---|"VCC red + GND brown"| SRVB
+    GND ---|"common ground"| SRVA
+    GND ---|"common ground"| SRVB
