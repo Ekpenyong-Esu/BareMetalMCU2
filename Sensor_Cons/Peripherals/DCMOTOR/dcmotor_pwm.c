@@ -77,6 +77,7 @@ static DCMOTOR_StatusTypeDef DCMOTOR_PWM_Validate(const DCMOTOR_Pins_t *pins, ui
 }
 
 static HAL_StatusTypeDef DCMOTOR_PWM_InitDirectionPins(const DCMOTOR_Pins_t *pins) {
+    
     GPIO_InitTypeDef gpioInit = {
         .Mode = GPIO_MODE_OUTPUT_PP,
         .Pull = GPIO_NOPULL,
@@ -85,11 +86,17 @@ static HAL_StatusTypeDef DCMOTOR_PWM_InitDirectionPins(const DCMOTOR_Pins_t *pin
 
     gpioInit.Pin = pins->in1Pin;
     if (GPIO_Driver_Pin_Init(pins->in1Port, &gpioInit) != HAL_OK) {
+        log_error("DCMOTOR: direction GPIO init failed for IN1 pin");
         return HAL_ERROR;
     }
 
     gpioInit.Pin = pins->in2Pin;
-    return GPIO_Driver_Pin_Init(pins->in2Port, &gpioInit);
+    if (GPIO_Driver_Pin_Init(pins->in2Port, &gpioInit) != HAL_OK) {
+        log_error("DCMOTOR: direction GPIO init failed for IN2 pin");
+        return HAL_ERROR;
+    }
+
+    return HAL_OK;
 }
 
 static HAL_StatusTypeDef DCMOTOR_PWM_StartTimer(const DCMOTOR_Pins_t *pins,
@@ -116,6 +123,7 @@ static HAL_StatusTypeDef DCMOTOR_PWM_StartTimer(const DCMOTOR_Pins_t *pins,
  * @brief Bring up the enable AF pin, the direction outputs and the PWM base.
  */
 DCMOTOR_StatusTypeDef DCMOTOR_PWM_Init(DCMOTOR_Handle_t *hmotor) {
+
     uint8_t alternate = 0;
     DCMOTOR_StatusTypeDef status = DCMOTOR_PWM_Validate(&hmotor->pins, &alternate);
 
