@@ -9,10 +9,9 @@ title: MIC - on-board MP45DT02 PDM microphone
 %% NOTE: PC3 is also the only free ADC-capable pin, so the mic and an analog
 %% sensor cannot both use it.
 flowchart LR
-    subgraph MIC["On-board MP45DT02"]
+    subgraph MIC["On-board MP45DT02 - L/R select tied low"]
         mCLK["CLK - clocked by the MCU"]
         mDAT["DOUT - PDM bitstream"]
-        mLR["L/R select"]
     end
 
     subgraph MCU["STM32F429I-DISC1"]

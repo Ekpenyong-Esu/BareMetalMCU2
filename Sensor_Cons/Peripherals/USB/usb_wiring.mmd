@@ -16,15 +16,14 @@ flowchart LR
         ID["PB12 - OTG_HS_ID"]
         VBUS["PB13 - OTG_HS_VBUS sense"]
         PWR["PC4 - VBUS power switch enable"]
-        OC["PC5 - overcurrent flag"]
+        OC["PC5 - overcurrent flag from the VBUS switch"]
     end
 
-    subgraph SOCK["USB User micro-AB socket"]
+    subgraph SOCK["USB User micro-AB socket - shell and GND to board ground"]
         sDM["D-"]
         sDP["D+"]
         sID["ID - grounded by an OTG cable"]
         sV["VBUS 5V"]
-        sG["GND"]
     end
 
     subgraph MODES["Roles"]
@@ -37,6 +36,5 @@ flowchart LR
     ID --- sID
     VBUS ---|"5 V sense in"| sV
     PWR -->|"switch 5 V out"| sV
-    OC -.->|"fault"| PWR
     sID -->|"floating"| DEV
     sID -->|"grounded"| HOST

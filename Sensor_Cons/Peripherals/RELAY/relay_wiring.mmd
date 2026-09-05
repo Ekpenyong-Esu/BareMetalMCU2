@@ -21,8 +21,7 @@ flowchart LR
         rIN["IN"]
         rV["VCC 5V"]
         rG["GND"]
-        rOPT["Optocoupler + transistor + flyback diode"]
-        rCOIL["Relay coil"]
+        rCOIL["Optocoupler drives the coil - flyback diode on board"]
     end
 
     subgraph CONT["Contacts - isolated side"]
@@ -36,9 +35,9 @@ flowchart LR
     IN --> rIN
     V5 --- rV
     GND --- rG
-    rIN --> rOPT
-    rOPT --> rCOIL
+    rIN --> rCOIL
     rCOIL --> COM
     COM --> NO
+    COM --> NC
     NO --> LOAD
     LOAD --> SUP

@@ -9,8 +9,7 @@ flowchart LR
     subgraph MCU["STM32F429I-DISC1"]
         DHR["DAC_DHR12R2 - 12-bit value"]
         DAC2["DAC channel 2"]
-        PA5["PA5 - DAC_OUT2"]
-        PA4["PA4 - DAC_OUT1 taken by LTDC_VSYNC"]
+        PA5["PA5 - DAC_OUT2 - OUT1 on PA4 is taken by LTDC_VSYNC"]
         VDDA["VDDA 3.3 V reference"]
         GND["GND"]
     end

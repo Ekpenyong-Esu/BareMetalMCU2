@@ -6,24 +6,19 @@ title: ADC - analog input
 %% PC3 (ADC123_IN13) is the only one of those still free in project.ioc.
 %% Input must stay within 0 - 3.3 V; divide anything larger.
 flowchart LR
-    subgraph SRC["Signal source"]
-        POT["10k potentiometer"]
-        SUP["3V3 wiper 0-3.3 V"]
-    end
+    SRC["10k potentiometer across 3V3 and GND - wiper 0-3.3 V"]
 
-    subgraph MCU["STM32F429I-DISC1"]
+    subgraph MCU["STM32F429I-DISC1 - analog pins"]
         AIN["PC3 - ADC123_IN13"]
-        VREF["VREF+ = VDDA 3.3 V"]
         GND["GND"]
-        ADC["ADC1 12-bit SAR"]
-        TEMP["Internal temp sensor ch16"]
-        VBAT["Internal VBAT ch18"]
     end
 
-    SUP --> AIN
-    POT --- SUP
-    POT --- GND
+    ADC["ADC1 12-bit SAR - VREF+ = VDDA 3.3 V"]
+    TEMP["Internal temperature sensor - channel 16"]
+    VBAT["Internal VBAT/4 - channel 18"]
+
+    SRC --> AIN
+    SRC --- GND
     AIN --> ADC
     TEMP --> ADC
     VBAT --> ADC
-    VREF --> ADC

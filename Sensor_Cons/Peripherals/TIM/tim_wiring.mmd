@@ -15,7 +15,7 @@ flowchart LR
         BASE["TIM_Base - periodic interrupt"]
         PWM["TIM_PWM - InitHz, ConfigChannel, SetDuty"]
         IC["TIM_IC - input capture"]
-        OC["TIM_OC - output compare"]
+        OC["TIM_OC - output compare, fires on the update IRQ"]
         ENC["TIM_Encoder - quadrature"]
     end
 
@@ -35,11 +35,12 @@ flowchart LR
     CLK --> BASE
     CLK --> PWM
     CLK --> IC
+    CLK --> OC
+    CLK --> ENC
     PWM --> SERVOP
     PWM --> MOTORP
     PWM --> LEDP
     PWM --> BUZZ
-    ECHOP --> IC
-    IRP --> IC
-    KNOB --> ENC
-    BASE -->|"update IRQ"| OC
+    IC ---|"echo width in"| ECHOP
+    IC ---|"pulse train in"| IRP
+    ENC ---|"quadrature in"| KNOB

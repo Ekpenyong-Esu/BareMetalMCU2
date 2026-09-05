@@ -10,29 +10,14 @@ title: PWR - power modes, nothing to wire
 flowchart LR
     subgraph MODES["Power modes - deepest last"]
         RUN["Run - full speed"]
-        SLEEP["Sleep - core stopped, peripherals live"]
-        STOP["Stop - clocks off, SRAM retained"]
-        STBY["Standby - only backup domain alive"]
+        SLEEP["Sleep - core stopped, peripherals live - any enabled interrupt wakes"]
+        STOP["Stop - clocks off, SRAM retained - an EXTI line wakes"]
+        STBY["Standby - only backup domain alive - WKUP pin PA0 or an RTC alarm wakes"]
     end
 
-    subgraph WAKE["Wake sources"]
-        IRQ["Any enabled interrupt"]
-        EXTI["EXTI line"]
-        WK["WKUP pin PA0 - the on-board B1 button"]
-        RTCA["RTC alarm"]
-    end
-
-    subgraph BKP["Backup domain"]
-        VBAT["VBAT - tied to VDD on this board"]
-        BKPR["Backup registers + RTC"]
-    end
+    BKP["Backup domain - registers + RTC, held up by VBAT (tied to VDD here)"]
 
     RUN --> SLEEP
     SLEEP --> STOP
     STOP --> STBY
-    IRQ --> SLEEP
-    EXTI --> STOP
-    WK --> STBY
-    RTCA --> STBY
-    VBAT --> BKPR
-    STBY -.->|"survives"| BKPR
+    STBY -.->|"survives"| BKP

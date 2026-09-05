@@ -32,9 +32,10 @@ flowchart LR
     end
 
     TRIG -->|"10 us pulse"| hT
-    hE --> R1
-    R1 --> R2
-    R1 --> ECHO
-    R2 --- GND
     V5 --> hV
     GND --- hG
+    hT -.->|"module pings, then drives ECHO high"| hE
+    hE --> R1
+    R1 --> R2
+    GND --- R2
+    ECHO ---|"divided echo in"| R1

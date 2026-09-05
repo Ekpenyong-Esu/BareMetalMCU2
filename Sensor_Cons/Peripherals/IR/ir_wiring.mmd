@@ -17,10 +17,9 @@ flowchart LR
     end
 
     subgraph EMIT["IR emitter"]
-        Q["2N2222 transistor"]
         R1["1k base resistor"]
-        R2["100 ohm series resistor"]
-        LED["IR LED 940 nm"]
+        Q["2N2222 transistor"]
+        LED["IR LED 940 nm + 100 ohm series resistor"]
     end
 
     subgraph RECV["TSOP38238 receiver"]
@@ -32,7 +31,6 @@ flowchart LR
     TX --> R1
     R1 --> Q
     Q --> LED
-    R2 --- LED
     GND --- LED
     RX ---|"demodulated pulses in"| rOUT
     V33 --- rV

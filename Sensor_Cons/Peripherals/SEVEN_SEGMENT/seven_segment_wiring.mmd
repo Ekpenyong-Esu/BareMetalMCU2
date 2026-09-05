@@ -23,8 +23,6 @@ flowchart LR
         hDAT["DATA"]
         hV["VDD 3.3-5 V"]
         hG["GND"]
-        hSEG["SEG0..SEG31"]
-        hCOM["COM0..COM3"]
     end
 
     subgraph DISP["Multi-digit 7-segment LCD"]
@@ -37,5 +35,5 @@ flowchart LR
     DAT --> hDAT
     V33 --- hV
     GND --- hG
-    hSEG --> SEGS
-    hCOM --> DIGS
+    hDAT -.->|"SEG0..SEG31"| SEGS
+    hDAT -.->|"COM0..COM3"| DIGS

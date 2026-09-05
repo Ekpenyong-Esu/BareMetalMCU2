@@ -29,7 +29,7 @@ flowchart LR
         pRST["nRST"]
     end
 
-    MAG["RJ45 with integrated magnetics"]
+    MAG["RJ45 with integrated magnetics - TX+/- and RX+/- pairs"]
 
     REF ---|"50 MHz ref in"| pREF
     CRS ---|"carrier sense in"| pCRS
@@ -39,4 +39,5 @@ flowchart LR
     MDC --> pMDC
     MDIO <--> pMDIO
     RST --> pRST
-    PHY --- MAG
+
+    pTXD -.->|"on-module 100BASE-TX line driver"| MAG

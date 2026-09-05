@@ -7,15 +7,12 @@ title: RTC - real-time clock
 %% clock and the backup registers do NOT survive a power cut as shipped.
 %% Choose LSE for real timekeeping; LSI drifts far too much for a clock.
 flowchart LR
-    subgraph XTAL["On-board crystal"]
-        OSCIN["PC14 - OSC32_IN"]
-        OSCOUT["PC15 - OSC32_OUT"]
-        Q["32.768 kHz crystal"]
-    end
+    XTAL["32.768 kHz crystal on PC14 / PC15"]
+    LSI["Internal LSI ~32 kHz - drifts, fallback when no crystal"]
+    VBAT["VBAT pin - tied to VDD here; a coin cell fits if the bridge is cut"]
 
     subgraph MCU["STM32F429I-DISC1 - backup domain"]
         LSE["LSE oscillator - accurate"]
-        LSI["LSI ~32 kHz - drifts"]
         PRE["Async /128 + sync /256 prescalers"]
         CAL["Calendar - date and time BCD"]
         ALRM["Alarm A / Alarm B"]
@@ -23,19 +20,10 @@ flowchart LR
         WK["Wake from Standby"]
     end
 
-    subgraph PWRIN["Backup supply"]
-        VBAT["VBAT pin - tied to VDD on this board"]
-        COIN["Optional coin cell if the bridge is cut"]
-    end
-
-    Q --- OSCIN
-    Q --- OSCOUT
-    OSCIN --> LSE
-    LSE --> PRE
+    XTAL --> LSE
     LSI -.-> PRE
+    VBAT ---|"powers the domain"| BKPR
+    LSE --> PRE
     PRE --> CAL
     CAL --> ALRM
     ALRM --> WK
-    BKPR --- VBAT
-    CAL ---|"backup supply"| VBAT
-    COIN -.-> VBAT

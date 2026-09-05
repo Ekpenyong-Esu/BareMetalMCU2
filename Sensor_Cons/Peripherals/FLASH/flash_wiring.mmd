@@ -13,9 +13,8 @@ flowchart LR
         subgraph B1["Bank 1 - 1 MB"]
             S0["Sector 0-3 : 16 KB each"]
             S4["Sector 4 : 64 KB"]
-            S5["Sector 5-11 : 128 KB each"]
-            APPC["Application code from 0x08000000"]
-            USER["Sector 11 - user data 0x080E0000"]
+            S5["Sector 5-10 : 128 KB each - application code from 0x08000000"]
+            S11["Sector 11 : 128 KB - user data at 0x080E0000"]
         end
 
         subgraph B2["Bank 2 - 1 MB"]
@@ -26,5 +25,3 @@ flowchart LR
     CPU --> FI
     FI --> B1
     FI --> B2
-    APPC --- S5
-    USER --- S5
