@@ -1,0 +1,35 @@
+---
+title: JOYSTICK - analog two-axis stick with push switch
+---
+%% Pins chosen from the free list in project.ioc.
+%% PA5 = ADC12_IN5, PC3 = ADC123_IN13; both land on ADC1, so one handle reads
+%% each axis in turn. PE2 is a plain input for the switch.
+%% Power the module from 3V3, NOT 5V - the wiper output feeds the ADC directly
+%% and an analog input must never exceed VDDA.
+%% PA5 doubles as DAC_OUT2 and PC3 as the on-board mic I2S2_SD; using them here
+%% gives up the DAC channel and the microphone.
+%% SW is an open switch to GND, so the driver enables the internal pull-up.
+%% Every link is written MCU-first so both boxes rank into one row; a wire has
+%% no direction, so the label names the signal instead of an arrowhead.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        P3V3["3V3"]
+        PA5["PA5 - ADC12_IN5"]
+        PC3["PC3 - ADC123_IN13"]
+        PE2["PE2 - GPIO input, pull-up"]
+        GND["GND"]
+    end
+
+    subgraph JOY["Joystick module - KY-023 style"]
+        VCC["+5V pad - feed 3V3"]
+        VRX["VRx"]
+        VRY["VRy"]
+        SW["SW"]
+        JGND["GND"]
+    end
+
+    P3V3 ---|"3.3 V supply"| VCC
+    PA5 ---|"X wiper in"| VRX
+    PC3 ---|"Y wiper in"| VRY
+    PE2 ---|"switch to GND"| SW
+    GND --- JGND
