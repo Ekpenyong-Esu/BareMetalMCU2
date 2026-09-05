@@ -1,0 +1,39 @@
+---
+title: QSPI - serial NOR flash over SPI
+---
+%% NO DOCUMENTED BOARD PINS - the driver takes an SPI bus plus a CS pin.
+%% Despite the folder name this is plain single-line SPI: the STM32F429 on
+%% this board does not expose a QUADSPI peripheral.
+%% SPI5 is the bus already wired here; CS uses a free pin from project.ioc.
+%% WP and HOLD must be tied high, not left floating, or writes fail randomly.
+%% The driver reads the JEDEC ID to identify Micron 0x20, Winbond 0xEF or
+%% Macronix 0xC2 parts.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCK["PF7 - SPI5_SCK"]
+        MISO["PF8 - SPI5_MISO"]
+        MOSI["PF9 - SPI5_MOSI"]
+        CS["PC13 - CS"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    subgraph FL["W25Q128 / N25Q128 serial flash"]
+        fCS["1 CS"]
+        fDO["2 DO - MISO"]
+        fWP["3 WP - tie high"]
+        fG["4 GND"]
+        fDI["5 DI - MOSI"]
+        fCLK["6 CLK"]
+        fHOLD["7 HOLD - tie high"]
+        fV["8 VCC 3.3V"]
+    end
+
+    SCK --> fCLK
+    MOSI --> fDI
+    MISO --- fDO
+    CS --> fCS
+    V33 --- fV
+    V33 --- fWP
+    V33 --- fHOLD
+    GND --- fG

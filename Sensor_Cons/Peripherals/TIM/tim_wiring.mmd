@@ -1,0 +1,45 @@
+---
+title: TIM - timer features and their pins
+---
+%% ON-CHIP ONLY. Timers have no wiring of their own - they lend a pin an
+%% alternate function.
+%% Alternate function per instance, from Peripherals/SERVO/servo_pwm.c:
+%%   TIM1/TIM2 -> AF1, TIM3/4/5 -> AF2, TIM8/9/10/11 -> AF3, TIM12/13/14 -> AF9.
+%% Free timer-capable pins on this board: PB4 (TIM3_CH1), PC8 (TIM3_CH3),
+%% PB7 (TIM4_CH2), PA5 (TIM2_CH1).
+%% TIM6 and TIM7 are time-base only - they have NO output pins.
+%% TIM_Clock_GetHz returns double the APB clock when the prescaler is not 1.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        CLK["TIM_Clock - enable + rate query"]
+        BASE["TIM_Base - periodic interrupt"]
+        PWM["TIM_PWM - InitHz, ConfigChannel, SetDuty"]
+        IC["TIM_IC - input capture"]
+        OC["TIM_OC - output compare"]
+        ENC["TIM_Encoder - quadrature"]
+    end
+
+    subgraph OUTS["What they drive"]
+        SERVOP["Servo signal - PB4 TIM3_CH1"]
+        MOTORP["Motor enable - PC8 TIM3_CH3"]
+        LEDP["LED dimming - PA5 TIM2_CH1"]
+        BUZZ["Buzzer tone"]
+    end
+
+    subgraph INS["What they measure"]
+        ECHOP["HC-SR04 echo width"]
+        IRP["IR remote pulse train"]
+        KNOB["Rotary encoder A/B"]
+    end
+
+    CLK --> BASE
+    CLK --> PWM
+    CLK --> IC
+    PWM --> SERVOP
+    PWM --> MOTORP
+    PWM --> LEDP
+    PWM --> BUZZ
+    ECHOP --> IC
+    IRP --> IC
+    KNOB --> ENC
+    BASE -->|"update IRQ"| OC

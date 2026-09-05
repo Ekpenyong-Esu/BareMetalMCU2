@@ -1,0 +1,41 @@
+---
+title: LTDC - on-board LCD parallel RGB
+---
+%% ALREADY SOLDERED on the STM32F429I-DISC1 - nothing to wire.
+%% Pins from Peripherals/LTDC/README.md and ltdc_panel.h.
+%% This is the pixel-pumping path; the ILI9341 SPI link is the command path.
+%% The framebuffer normally lives in the FMC SDRAM, so FMC must be up first.
+%% Ports I, J and K only exist on the larger packages - on this board the
+%% panel is wired to whatever the layout provides, not to free header pins.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1 - LTDC controller"]
+        R["R0-R7 - PI15 PJ0-PJ6"]
+        G["G0-G7 - PJ7-PJ11 PK0-PK2"]
+        B["B0-B7 - PG12 PJ13-PJ15 PK3-PK6"]
+        HS["HSYNC - PI10"]
+        VS["VSYNC - PI9"]
+        DE["DE - PF10"]
+        CLK["LCD_CLK - PG7"]
+    end
+
+    FB["Framebuffer in SDRAM at 0xD0000000"]
+
+    subgraph PANEL["On-board 2.4in ILI9341 - 240x320 RGB"]
+        pR["R0-R7"]
+        pG["G0-G7"]
+        pB["B0-B7"]
+        pHS["HSYNC"]
+        pVS["VSYNC"]
+        pDE["DE"]
+        pCLK["DOTCLK"]
+        pBL["Backlight"]
+    end
+
+    FB --> MCU
+    R --> pR
+    G --> pG
+    B --> pB
+    HS --> pHS
+    VS --> pVS
+    DE --> pDE
+    CLK --> pCLK

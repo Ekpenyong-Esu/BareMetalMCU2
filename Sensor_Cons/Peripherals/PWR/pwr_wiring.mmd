@@ -1,0 +1,38 @@
+---
+title: PWR - power modes, nothing to wire
+---
+%% ON-CHIP ONLY. No pins of its own.
+%% The wake-up pin is PA0, which is also the on-board B1 button - so the user
+%% button doubles as the wake source with no extra wiring.
+%% VBAT on this board is tied to VDD unless you cut the jumper, so the backup
+%% domain does not survive a power cut out of the box.
+%% Standby loses all SRAM except the backup registers.
+flowchart LR
+    subgraph MODES["Power modes - deepest last"]
+        RUN["Run - full speed"]
+        SLEEP["Sleep - core stopped, peripherals live"]
+        STOP["Stop - clocks off, SRAM retained"]
+        STBY["Standby - only backup domain alive"]
+    end
+
+    subgraph WAKE["Wake sources"]
+        IRQ["Any enabled interrupt"]
+        EXTI["EXTI line"]
+        WK["WKUP pin PA0 - the on-board B1 button"]
+        RTCA["RTC alarm"]
+    end
+
+    subgraph BKP["Backup domain"]
+        VBAT["VBAT - tied to VDD on this board"]
+        BKPR["Backup registers + RTC"]
+    end
+
+    RUN --> SLEEP
+    SLEEP --> STOP
+    STOP --> STBY
+    IRQ --> SLEEP
+    EXTI --> STOP
+    WK --> STBY
+    RTCA --> STBY
+    VBAT --> BKPR
+    STBY -.->|"survives"| BKPR

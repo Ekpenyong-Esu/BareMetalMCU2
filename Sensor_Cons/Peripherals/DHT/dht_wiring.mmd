@@ -1,0 +1,30 @@
+---
+title: DHT - DHT22 / DHT11 temperature and humidity
+---
+%% NO DOCUMENTED PINS - DHT_Init takes any port and pin.
+%% PE2 is free in project.ioc.
+%% The 4.7k pull-up is mandatory: the DATA line is open-drain and both ends
+%% only ever pull it low.
+%% Pin must be configured open-drain - the driver drives the line both ways.
+%% DHT22 needs 2 s between reads, DHT11 needs 1 s.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        PE2["PE2 - GPIO open-drain"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    PU["4.7k pull-up resistor"]
+
+    subgraph DHT["DHT22 module - 4 pins, only 3 used"]
+        dV["VCC 3.3-5 V"]
+        dD["DATA"]
+        dNC["NC"]
+        dG["GND"]
+    end
+
+    V33 --- PU
+    PU --- dD
+    PE2 <--> dD
+    V33 --- dV
+    GND --- dG

@@ -1,0 +1,23 @@
+---
+title: IWDG - independent watchdog, nothing to wire
+---
+%% ON-CHIP ONLY. No pins.
+%% Clocked by the LSI (~32 kHz), which keeps running even if the main clock
+%% or the PLL dies - that is what makes it "independent".
+%% Once started it cannot be stopped in software; only a reset clears it.
+%% The LSI is untrimmed, so the real timeout can drift by tens of percent.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        LSI["LSI RC ~32 kHz - always available"]
+        PRE["Prescaler /4 .. /256"]
+        CNT["12-bit down counter"]
+        RST["Reset generator"]
+        APP["Application main loop"]
+        NRST["System reset"]
+    end
+
+    LSI --> PRE
+    PRE --> CNT
+    APP -->|"IWDG_Refresh reloads the counter"| CNT
+    CNT -->|"reaches zero"| RST
+    RST --> NRST

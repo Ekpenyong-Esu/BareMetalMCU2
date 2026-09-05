@@ -1,0 +1,20 @@
+---
+title: CRC - on-chip, nothing to wire
+---
+%% ON-CHIP ONLY. The CRC unit has no pins and no external hardware.
+%% Fixed CCITT-32 polynomial 0x04C11DB7 in hardware; the driver also offers a
+%% software path for other polynomials.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        APP["Application buffer in RAM"]
+        DR["CRC_DR - 32-bit data register"]
+        ENG["Polynomial engine 0x04C11DB7"]
+        OUT["CRC result"]
+        SW["Software CRC - other polynomials"]
+    end
+
+    APP -->|"word at a time"| DR
+    DR --> ENG
+    ENG --> OUT
+    APP -.-> SW
+    SW -.-> OUT

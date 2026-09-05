@@ -1,0 +1,34 @@
+---
+title: MIC - on-board MP45DT02 PDM microphone
+---
+%% ALREADY SOLDERED on the STM32F429I-DISC1 - nothing to wire.
+%% Pins from Peripherals/MIC/README.md: I2S2 CK on PB10, SD on PC3.
+%% The mic outputs a 1-bit PDM stream, not audio samples - it has to be
+%% decimated and low-pass filtered into PCM before it means anything.
+%% DMA1 stream 3 channel 0 carries the bitstream so the CPU is not tied up.
+%% NOTE: PC3 is also the only free ADC-capable pin, so the mic and an analog
+%% sensor cannot both use it.
+flowchart LR
+    subgraph MIC["On-board MP45DT02"]
+        mCLK["CLK - clocked by the MCU"]
+        mDAT["DOUT - PDM bitstream"]
+        mLR["L/R select"]
+    end
+
+    subgraph MCU["STM32F429I-DISC1"]
+        CK["PB10 - I2S2_CK"]
+        SD["PC3 - I2S2_SD"]
+        I2S["SPI2 in I2S mode"]
+        DMA["DMA1 stream 3 ch 0"]
+        BUF["PDM buffer in RAM"]
+        DEC["PDM to PCM decimation filter"]
+        PCM["16-bit PCM samples"]
+    end
+
+    CK --> mCLK
+    mDAT --> SD
+    SD --> I2S
+    I2S --> DMA
+    DMA --> BUF
+    BUF --> DEC
+    DEC --> PCM

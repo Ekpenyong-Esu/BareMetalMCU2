@@ -1,0 +1,30 @@
+---
+title: WWDG - window watchdog, nothing to wire
+---
+%% ON-CHIP ONLY. No pins.
+%% Unlike the IWDG, refreshing TOO EARLY also resets the chip - the refresh
+%% has to land inside the window.
+%% Clocked from PCLK1, so it stops if the clock tree stops - it cannot catch
+%% a clock failure the way the IWDG can.
+%% The early-wakeup interrupt fires just before the reset, which is your one
+%% chance to save state.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        PCLK["PCLK1 42 MHz"]
+        PRE["Prescaler /1 /2 /4 /8"]
+        CNT["7-bit down-counter T6..T0"]
+        WIN["Window register W6..W0"]
+        EWI["Early wakeup interrupt"]
+        RST["System reset"]
+    end
+
+    APP["Application refresh"]
+
+    PCLK --> PRE
+    PRE --> CNT
+    CNT -->|"counter reaches 0x3F"| RST
+    APP -->|"refresh while CNT > window - OK"| CNT
+    APP -->|"refresh while CNT > W - TOO EARLY, reset"| RST
+    WIN --- CNT
+    CNT -->|"just before reset"| EWI
+    EWI -.->|"save state"| APP

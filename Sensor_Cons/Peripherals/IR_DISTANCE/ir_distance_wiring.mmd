@@ -1,0 +1,30 @@
+---
+title: IR_DISTANCE - Sharp GP2Y0A analog range sensor
+---
+%% NO DOCUMENTED PINS - the application picks the ADC channel.
+%% PC3 (ADC123_IN13) is the only free ADC-capable pin in project.ioc.
+%% Sensor runs from 5 V but its output only reaches about 3.1 V, so it can go
+%% straight into a 3.3 V ADC pin with no divider.
+%% Output is non-linear and non-monotonic below the minimum range - readings
+%% under the sensor floor look like valid far-away distances.
+%% Fit the 10 uF cap across VCC/GND or the readings jitter badly.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        AIN["PC3 - ADC123_IN13"]
+        V5["5V"]
+        GND["GND"]
+    end
+
+    CAP["10 uF capacitor across VCC and GND"]
+
+    subgraph SENS["Sharp GP2Y0A21YK - 10 to 80 cm"]
+        sV["VCC 5V - red"]
+        sG["GND - black"]
+        sO["Vout 0.4-3.1 V - yellow"]
+    end
+
+    V5 --- sV
+    GND --- sG
+    sO --> AIN
+    CAP --- sV
+    CAP --- sG

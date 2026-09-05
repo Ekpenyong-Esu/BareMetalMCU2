@@ -1,0 +1,39 @@
+---
+title: LED - on-board and external
+---
+%% Pins from Peripherals/BOARD/board.h.
+%% PG13 and PG14 are the soldered LEDs - nothing to wire for those.
+%% PA5 (TIM2_CH1) and PB4 are free in project.ioc for external LEDs.
+%% Always fit the series resistor; an STM32 pin can source about 20 mA and a
+%% bare LED will take far more than that.
+%% Use the PWM-capable pin if you want brightness control rather than on/off.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        PG13["PG13 - green LD3 on board"]
+        PG14["PG14 - red LD4 on board"]
+        PA5["PA5 - TIM2_CH1 PWM out"]
+        PB4["PB4 - plain GPIO out"]
+        GND["GND"]
+    end
+
+    LD3["On-board green LED"]
+    LD4["On-board red LED"]
+
+    subgraph EXT["External LED - dimmable"]
+        R1["330 ohm resistor"]
+        L1["LED anode to resistor"]
+    end
+
+    subgraph EXT2["External LED - on/off"]
+        R2["330 ohm resistor"]
+        L2["LED anode to resistor"]
+    end
+
+    PG13 --> LD3
+    PG14 --> LD4
+    PA5 --> R1
+    R1 --> L1
+    L1 --- GND
+    PB4 --> R2
+    R2 --> L2
+    L2 --- GND

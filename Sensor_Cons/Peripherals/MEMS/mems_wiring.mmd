@@ -1,0 +1,34 @@
+---
+title: MEMS - on-board L3GD20 gyroscope
+---
+%% ALREADY SOLDERED on the STM32F429I-DISC1 - nothing to wire.
+%% Pins from Core/Inc/main.h and Peripherals/MEMS/README.md.
+%% SPI5 is shared with the LCD, so CS on PC1 is what keeps them apart.
+%% INT1 and INT2 are wired to PA1 and PA2, which project.ioc sets up as EXTI
+%% lines - use them instead of polling if you need data-ready timing.
+%% SPI mode 0, up to 10 MHz.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCK["PF7 - SPI5_SCK"]
+        MISO["PF8 - SPI5_MISO"]
+        MOSI["PF9 - SPI5_MOSI"]
+        CS["PC1 - NCS_MEMS_SPI"]
+        I1["PA1 - MEMS_INT1 EXTI"]
+        I2["PA2 - MEMS_INT2 EXTI"]
+    end
+
+    subgraph GYRO["On-board L3GD20 3-axis gyro"]
+        gSCK["SPC"]
+        gSDO["SDO"]
+        gSDI["SDI"]
+        gCS["CS"]
+        gI1["INT1"]
+        gI2["DRDY/INT2"]
+    end
+
+    SCK --> gSCK
+    MOSI --> gSDI
+    MISO --- gSDO
+    CS --> gCS
+    gI1 --> I1
+    gI2 --> I2

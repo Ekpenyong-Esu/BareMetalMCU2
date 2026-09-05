@@ -1,0 +1,42 @@
+---
+title: ETH - external RMII PHY
+---
+%% NOT ON THIS BOARD. The STM32F429I-DISC1 has no Ethernet PHY and no RJ45.
+%% NO DOCUMENTED PINS - HAL_ETH_MspInit in the application assigns them.
+%% RMII needs 9 pins plus a shared 50 MHz reference clock; the DISC1 has 22
+%% free pins but not the right ones, so this needs a re-pinned board.
+%% Shown for reference only.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1 - ETH MAC"]
+        REF["REF_CLK 50 MHz"]
+        CRS["CRS_DV"]
+        RXD["RXD0 RXD1"]
+        TXEN["TX_EN"]
+        TXD["TXD0 TXD1"]
+        MDC["MDC"]
+        MDIO["MDIO"]
+        RST["PHY reset GPIO"]
+    end
+
+    subgraph PHY["LAN8720 RMII PHY module"]
+        pREF["REFCLK - 50 MHz oscillator"]
+        pCRS["CRS_DV"]
+        pRXD["RXD0 RXD1"]
+        pTXEN["TX_EN"]
+        pTXD["TXD0 TXD1"]
+        pMDC["MDC"]
+        pMDIO["MDIO"]
+        pRST["nRST"]
+    end
+
+    MAG["RJ45 with integrated magnetics"]
+
+    pREF --> REF
+    pCRS --> CRS
+    pRXD --> RXD
+    TXEN --> pTXEN
+    TXD --> pTXD
+    MDC --> pMDC
+    MDIO <--> pMDIO
+    RST --> pRST
+    PHY --- MAG

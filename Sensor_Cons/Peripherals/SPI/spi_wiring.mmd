@@ -1,0 +1,37 @@
+---
+title: SPI - shared four-wire bus
+---
+%% NO DOCUMENTED PINS in the driver - the application opens the bus.
+%% SPI5 on PF7/PF8/PF9 is already wired on this board and is shared by the
+%% on-board LCD and gyro, so any extra device needs a CS pin of its own.
+%% Free pins for chip selects: PC11, PC12, PC13, PE2, PE3.
+%% Only ONE CS may be low at a time or two devices drive MISO together.
+%% Idle every CS HIGH; a floating CS makes a device respond to another's traffic.
+%% Devices on the same bus must tolerate the same mode and clock rate, or the
+%% bus has to be reconfigured between transfers.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1 - SPI5 master"]
+        SCK["PF7 - SCK"]
+        MISO["PF8 - MISO"]
+        MOSI["PF9 - MOSI"]
+        CS1["PC1 - CS gyro, on board"]
+        CS2["PC2 - CS LCD, on board"]
+        CS3["PC13 - CS spare device"]
+    end
+
+    D1["L3GD20 gyro - on board"]
+    D2["ILI9341 LCD - on board"]
+    D3["Your device - flash, MCP2515, XPT2046..."]
+
+    SCK --> D1
+    SCK --> D2
+    SCK --> D3
+    MOSI --> D1
+    MOSI --> D2
+    MOSI --> D3
+    MISO --- D1
+    MISO --- D2
+    MISO --- D3
+    CS1 --> D1
+    CS2 --> D2
+    CS3 --> D3

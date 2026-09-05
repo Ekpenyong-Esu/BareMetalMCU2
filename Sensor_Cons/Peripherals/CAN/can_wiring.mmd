@@ -1,0 +1,39 @@
+---
+title: CAN - bxCAN with transceiver
+---
+%% Pins from Peripherals/CAN/README.md.
+%% CONFLICT: PB8 and PB9 are taken by LTDC_B6 and LTDC_B7 in project.ioc.
+%% With the LCD in use there is no free bxCAN pin pair on this board - that is
+%% why the repo also carries the MCP2515 SPI CAN controller as a way out.
+%% bxCAN gives logic levels only; a transceiver is always required.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        TX["PB9 - CAN1_TX"]
+        RX["PB8 - CAN1_RX"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    subgraph TRX["SN65HVD230 transceiver"]
+        tD["D"]
+        tR["R"]
+        tRs["Rs - 10k to GND for slope control"]
+        tV["VCC 3.3V"]
+        tG["GND"]
+    end
+
+    subgraph BUS["CAN bus"]
+        CH["CAN_H"]
+        CL["CAN_L"]
+        TERM["120 ohm at each end"]
+    end
+
+    TX --> tD
+    tR --> RX
+    V33 --- tV
+    GND --- tG
+    GND --- tRs
+    tD --> CH
+    tR --- CL
+    CH --- TERM
+    CL --- TERM

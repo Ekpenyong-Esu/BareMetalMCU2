@@ -1,0 +1,39 @@
+---
+title: IR - transmit and receive
+---
+%% Pins from Peripherals/IR/README.md.
+%% CONFLICT: PB5 is FMC_SDCKE1 and PB6 is FMC_SDNE1 in project.ioc.
+%% With the SDRAM in use, move TX to PB4 (TIM3_CH1) and RX to PB7 (TIM4_CH2),
+%% both of which are free.
+%% TX modulates a 38 kHz carrier; the LED needs a series resistor and usually
+%% a transistor, since a bare pin cannot supply useful IR range.
+%% The TSOP receiver output is already demodulated and idles HIGH.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        TX["PB5 - TIM3_CH2 - 38 kHz carrier"]
+        RX["PB6 - TIM4_CH1 input capture"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    subgraph EMIT["IR emitter"]
+        Q["2N2222 transistor"]
+        R1["1k base resistor"]
+        R2["100 ohm series resistor"]
+        LED["IR LED 940 nm"]
+    end
+
+    subgraph RECV["TSOP38238 receiver"]
+        rOUT["OUT - idles high"]
+        rV["VCC 3.3V"]
+        rG["GND"]
+    end
+
+    TX --> R1
+    R1 --> Q
+    Q --> LED
+    R2 --- LED
+    LED --- GND
+    rOUT --> RX
+    V33 --- rV
+    GND --- rG

@@ -1,0 +1,27 @@
+---
+title: DMA2D - Chrom-Art graphics accelerator, nothing to wire
+---
+%% ON-CHIP ONLY. No pins. Moves and blends pixels without the CPU.
+%% Typically works on framebuffers living in the on-board SDRAM behind FMC,
+%% then LTDC scans those framebuffers out to the LCD.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        CPU["Cortex-M4 core"]
+        D2D["DMA2D engine"]
+        MODE["Modes: register-to-memory fill, memory-to-memory copy, blend, convert"]
+    end
+
+    subgraph SDRAM["On-board SDRAM via FMC"]
+        FG["Foreground layer"]
+        BG["Background layer"]
+        FB["Output framebuffer"]
+    end
+
+    LCD["LTDC to on-board LCD"]
+
+    CPU -->|"set up transfer"| D2D
+    MODE --- D2D
+    FG --> D2D
+    BG --> D2D
+    D2D --> FB
+    FB --> LCD

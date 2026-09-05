@@ -1,0 +1,38 @@
+---
+title: LASER_DISTANCE - VL53L0X / VL53L1X time-of-flight
+---
+%% NO DOCUMENTED PINS beyond the I2C address - the application opens the bus.
+%% PA8 / PC9 are already I2C3 in project.ioc. XSHUT and GPIO1 use free pins.
+%% Default address 0x29 (7-bit) is the same on every VL53L0X, so to run more
+%% than one you hold all XSHUT low, release one at a time and re-address it.
+%% Most breakouts have an onboard regulator and level shifters, so 5 V is fine
+%% on VIN - but the bare chip is 2.8 V only.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCL["PA8 - I2C3_SCL"]
+        SDA["PC9 - I2C3_SDA"]
+        XS["PE2 - XSHUT enable"]
+        INT["PE3 - GPIO1 data-ready IRQ"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    PU["2 x 4.7k pull-ups - usually already on the breakout"]
+
+    subgraph TOF["VL53L0X breakout - addr 0x29"]
+        tSCL["SCL"]
+        tSDA["SDA"]
+        tXS["XSHUT - low = shutdown"]
+        tINT["GPIO1"]
+        tV["VIN 3.3-5 V"]
+        tG["GND"]
+    end
+
+    PU --- SCL
+    PU --- SDA
+    SCL --> tSCL
+    SDA <--> tSDA
+    XS --> tXS
+    tINT --> INT
+    V33 --- tV
+    GND --- tG

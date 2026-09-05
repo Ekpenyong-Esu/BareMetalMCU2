@@ -1,0 +1,34 @@
+---
+title: TOUCHSCREEN - on-board STMPE811 controller
+---
+%% ALREADY SOLDERED on the STM32F429I-DISC1 - nothing to wire.
+%% I2C3 on PA8 / PC9, address 0x82 (8-bit). INT is on PA15.
+%% Same I2C bus as the EEPROM driver - both can share it, they have
+%% different addresses.
+%% The STMPE811 reads the resistive film bonded to the ILI9341 panel; it is a
+%% separate chip from the display controller and speaks a different bus.
+%% Raw ADC counts are NOT screen pixels - the driver has to calibrate and
+%% often swap or invert axes to match the LCD orientation.
+%% Resistive means a single touch point only; no pinch or multi-touch.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCL["PA8 - I2C3_SCL"]
+        SDA["PC9 - I2C3_SDA"]
+        INT["PA15 - TP_INT1 EXTI"]
+    end
+
+    subgraph TP["On-board STMPE811 - addr 0x82"]
+        tSCL["SCL"]
+        tSDA["SDA"]
+        tINT["INT"]
+        tADC["4-wire ADC - XP XM YP YM"]
+    end
+
+    PANEL["Resistive film over the 2.4in ILI9341 LCD"]
+    CAL["Calibration - raw counts to 240x320 pixels"]
+
+    SCL --> tSCL
+    SDA <--> tSDA
+    tINT -->|"touch detected"| INT
+    PANEL --- tADC
+    tADC --> CAL

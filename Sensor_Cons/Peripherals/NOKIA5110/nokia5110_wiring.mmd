@@ -1,0 +1,44 @@
+---
+title: NOKIA5110 - PCD8544 84x48 LCD
+---
+%% NO DOCUMENTED PINS - NOKIA5110_Config_t takes the SPI bus plus 3 GPIO.
+%% SPI5 is the bus already wired on this board; CE/DC/RST use free pins.
+%% MISO is unused - the PCD8544 is write-only.
+%% The panel is a 3.3 V part. Many red breakout boards have series resistors
+%% and will work at 5 V, but the bare module will not.
+%% Backlight draws real current - use a resistor, and a transistor if you
+%% want it bright.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCK["PF7 - SPI5_SCK"]
+        MOSI["PF9 - SPI5_MOSI"]
+        CE["PC13 - CE chip enable"]
+        DC["PE2 - DC data/command"]
+        RST["PE3 - RST"]
+        BL["PE4 - backlight on/off"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    R1["330 ohm backlight resistor"]
+
+    subgraph NK["Nokia 5110 module - PCD8544"]
+        nRST["1 RST"]
+        nCE["2 CE"]
+        nDC["3 DC"]
+        nDIN["4 DIN"]
+        nCLK["5 CLK"]
+        nV["6 VCC 3.3V"]
+        nBL["7 BL"]
+        nG["8 GND"]
+    end
+
+    SCK --> nCLK
+    MOSI --> nDIN
+    CE --> nCE
+    DC --> nDC
+    RST --> nRST
+    BL --> R1
+    R1 --> nBL
+    V33 --- nV
+    GND --- nG

@@ -1,0 +1,30 @@
+---
+title: FLASH - internal flash, nothing to wire
+---
+%% ON-CHIP ONLY. 2 MB embedded flash in two 1 MB banks. No pins.
+%% Sector 11 (0x080E0000, 128 KB) is reserved for user data by this driver.
+%% Erase granularity is a whole sector - there is no byte erase.
+%% Writes only clear bits; a sector erase is what sets them back to 1.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        CPU["Cortex-M4 core"]
+        FI["FLASH interface + prefetch/ART cache"]
+
+        subgraph B1["Bank 1 - 1 MB"]
+            S0["Sector 0-3 : 16 KB each"]
+            S4["Sector 4 : 64 KB"]
+            S5["Sector 5-11 : 128 KB each"]
+            APPC["Application code from 0x08000000"]
+            USER["Sector 11 - user data 0x080E0000"]
+        end
+
+        subgraph B2["Bank 2 - 1 MB"]
+            S12["Sector 12-23"]
+        end
+    end
+
+    CPU --> FI
+    FI --> B1
+    FI --> B2
+    APPC --- S5
+    USER --- S5

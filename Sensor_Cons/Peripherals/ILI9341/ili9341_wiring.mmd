@@ -1,0 +1,33 @@
+---
+title: ILI9341 - on-board TFT over SPI5
+---
+%% ALREADY SOLDERED on the STM32F429I-DISC1 - nothing to wire.
+%% Pins from Peripherals/ILI9341/README.md and project.ioc.
+%% RST is tied to the board NRST, so software cannot reset the panel alone.
+%% The same panel is also driven by LTDC over the parallel RGB bus; this SPI
+%% path is the command/config channel.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCK["PF7 - SPI5_SCK"]
+        MISO["PF8 - SPI5_MISO"]
+        MOSI["PF9 - SPI5_MOSI"]
+        CS["PC2 - NCS"]
+        DC["PD13 - WRX data/command"]
+        NRST["Board NRST"]
+    end
+
+    subgraph LCD["On-board ILI9341 - 240x320"]
+        lSCK["SCK"]
+        lSDO["SDO"]
+        lSDI["SDI"]
+        lCS["CS"]
+        lDC["D/CX"]
+        lRST["RESET"]
+    end
+
+    SCK --> lSCK
+    MOSI --> lSDI
+    MISO --- lSDO
+    CS --> lCS
+    DC --> lDC
+    NRST --> lRST

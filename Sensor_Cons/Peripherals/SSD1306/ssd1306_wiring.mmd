@@ -1,0 +1,32 @@
+---
+title: SSD1306 - 128x64 OLED over I2C
+---
+%% NO DOCUMENTED PINS - the driver takes an I2C bus and an address.
+%% PA8 / PC9 are already I2C3_SCL / I2C3_SDA in project.ioc.
+%% Address is 0x3C on most modules, 0x3D if the board's address jumper is moved.
+%% Nearly all SSD1306 breakouts include pull-ups and a regulator, so VCC can be
+%% 3.3 V or 5 V - but the logic pins are then 3.3 V, which suits this board.
+%% Only 4 wires: there is no reset or chip-select in the I2C variant.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCL["PA8 - I2C3_SCL"]
+        SDA["PC9 - I2C3_SDA"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    PU["4.7k pull-ups - usually already fitted on the module"]
+
+    subgraph OLED["SSD1306 128x64 module - addr 0x3C"]
+        oV["VCC"]
+        oG["GND"]
+        oSCL["SCL"]
+        oSDA["SDA"]
+    end
+
+    PU --- SCL
+    PU --- SDA
+    SCL --> oSCL
+    SDA <--> oSDA
+    V33 --- oV
+    GND --- oG

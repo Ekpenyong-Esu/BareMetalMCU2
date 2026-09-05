@@ -1,0 +1,41 @@
+---
+title: SEVEN_SEGMENT - HT1621 driver mode
+---
+%% Pins from the HT1621 example in Peripherals/SEVEN_SEGMENT/README.md,
+%% remapped onto free pins from project.ioc.
+%% The driver also supports direct GPIO multiplexing, but that costs 8 segment
+%% pins plus one per digit - more than the 22 free pins allow for 4+ digits,
+%% so the HT1621 path is the practical one on this board.
+%% The HT1621 is a 3-wire bit-banged bus, not real SPI.
+%% It refreshes the display itself, so the CPU is not tied up multiplexing.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        CS["PC11 - CS"]
+        WR["PC12 - WR clock"]
+        DAT["PC13 - DATA"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    subgraph HT["HT1621 module"]
+        hCS["CS"]
+        hWR["WR"]
+        hDAT["DATA"]
+        hV["VDD 3.3-5 V"]
+        hG["GND"]
+        hSEG["SEG0..SEG31"]
+        hCOM["COM0..COM3"]
+    end
+
+    subgraph DISP["Multi-digit 7-segment LCD"]
+        SEGS["Segments a b c d e f g dp"]
+        DIGS["Digit commons"]
+    end
+
+    CS --> hCS
+    WR --> hWR
+    DAT --> hDAT
+    V33 --- hV
+    GND --- hG
+    hSEG --> SEGS
+    hCOM --> DIGS

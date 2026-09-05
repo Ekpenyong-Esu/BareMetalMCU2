@@ -1,0 +1,32 @@
+---
+title: ACCEL - MMA8452Q accelerometer on SPI5
+---
+%% Pins from Peripherals/ACCEL/accel_tutorial.ipynb (SPI5 bus).
+%% CS is not fixed by the driver; PC13 is free in project.ioc.
+%% SPI5 is shared with the on-board L3GD20 gyro and the LCD, so this part
+%% needs a chip select of its own. SPI mode 0, clock at or below 1 MHz.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCK["PF7 - SPI5_SCK"]
+        MISO["PF8 - SPI5_MISO"]
+        MOSI["PF9 - SPI5_MOSI"]
+        CS["PC13 - GPIO out"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    subgraph DEV["MMA8452Q breakout"]
+        dSCK["SCK"]
+        dSDO["SDO"]
+        dSDI["SDI"]
+        dCS["CS"]
+        dV["VCC 3.3V"]
+        dG["GND"]
+    end
+
+    SCK --> dSCK
+    MOSI --> dSDI
+    MISO --- dSDO
+    CS --> dCS
+    V33 --- dV
+    GND --- dG

@@ -1,0 +1,35 @@
+---
+title: LOG - logging backends
+---
+%% ON-CHIP ONLY as far as wiring goes - LOG is a software layer.
+%% The UART sink is the one that leaves the chip: USART1 on PA9/PA10 reaches
+%% the ST-LINK virtual COM port, so no extra cable is needed.
+%% log_error and friends are macros that capture __FILE__ and __LINE__.
+flowchart LR
+    subgraph APP["Application"]
+        CALL["log_error / log_warn / log_info / log_debug"]
+    end
+
+    subgraph LOGC["LOG core"]
+        LVL["Level filter"]
+        FMT["log_format - timestamp, level, file:line"]
+    end
+
+    subgraph SINKS["Sinks"]
+        UARTS["log_sink_uart"]
+        PRINTF["log_sink_printf - semihosting or SWO"]
+    end
+
+    subgraph OUTP["Where it lands"]
+        VCP["USART1 PA9/PA10 to ST-LINK VCP"]
+        TERM["Serial terminal at 115200 8N1"]
+        SWO["SWO / debugger console"]
+    end
+
+    CALL --> LVL
+    LVL --> FMT
+    FMT --> UARTS
+    FMT --> PRINTF
+    UARTS --> VCP
+    VCP --> TERM
+    PRINTF --> SWO

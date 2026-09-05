@@ -1,0 +1,40 @@
+---
+title: ULTRASONIC - HC-SR04 distance sensor
+---
+%% NO DOCUMENTED PINS - the driver takes any two GPIO. PE2 and PE3 are free
+%% in project.ioc.
+%% DANGER: the HC-SR04 ECHO pin swings to 5 V. Feeding that straight into a
+%% 3.3 V GPIO will damage the pin. Use a divider - 1k to 2k gives 3.3 V.
+%% TRIG is an input on the sensor and reads 3.3 V as a valid high, so that
+%% direction needs no shifting.
+%% The sensor needs a real 5 V supply; it will not fire reliably at 3.3 V.
+%% Sequence: 10 us pulse on TRIG, then time how long ECHO stays high.
+%% distance_cm = echo_us / 58. Leave 60 ms between readings for the echoes
+%% to die away.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        TRIG["PE2 - TRIG output"]
+        ECHO["PE3 - ECHO input"]
+        V5["5V"]
+        GND["GND"]
+    end
+
+    subgraph DIV["Divider - REQUIRED on ECHO"]
+        R1["1k in series"]
+        R2["2k to GND"]
+    end
+
+    subgraph HC["HC-SR04"]
+        hV["VCC 5V"]
+        hT["TRIG"]
+        hE["ECHO - 5 V output"]
+        hG["GND"]
+    end
+
+    TRIG -->|"10 us pulse"| hT
+    hE --> R1
+    R1 --> R2
+    R1 --> ECHO
+    R2 --- GND
+    V5 --> hV
+    GND --- hG

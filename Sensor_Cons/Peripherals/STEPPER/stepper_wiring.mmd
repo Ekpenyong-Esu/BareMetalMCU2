@@ -1,0 +1,46 @@
+---
+title: STEPPER - 4-wire stepper via ULN2003 or L298N
+---
+%% Default pins from STEPPER_GetDefaultPins in Peripherals/STEPPER/stepper.c:
+%% PE4, PE5, PE6, PB6.
+%% CONFLICT: PB6 is FMC_SDNE1 in project.ioc. Move coil 4 to PB7, PF6 or PD2
+%% if the SDRAM is in use.
+%% The driver only toggles four GPIO in sequence, so the SAME code drives
+%% either board - the difference is the motor, not the software.
+%% ULN2003 suits a 28BYJ-48 (5-wire unipolar); L298N suits a bipolar NEMA 17.
+%% Coil current comes from the motor supply, never from the MCU.
+%% Grounds must be common.
+flowchart LR
+    subgraph PSU["Motor supply - 5 V for 28BYJ-48, 12 V for NEMA 17"]
+        VP["+V"]
+        VG["GND"]
+    end
+
+    subgraph MCU["STM32F429I-DISC1"]
+        P1["PE4 - coil 1"]
+        P2["PE5 - coil 2"]
+        P3["PE6 - coil 3"]
+        P4["PB6 - coil 4 (conflicts with FMC_SDNE1)"]
+        GND["GND"]
+    end
+
+    subgraph DRV["ULN2003 board or L298N"]
+        IN1["IN1"]
+        IN2["IN2"]
+        IN3["IN3"]
+        IN4["IN4"]
+        VIN["motor V+"]
+        DG["GND"]
+        OUT["OUT1-OUT4 to the coils"]
+    end
+
+    MOT["Stepper motor - 28BYJ-48 or NEMA 17"]
+
+    P1 --> IN1
+    P2 --> IN2
+    P3 --> IN3
+    P4 --> IN4
+    VP --> VIN
+    VG --- DG
+    GND --- DG
+    OUT --> MOT

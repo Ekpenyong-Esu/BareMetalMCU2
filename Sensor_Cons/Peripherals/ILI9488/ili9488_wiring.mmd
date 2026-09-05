@@ -1,0 +1,41 @@
+---
+title: ILI9488 - external 320x480 TFT over SPI5
+---
+%% Pins from Peripherals/ILI9488/ili9488_core.h and ILI9488_tutorial.ipynb.
+%% CONFLICT: PB12-PB15 are USB_OTG_HS_ID/VBUS/DM/DP in project.ioc.
+%% Move CS/RST/DC to free pins (PC11, PC12, PC13) unless USB OTG HS is unused.
+%% The panel is 3.3 V logic - do not feed it 5 V.
+%% LED backlight usually wants a series resistor or a transistor.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCK["PF7 - SPI5_SCK"]
+        MISO["PF8 - SPI5_MISO"]
+        MOSI["PF9 - SPI5_MOSI"]
+        CS["PB12 - CS  (conflicts with USB_OTG_HS_ID)"]
+        RST["PB13 - RST (conflicts with USB_OTG_HS_VBUS)"]
+        DC["PB14 - DC  (conflicts with USB_OTG_HS_DM)"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    subgraph LCD["ILI9488 module - 320x480"]
+        lSCK["SCK"]
+        lSDO["MISO"]
+        lSDI["MOSI"]
+        lCS["CS"]
+        lRST["RST"]
+        lDC["DC / RS"]
+        lLED["LED backlight"]
+        lV["VCC 3.3V"]
+        lG["GND"]
+    end
+
+    SCK --> lSCK
+    MOSI --> lSDI
+    MISO --- lSDO
+    CS --> lCS
+    RST --> lRST
+    DC --> lDC
+    V33 --- lV
+    V33 --- lLED
+    GND --- lG

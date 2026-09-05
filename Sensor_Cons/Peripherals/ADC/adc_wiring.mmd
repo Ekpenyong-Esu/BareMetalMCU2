@@ -1,0 +1,29 @@
+---
+title: ADC - analog input
+---
+%% On-chip peripheral; nothing to wire except the signal you want to measure.
+%% Channel map from Peripherals/ADC/adc_tutorial.ipynb: PA0-PA7, PB0-PB1, PC0-PC5.
+%% PC3 (ADC123_IN13) is the only one of those still free in project.ioc.
+%% Input must stay within 0 - 3.3 V; divide anything larger.
+flowchart LR
+    subgraph SRC["Signal source"]
+        POT["10k potentiometer"]
+        SUP["3V3 wiper 0-3.3 V"]
+    end
+
+    subgraph MCU["STM32F429I-DISC1"]
+        AIN["PC3 - ADC123_IN13"]
+        VREF["VREF+ = VDDA 3.3 V"]
+        GND["GND"]
+        ADC["ADC1 12-bit SAR"]
+        TEMP["Internal temp sensor ch16"]
+        VBAT["Internal VBAT ch18"]
+    end
+
+    SUP --> AIN
+    POT --- SUP
+    POT --- GND
+    AIN --> ADC
+    TEMP --> ADC
+    VBAT --> ADC
+    VREF --> ADC

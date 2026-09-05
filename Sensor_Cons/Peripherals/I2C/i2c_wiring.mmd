@@ -1,0 +1,36 @@
+---
+title: I2C - shared two-wire bus
+---
+%% NO DOCUMENTED PINS in the driver - the application opens the bus.
+%% PA8 / PC9 are already I2C3_SCL / I2C3_SDA in project.ioc and are the
+%% natural choice on this board.
+%% One pull-up pair for the whole bus, not one per device.
+%% Every device needs a different 7-bit address.
+%% Both lines must be open-drain; push-pull will fight the pull-ups.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1 - I2C3 master"]
+        SCL["PA8 - I2C3_SCL open-drain"]
+        SDA["PC9 - I2C3_SDA open-drain"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    PU["2 x 4.7k pull-ups to 3V3 - once per bus"]
+
+    D1["SSD1306 OLED - 0x3C"]
+    D2["AT24C256 EEPROM - 0x50"]
+    D3["VL53L0X range - 0x29"]
+    D4["STMPE811 touch - 0x41 on-board"]
+
+    V33 --- PU
+    PU --- SCL
+    PU --- SDA
+    SCL --> D1
+    SCL --> D2
+    SCL --> D3
+    SCL --> D4
+    SDA <--> D1
+    SDA <--> D2
+    SDA <--> D3
+    SDA <--> D4
+    GND --- D1

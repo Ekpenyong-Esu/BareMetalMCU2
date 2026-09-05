@@ -1,0 +1,42 @@
+---
+title: XPT2046 - resistive touch controller over SPI
+---
+%% NO DOCUMENTED PINS - the driver takes an SPI bus, a CS and an IRQ pin.
+%% SPI5 is the bus already wired here; PC13 and PE2 are free in project.ioc.
+%% This is the controller found on the back of 2.4in and 3.2in ILI9341 shields.
+%% The DISC1 already has an STMPE811 for its own panel - use the TOUCHSCREEN
+%% driver for that, and XPT2046 only for a bolt-on shield.
+%% The XPT2046 wants a SLOW clock, around 2 MHz - much slower than the display
+%% on the same bus, so the bus rate has to change between them.
+%% T_IRQ goes LOW while the screen is pressed; poll the pin, then read.
+%% Raw 12-bit ADC counts need calibrating into pixels.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCK["PF7 - SPI5_SCK"]
+        MISO["PF8 - SPI5_MISO"]
+        MOSI["PF9 - SPI5_MOSI"]
+        CS["PC13 - T_CS"]
+        IRQ["PE2 - T_IRQ input pull-up"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    subgraph XPT["XPT2046 on an ILI9341 shield"]
+        tCLK["T_CLK"]
+        tDO["T_DO"]
+        tDIN["T_DIN"]
+        tCS["T_CS"]
+        tIRQ["T_IRQ - low when pressed"]
+        tPANEL["4-wire resistive film"]
+    end
+
+    CAL["Calibration to 240x320 pixels"]
+
+    SCK -->|"max 2 MHz"| tCLK
+    MOSI --> tDIN
+    MISO --- tDO
+    CS --> tCS
+    tIRQ --> IRQ
+    V33 --- XPT
+    GND --- XPT
+    tPANEL --> CAL

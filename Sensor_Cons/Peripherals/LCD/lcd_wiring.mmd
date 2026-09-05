@@ -1,0 +1,51 @@
+---
+title: LCD - HD44780 character display in 4-bit mode
+---
+%% NO DOCUMENTED PINS - LCD_PinsTypeDef takes any GPIO.
+%% Pins chosen from the free list in project.ioc.
+%% 4-bit mode is used so one display costs 6 pins instead of 10.
+%% Most HD44780 panels need 5 V to make the contrast usable; their inputs
+%% still read 3.3 V as logic high, so no level shifter is needed on RS/EN/D4-D7.
+%% Never wire the display's data pins back as outputs - tie RW to GND so the
+%% panel can never drive the bus into a 3.3 V pin.
+%% V0 must go to a 10k pot or the screen looks blank.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        RS["PE2 - RS"]
+        EN["PE3 - EN"]
+        D4["PE4 - D4"]
+        D5["PE5 - D5"]
+        D6["PE6 - D6"]
+        D7["PF6 - D7"]
+        V5["5V"]
+        GND["GND"]
+    end
+
+    POT["10k contrast potentiometer"]
+
+    subgraph DISP["HD44780 16x2 - 16 pins"]
+        lVSS["1 VSS"]
+        lVDD["2 VDD 5V"]
+        lV0["3 V0 contrast"]
+        lRS["4 RS"]
+        lRW["5 RW - tie to GND"]
+        lEN["6 EN"]
+        lD["11-14 D4-D7"]
+        lA["15 A backlight +"]
+        lK["16 K backlight -"]
+    end
+
+    RS --> lRS
+    EN --> lEN
+    D4 --> lD
+    D5 --> lD
+    D6 --> lD
+    D7 --> lD
+    V5 --- lVDD
+    GND --- lVSS
+    GND --- lRW
+    POT --> lV0
+    V5 --- POT
+    GND --- POT
+    V5 --- lA
+    GND --- lK

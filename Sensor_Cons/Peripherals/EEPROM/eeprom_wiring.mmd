@@ -1,0 +1,37 @@
+---
+title: EEPROM - I2C serial EEPROM
+---
+%% Pins from the I2C3 example in Peripherals/EEPROM/README.md.
+%% PA8 and PC9 are already I2C3_SCL and I2C3_SDA in project.ioc, so this one
+%% needs no reassignment.
+%% Most breakout boards already carry the 4.7k pull-ups - do not fit a second
+%% pair or the bus edges get too slow.
+%% A0-A2 set the low address bits, so up to 8 devices share one bus.
+%% Tie WP low to allow writes.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCL["PA8 - I2C3_SCL"]
+        SDA["PC9 - I2C3_SDA"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    PU["2 x 4.7k pull-ups to 3V3"]
+
+    subgraph EE["AT24C256 / M24C64 - base addr 0x50"]
+        eSCL["SCL"]
+        eSDA["SDA"]
+        eA["A0 A1 A2 - address select"]
+        eWP["WP - tie low to write"]
+        eV["VCC"]
+        eG["GND"]
+    end
+
+    PU --- SCL
+    PU --- SDA
+    SCL --> eSCL
+    SDA <--> eSDA
+    V33 --- eV
+    GND --- eG
+    GND --- eWP
+    GND --- eA

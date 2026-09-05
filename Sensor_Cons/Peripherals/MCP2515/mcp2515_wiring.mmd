@@ -1,0 +1,47 @@
+---
+title: MCP2515 - CAN controller over SPI
+---
+%% NO DOCUMENTED PINS - the driver takes an SPI bus plus a CS pin.
+%% SPI5 (PF7/PF8/PF9) is the bus already wired on this board; CS and INT use
+%% free pins from project.ioc.
+%% This part exists in the repo because bxCAN's pins clash with the LCD - the
+%% MCP2515 needs only SPI plus two spare GPIO.
+%% The MCP2515 still needs a transceiver; most modules include an TJA1050 or
+%% MCP2551, which are 5 V parts - check your module's logic levels.
+%% Tell the driver the crystal frequency: 8 MHz and 16 MHz need different
+%% bit-timing registers.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCK["PF7 - SPI5_SCK"]
+        MISO["PF8 - SPI5_MISO"]
+        MOSI["PF9 - SPI5_MOSI"]
+        CS["PC13 - CS"]
+        INT["PE2 - INT input"]
+        V5["5V"]
+        GND["GND"]
+    end
+
+    subgraph MOD["MCP2515 module + TJA1050"]
+        mSCK["SCK"]
+        mSO["SO"]
+        mSI["SI"]
+        mCS["CS"]
+        mINT["INT - active low"]
+        mXTAL["8 or 16 MHz crystal"]
+        mV["VCC 5V"]
+        mG["GND"]
+        mH["CANH"]
+        mL["CANL"]
+    end
+
+    BUS["CAN bus - 120 ohm at both ends"]
+
+    SCK --> mSCK
+    MOSI --> mSI
+    MISO --- mSO
+    CS --> mCS
+    mINT --> INT
+    V5 --- mV
+    GND --- mG
+    mH --- BUS
+    mL --- BUS

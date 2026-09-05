@@ -1,0 +1,38 @@
+---
+title: SSD1331 - 96x64 colour OLED over SPI
+---
+%% Example pins in Peripherals/SSD1331/ssd1331.h use PC4, PC5 and PB1, but
+%% project.ioc gives those to GPIO_Output, GPXTI5 and LTDC_R6.
+%% Remapped here onto free pins: PC13, PE2, PE3.
+%% SPI5 is the bus already wired on this board.
+%% MISO is unused - the SSD1331 is write-only in this driver.
+%% RST must be pulsed low once at power-up; the panel does not self-reset.
+%% Pixels are RGB565, so a full frame is 96 x 64 x 2 = 12 KB.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        SCK["PF7 - SPI5_SCK"]
+        MOSI["PF9 - SPI5_MOSI"]
+        CS["PC13 - CS"]
+        DC["PE2 - DC data/command"]
+        RST["PE3 - RST"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    subgraph OLED["SSD1331 0.95in colour OLED"]
+        oCLK["SCL / CLK"]
+        oSDI["SDA / MOSI"]
+        oCS["CS"]
+        oDC["DC"]
+        oRST["RES"]
+        oV["VCC 3.3V"]
+        oG["GND"]
+    end
+
+    SCK --> oCLK
+    MOSI --> oSDI
+    CS --> oCS
+    DC --> oDC
+    RST --> oRST
+    V33 --- oV
+    GND --- oG

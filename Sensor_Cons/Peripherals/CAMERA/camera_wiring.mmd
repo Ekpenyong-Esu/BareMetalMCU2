@@ -1,0 +1,47 @@
+---
+title: CAMERA - OV7670 on DCMI
+---
+%% NO DOCUMENTED PINS - the driver takes the DCMI and I2C handles from the app.
+%% DCMI needs 11 pins and the DISC1 has only 22 free, most of which the LCD and
+%% SDRAM already claim; a DCMI-capable pin set is not available without
+%% releasing FMC or LTDC first.
+%% SCCB is I2C at 100 kHz; write address 0x42, read address 0x43.
+%% XCLK must be fed 24 MHz - the OV7670 has no oscillator of its own.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        D07["DCMI_D0..D7 - 8 data pins"]
+        HS["DCMI_HSYNC"]
+        VS["DCMI_VSYNC"]
+        PX["DCMI_PIXCLK"]
+        SCL["I2C SCL - SCCB"]
+        SDA["I2C SDA - SCCB"]
+        XC["MCO or timer - XCLK 24 MHz"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    subgraph CAM["OV7670 module - SCCB addr 0x42"]
+        cD["D0..D7"]
+        cH["HREF"]
+        cV["VSYNC"]
+        cP["PCLK"]
+        cSCL["SIOC"]
+        cSDA["SIOD"]
+        cX["XCLK"]
+        cRST["RESET - tie high"]
+        cPWDN["PWDN - tie low"]
+        cV33["3V3"]
+        cG["GND"]
+    end
+
+    D07 --- cD
+    cH --> HS
+    cV --> VS
+    cP --> PX
+    SCL --> cSCL
+    SDA --- cSDA
+    XC --> cX
+    V33 --- cV33
+    V33 --- cRST
+    GND --- cPWDN
+    GND --- cG

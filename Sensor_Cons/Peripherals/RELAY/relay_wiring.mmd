@@ -1,0 +1,44 @@
+---
+title: RELAY - switching mains or motor loads
+---
+%% NO DOCUMENTED PINS - Relay_Init takes any port and pin plus a polarity.
+%% PE2 is free in project.ioc.
+%% Most blue relay modules are ACTIVE LOW - pass RELAY_ACTIVE_LOW or the
+%% relay will be energised the moment you initialise the pin.
+%% The coil needs far more current than a GPIO can give, so use a module with
+%% its own transistor and flyback diode, never a bare relay.
+%% Power the coil from 5 V, not from the 3.3 V rail.
+%% If you are switching mains: that side of the board is lethal, keep it
+%% physically separated and never probe it while live.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        IN["PE2 - GPIO out"]
+        V5["5V"]
+        GND["GND"]
+    end
+
+    subgraph MOD["Relay module - opto-isolated, active low"]
+        rIN["IN"]
+        rV["VCC 5V"]
+        rG["GND"]
+        rOPT["Optocoupler + transistor + flyback diode"]
+        rCOIL["Relay coil"]
+    end
+
+    subgraph CONT["Contacts - isolated side"]
+        COM["COM"]
+        NO["NO - open when idle"]
+        NC["NC - closed when idle"]
+        LOAD["Load - lamp, pump, motor"]
+        SUP["Load supply"]
+    end
+
+    IN --> rIN
+    V5 --- rV
+    GND --- rG
+    rIN --> rOPT
+    rOPT --> rCOIL
+    rCOIL --> COM
+    COM --> NO
+    NO --> LOAD
+    LOAD --> SUP

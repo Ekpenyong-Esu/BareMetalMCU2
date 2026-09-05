@@ -1,0 +1,24 @@
+---
+title: BUTTON - momentary push button
+---
+%% Driver takes any port/pin; no defaults in code.
+%% PA0 is the on-board B1 (active HIGH on this board).
+%% PE2 is free in project.ioc and shown as the conventional active-low button.
+%% No external resistor needed - enable the internal pull-up or pull-down.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        PA0["PA0 - on-board B1"]
+        PE2["PE2 - external button"]
+        V33["3V3"]
+        GND["GND"]
+    end
+
+    B1["On-board B1 - pulls PA0 high when pressed"]
+    BX["External button - active low"]
+    PU["Internal pull-up enabled in software"]
+
+    V33 --- B1
+    B1 --> PA0
+    PU --- PE2
+    PE2 --- BX
+    BX --- GND

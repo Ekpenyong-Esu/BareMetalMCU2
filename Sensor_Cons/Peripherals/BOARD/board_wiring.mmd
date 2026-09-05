@@ -1,0 +1,29 @@
+---
+title: BOARD - on-board resources
+---
+%% Everything here is already soldered on the STM32F429I-DISC1 - nothing to wire.
+%% Pins from Peripherals/BOARD/board.h.
+%% B1 is active HIGH on this board: it drives PA0 to 3V3 when pressed, so use
+%% a pull-down, not a pull-up.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        PG13["PG13"]
+        PG14["PG14"]
+        PA0["PA0 - WKUP"]
+        PA9["PA9 - USART1_TX"]
+        PA10["PA10 - USART1_RX"]
+        GND["GND"]
+    end
+
+    LG["Green LED LD3 - active high"]
+    LR["Red LED LD4 - active high"]
+    BTN["User button B1 - active high to 3V3"]
+    STL["ST-LINK virtual COM port"]
+
+    PG13 --> LG
+    PG14 --> LR
+    BTN --> PA0
+    PA9 --> STL
+    STL --> PA10
+    LG --- GND
+    LR --- GND

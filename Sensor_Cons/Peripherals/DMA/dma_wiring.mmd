@@ -1,0 +1,28 @@
+---
+title: DMA - on-chip, nothing to wire
+---
+%% ON-CHIP ONLY. DMA has no pins; it moves bytes for other peripherals.
+%% DMA2 can do memory-to-memory, DMA1 cannot.
+%% Peripheral-to-memory requests are what free the CPU during SPI/UART/ADC bursts.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        CPU["Cortex-M4 core"]
+
+        subgraph D1["DMA1 - 8 streams x 8 channels"]
+            S1["Stream 0..7"]
+        end
+
+        subgraph D2["DMA2 - 8 streams, memory-to-memory capable"]
+            S2["Stream 0..7"]
+        end
+
+        PER["SPI / I2C / UART / ADC / I2S FIFOs"]
+        RAM["SRAM buffer"]
+    end
+
+    CPU -->|"configure once"| S1
+    PER -->|"request"| S1
+    S1 --> RAM
+    RAM --> S2
+    S2 --> PER
+    S1 -->|"transfer complete IRQ"| CPU

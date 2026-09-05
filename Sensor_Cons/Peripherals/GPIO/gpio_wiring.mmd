@@ -1,0 +1,30 @@
+---
+title: GPIO - pin modes
+---
+%% Generic driver - the application picks the pins.
+%% Board examples from Peripherals/BOARD/board.h.
+%% GPIO_Driver_Pin_Init turns on the port clock for you.
+%% Open-drain can only pull low, so it always needs a pull-up somewhere.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        subgraph MODES["Pin modes"]
+            OUTPP["Output push-pull - LED, direction pin"]
+            OUTOD["Output open-drain - I2C, DHT one-wire"]
+            IN["Input + pull-up/down - button"]
+            AF["Alternate function - timer, SPI, UART"]
+            ANA["Analog - ADC, DAC"]
+            IT["Input with EXTI interrupt"]
+        end
+        NVIC["NVIC - EXTI0..15 lines"]
+    end
+
+    LED["On-board LED PG13 / PG14"]
+    BTN["On-board button PA0"]
+    EXT["External device pin"]
+
+    OUTPP --> LED
+    BTN --> IN
+    AF --- EXT
+    OUTOD --- EXT
+    ANA --- EXT
+    IT --> NVIC

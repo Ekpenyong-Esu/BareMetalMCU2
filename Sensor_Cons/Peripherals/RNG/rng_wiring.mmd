@@ -1,0 +1,21 @@
+---
+title: RNG - true random number generator, nothing to wire
+---
+%% ON-CHIP ONLY. No pins.
+%% Entropy comes from an analog noise source, not a software PRNG.
+%% Needs its own 48 MHz-capable clock domain enabled before it will produce
+%% anything; check the seed and clock error flags on every read.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        NOISE["Analog noise source - ring oscillators"]
+        LFSR["Conditioning / LFSR"]
+        DR["RNG_DR - 32-bit output"]
+        SR["RNG_SR - DRDY, SEIS seed error, CEIS clock error"]
+        APP["Application"]
+    end
+
+    NOISE --> LFSR
+    LFSR --> DR
+    LFSR --> SR
+    SR -->|"check before trusting DR"| APP
+    DR --> APP

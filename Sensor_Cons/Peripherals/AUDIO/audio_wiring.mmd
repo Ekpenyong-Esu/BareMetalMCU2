@@ -1,0 +1,41 @@
+---
+title: AUDIO - CS43L22 codec
+---
+%% Pins from Peripherals/AUDIO/AUDIO_tutorial.ipynb (SAI1 variant).
+%% CONFLICT: PB6 and PB7 are taken by FMC_SDNE1 and the SDRAM in project.ioc.
+%% Move the codec control bus to a free I2C (e.g. I2C3 on PA8/PC9) if the
+%% SDRAM is in use. The I2S3 variant instead uses PA4/PC10/PC12/PC7.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        MCK["PE2 - SAI1 MCK"]
+        SD["PE4 - SAI1 SD"]
+        FS["PE5 - SAI1 FS"]
+        BCK["PE6 - SAI1 SCK"]
+        SCL["PB6 - I2C1 SCL"]
+        SDA["PB7 - I2C1 SDA"]
+        RST["PD4 - GPIO reset"]
+        GND["GND"]
+    end
+
+    subgraph CODEC["CS43L22 audio codec - I2C addr 0x94"]
+        cMCK["MCLK"]
+        cSD["SDIN"]
+        cFS["LRCK"]
+        cBCK["SCLK"]
+        cSCL["SCL"]
+        cSDA["SDA"]
+        cRST["RESET"]
+        cG["GND"]
+    end
+
+    OUT["Headphone jack L / R"]
+
+    MCK --> cMCK
+    SD --> cSD
+    FS --> cFS
+    BCK --> cBCK
+    SCL --> cSCL
+    SDA --- cSDA
+    RST --> cRST
+    GND --- cG
+    cSD --> OUT

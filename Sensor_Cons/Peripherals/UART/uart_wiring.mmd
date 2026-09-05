@@ -1,0 +1,38 @@
+---
+title: UART - USART1 to the ST-LINK virtual COM port
+---
+%% Pins from Core/Src/main.c and Peripherals/UART/README.md: PA9 TX, PA10 RX.
+%% These already run to the on-board ST-LINK, so printf comes out of the SAME
+%% USB cable you flash with - no external adapter needed.
+%% TX of one side goes to RX of the other. Wiring TX to TX gets you nothing.
+%% If you add an external device instead, it must be 3.3 V logic. A 5 V TX
+%% into PA10 needs a divider.
+%% Common ground is mandatory.
+%% Default 115200 8N1.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        TX["PA9 - USART1_TX"]
+        RX["PA10 - USART1_RX"]
+        GND["GND"]
+    end
+
+    subgraph LINK["On-board ST-LINK/V2-B"]
+        lRX["VCP RX"]
+        lTX["VCP TX"]
+    end
+
+    HOST["PC - /dev/ttyACM0 at 115200 8N1"]
+
+    subgraph EXT["Or an external 3.3 V device"]
+        eRX["RX"]
+        eTX["TX"]
+        eG["GND"]
+    end
+
+    TX --> lRX
+    lTX --> RX
+    lRX --- HOST
+    lTX --- HOST
+    TX -.->|"alternative"| eRX
+    eTX -.-> RX
+    GND -.- eG

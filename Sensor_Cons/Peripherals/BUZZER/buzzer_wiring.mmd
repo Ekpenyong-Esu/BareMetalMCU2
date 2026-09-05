@@ -1,0 +1,31 @@
+---
+title: BUZZER - active and passive wiring
+---
+%% Driver takes any port/pin (active mode) or any timer channel (passive mode).
+%% No defaults in code; PE3 and PB4 are free in project.ioc.
+%% An active buzzer makes its own tone from a steady level.
+%% A passive piezo needs the PWM frequency to set the pitch.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        GP["PE3 - GPIO out - active buzzer"]
+        PWM["PB4 - TIM3_CH1 - passive buzzer"]
+        GND["GND"]
+    end
+
+    subgraph ACT["Active buzzer - built-in oscillator"]
+        aI["signal"]
+        aG["GND"]
+    end
+
+    subgraph PAS["Passive piezo - needs a tone"]
+        pI["signal"]
+        pG["GND"]
+    end
+
+    NPN["2N2222 + 1k base resistor if buzzer draws over 8 mA"]
+
+    GP --> aI
+    aG --- GND
+    PWM --> pI
+    pG --- GND
+    GP -.-> NPN

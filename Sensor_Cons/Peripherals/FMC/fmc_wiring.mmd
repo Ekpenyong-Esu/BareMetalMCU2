@@ -1,0 +1,39 @@
+---
+title: FMC - on-board SDRAM
+---
+%% ALREADY SOLDERED on the STM32F429I-DISC1 - nothing to wire.
+%% IS42S16400J, 8 MB, 16-bit wide, on FMC SDRAM Bank 2 at 0xD0000000.
+%% Pins are fixed by the board layout; project.ioc claims most of ports D, E,
+%% F and G for this, which is why so few pins are left free.
+%% Must be initialised before any framebuffer is placed in external RAM.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1 - FMC controller"]
+        ADDR["A0-A11 - PF0-PF5 PF12-PF15 PG0 PG1"]
+        DATA["D0-D15 - PD14 PD15 PD0 PD1 PE7-PE15 PD8-PD10"]
+        BA["BA0 BA1 - PG4 PG5"]
+        CTRL["SDNRAS PF11 / SDNCAS PG15 / SDNWE PC0"]
+        CS["SDNE1 - PB6"]
+        CKE["SDCKE1 - PB5"]
+        CLK["SDCLK - PG8"]
+        NBL["NBL0 PE0 / NBL1 PE1"]
+    end
+
+    subgraph RAM["IS42S16400J - 8 MB SDRAM at 0xD0000000"]
+        rA["A0-A11"]
+        rD["DQ0-DQ15"]
+        rBA["BA0 BA1"]
+        rCTRL["RAS CAS WE"]
+        rCS["CS"]
+        rCKE["CKE"]
+        rCLK["CLK"]
+        rDQM["LDQM UDQM"]
+    end
+
+    ADDR --> rA
+    DATA <--> rD
+    BA --> rBA
+    CTRL --> rCTRL
+    CS --> rCS
+    CKE --> rCKE
+    CLK --> rCLK
+    NBL --> rDQM

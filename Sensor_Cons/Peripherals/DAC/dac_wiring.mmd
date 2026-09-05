@@ -1,0 +1,28 @@
+---
+title: DAC - analog output
+---
+%% Pins from Peripherals/DAC/dac.h and DAC_tutorial.ipynb.
+%% DAC_OUT1 is PA4, but project.ioc gives PA4 to LTDC_VSYNC.
+%% PA5 (DAC_OUT2) is free, so channel 2 is the usable one here.
+%% The output cannot source much current - buffer it before driving a load.
+flowchart LR
+    subgraph MCU["STM32F429I-DISC1"]
+        DHR["DAC_DHR12R2 - 12-bit value"]
+        DAC2["DAC channel 2"]
+        PA5["PA5 - DAC_OUT2"]
+        PA4["PA4 - DAC_OUT1 taken by LTDC_VSYNC"]
+        VDDA["VDDA 3.3 V reference"]
+        GND["GND"]
+    end
+
+    subgraph LOAD["Load"]
+        BUF["Op-amp buffer e.g. MCP6002"]
+        SPK["Speaker or scope probe"]
+    end
+
+    DHR --> DAC2
+    VDDA --> DAC2
+    DAC2 --> PA5
+    PA5 --> BUF
+    BUF --> SPK
+    GND --- SPK
